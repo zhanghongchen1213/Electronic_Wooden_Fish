@@ -1,0 +1,35 @@
+# 本地环境变量覆盖（不提交）
+*.local
+
+# 日志目录
+logs/*
+!logs/.gitkeep
+
+# Node.js
+node_modules/
+.npm-cache/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+package-lock.json
+.pnpm-debug.log*
+
+# 构建产物
+dist/
+build/
+*.jar
+*.war
+target/
+_bmad
+
+# IDE
+.idea/
+.vscode/
+*.swp
+*.swo
+.cursor
+.claude
+.agents
+.DS_Store
+tmp/*   
+
