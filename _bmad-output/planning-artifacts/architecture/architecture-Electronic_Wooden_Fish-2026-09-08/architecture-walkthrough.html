@@ -1,0 +1,335 @@
+<title>电子木鱼架构主干</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Noto+Serif+SC:wght@600;700&family=Noto+Sans+SC:wght@400;500;700&family=JetBrains+Mono:wght@400;600&display=swap">
+<style>
+:root{
+  --bg:#F4EFE4; --surface:#FFFDF6; --ink:#2A251E; --muted:#746A59; --line:#DFD4C1;
+  --accent:#9C3B25; --wood:#6B4F35; --moss:#3E5A45; --code:#4C4437; --code-bg:#F0E8D7;
+  --ok:#3E5A45; --warn:#A9731F;
+}
+@media (prefers-color-scheme: dark){
+  :root:not([data-theme="light"]){
+    --bg:#171510; --surface:#221D15; --ink:#ECE4D3; --muted:#A79B84; --line:#3B3427;
+    --accent:#CE6B49; --wood:#C59163; --moss:#92AC8C; --code:#D8CEB8; --code-bg:#262017;
+    --ok:#92AC8C; --warn:#D9A648;
+  }
+}
+:root[data-theme="dark"]{
+  --bg:#171510; --surface:#221D15; --ink:#ECE4D3; --muted:#A79B84; --line:#3B3427;
+  --accent:#CE6B49; --wood:#C59163; --moss:#92AC8C; --code:#D8CEB8; --code-bg:#262017;
+  --ok:#92AC8C; --warn:#D9A648;
+}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--ink);font-family:"Noto Sans SC","PingFang SC","Microsoft YaHei",sans-serif;line-height:1.7;font-size:15px}
+.wrap{max-width:1040px;margin:0 auto;padding:0 22px}
+.serif{font-family:"Noto Serif SC","Songti SC",serif}
+.mono{font-family:"JetBrains Mono",ui-monospace,Menlo,monospace;font-size:.86em}
+a{color:var(--accent);text-decoration:none}
+.tok{font-family:"JetBrains Mono",monospace;background:var(--code-bg);border:1px solid var(--line);border-radius:5px;padding:.1em .42em;font-size:.84em;white-space:nowrap;color:var(--code)}
+.eyebrow{font-size:.72rem;letter-spacing:.22em;text-transform:uppercase;color:var(--accent);font-weight:700}
+header{padding:44px 0 8px}
+h1{font-family:"Noto Serif SC",serif;font-weight:700;font-size:clamp(30px,4.6vw,46px);line-height:1.18;margin:10px 0 6px;text-wrap:balance;letter-spacing:.01em}
+h2{font-family:"Noto Serif SC",serif;font-weight:700;font-size:clamp(19px,2.4vw,24px);margin:46px 0 6px;text-wrap:balance}
+h2 .no{color:var(--accent);font-family:"Noto Sans SC",sans-serif;font-size:.7em;letter-spacing:.1em;margin-right:10px;vertical-align:2px}
+.sub{color:var(--muted);font-size:1.02em;max-width:60ch;margin:0}
+.chips{display:flex;flex-wrap:wrap;gap:8px;margin-top:16px}
+.chip{display:inline-flex;align-items:center;gap:7px;padding:5px 12px;border:1px solid var(--line);background:var(--surface);border-radius:999px;font-size:.82rem;color:var(--muted)}
+.chip b{color:var(--ink);font-weight:500}
+.chip .dot{width:7px;height:7px;border-radius:50%;flex:none}
+.panel{background:var(--surface);border:1px solid var(--line);border-radius:14px;padding:20px 22px;margin:18px 0}
+.lead{display:grid;gap:14px}
+.decide{display:grid;grid-template-columns:auto 1fr;gap:12px 14px;align-items:baseline}
+.decide .tag{font-family:"JetBrains Mono",monospace;font-size:.8em;white-space:nowrap}
+.layer{display:grid;grid-template-columns:1fr 1fr;gap:18px;margin:16px 0}
+.layer .card{border:1px solid var(--line);border-radius:14px;background:var(--surface);padding:18px 20px}
+.layer .card h3{margin:0 0 2px;font-family:"Noto Serif SC",serif;font-size:1.18rem}
+.layer .card .role{font-size:.82rem;color:var(--muted);margin-bottom:10px}
+.kv{display:grid;grid-template-columns:max-content 1fr;gap:3px 16px;font-size:.92rem}
+.kv dt{color:var(--muted);white-space:nowrap}
+.kv dd{margin:0}
+.band{margin:14px 0;border-left:3px solid var(--accent);background:var(--code-bg);padding:12px 16px;border-radius:0 10px 10px 0;color:var(--code)}
+.grid2{display:grid;grid-template-columns:1fr 1fr;gap:22px}
+@media(max-width:760px){.layer,.grid2{grid-template-columns:1fr}}
+table{border-collapse:collapse;width:100%;font-size:.86rem}
+th,td{border:1px solid var(--line);padding:6px 9px;text-align:left;vertical-align:top}
+th{background:var(--code-bg);font-weight:600;color:var(--muted);font-size:.78rem;letter-spacing:.05em}
+.scroll{overflow-x:auto;margin:12px 0}
+code{font-family:"JetBrains Mono",monospace;font-size:.85em;color:var(--code)}
+.adrow{display:grid;grid-template-columns:64px 1fr;gap:14px;align-items:baseline;padding:9px 0;border-bottom:1px dashed var(--line)}
+.adrow:last-child{border-bottom:none}
+.adid{font-family:"JetBrains Mono",monospace;font-size:.8em;color:var(--accent);font-weight:600}
+.adid small{display:block;color:var(--muted);font-weight:400;font-size:.66rem;letter-spacing:.08em}
+details{border:1px solid var(--line);border-radius:10px;margin:10px 0;background:var(--surface)}
+summary{cursor:pointer;padding:10px 14px;font-weight:500;list-style:none}
+summary::before{content:"＋";margin-right:10px;color:var(--accent)}
+details[open] summary::before{content:"－"}
+details .body{padding:0 16px 12px;font-size:.9rem;color:var(--muted)}
+.status{display:inline-flex;gap:8px;flex-wrap:wrap;margin-top:4px}
+.diagram{margin:12px 0;background:var(--surface);border:1px solid var(--line);border-radius:14px;padding:10px 12px}
+.syncsvg{width:100%;height:auto;display:block}
+.legend{display:flex;gap:18px;flex-wrap:wrap;font-size:.8rem;color:var(--muted);margin-top:8px}
+.legend i{width:14px;height:3px;display:inline-block;margin-right:6px;vertical-align:middle;border-radius:2px}
+.gotable{display:grid;grid-template-columns:repeat(auto-fit,minmax(210px,1fr));gap:10px}
+.gocard{background:var(--surface);border:1px solid var(--line);border-radius:11px;padding:12px 14px}
+.gocard .chipname{font-family:"Noto Serif SC",serif;font-weight:600}
+.gocard p{margin:4px 0 0;font-size:.82rem;color:var(--muted)}
+footer{margin:52px 0 40px;border-top:1px solid var(--line);padding-top:18px;color:var(--muted);font-size:.82rem}
+.tagwarn{background:color-mix(in srgb,var(--warn) 14%,var(--surface));border:1px solid color-mix(in srgb,var(--warn) 45%,var(--line))}
+.tagok{background:color-mix(in srgb,var(--ok) 13%,var(--surface));border:1px solid color-mix(in srgb,var(--ok) 45%,var(--line))}
+.tagaccent{background:color-mix(in srgb,var(--accent) 10%,var(--surface));border:1px solid color-mix(in srgb,var(--accent) 45%,var(--line))}
+@media(prefers-reduced-motion:no-preference){.reveal{animation:up .5s ease both}}
+@keyframes up{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:none}}
+:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+</style>
+
+<header class="wrap">
+  <div class="eyebrow">Architecture Spine · 单一事实源 · feature</div>
+  <h1>电子木鱼架构主干</h1>
+  <p class="sub">一敲一字，离线不丢，云端最终一致。设备是「本地事实记录器」，backend 是「确认权威」，微信小程序只按已确认顺序呈现。</p>
+  <div class="chips">
+    <span class="chip"><span class="dot" style="background:var(--accent)"></span>Embedded <b>ESP32-S3 + Air780EGP</b></span>
+    <span class="chip"><span class="dot" style="background:var(--moss)"></span>Software <b>Spring Boot · JSON 零库</b></span>
+    <span class="chip"><span class="dot" style="background:var(--warn)"></span>小程序 <b>uni-app · WebSocket</b></span>
+    <span class="chip">状态 <b>draft → final</b></span>
+    <span class="chip">2026-09-08</span>
+  </div>
+</header>
+
+<main class="wrap">
+
+<section>
+  <div class="panel lead reveal">
+    <p class="sub">本页是架构主干 <span class="tok">ARCHITECTURE-SPINE.md</span> 的可视化讲解。产品意图与验收权威为 <b>09-08 简报/附录</b>（冲突处以它们为准）；个人自用原型，一台设备、一个固定 backend。主干含 19 条不变量（AD-1…19），原文与本页同目录。</p>
+    <div style="margin-top:6px"><span class="eyebrow" style="font-size:.68rem">本轮关键决定</span></div>
+    <div class="decide">
+      <span class="tag">P-1</span><span><b>后端零数据库：JSON 原子文件</b> —— 单实例单进程，临时文件 + fsync + rename，<span class="tok">cloud/backend/data/</span> 落盘，重启全恢复。覆盖 PRD FR-B-009 与旧根文档的「SQLite」决定；零库写法借鉴 <span class="tok">legbot_watch/cloud</span>。</span>
+      <span class="tag">P-2</span><span><b>backend 权威 + 幂等高水位同步</b> —— 设备带 <span class="tok">local_total / acked_total / round_id</span> 在活动窗口一次性上报；backend 只对高于已确认的差值推进一次，重复/回退为 no-op；轮次只由设备本地推进，backend 校验确认并回传。</span>
+      <span class="tag">P-3</span><span><b>WebSocket 推送 + 快照水位补齐</b> —— 小程序断线后以「查询响应冻结的快照水位 S」为基准，只消费序号 &gt; S 的实时差量，防空洞与重叠。</span>
+      <span class="tag">P-4</span><span><b>旧根文档 <span class="tok">architecture.md</span> 已并入本主干后删除</b> —— 引脚表、电源、同步字段、验证门禁等保真迁移（对账见 <span class="tok">reviews/reconcile-arch-parity.md</span>）。</span>
+    </div>
+  </div>
+</section>
+
+<section>
+  <h2><span class="no">01</span>两层一契约</h2>
+  <p class="sub">嵌入式沿用 legbot_watch 范式；软件层以「活动窗口 + 幂等高水位」连接，不常开会话、不逐事件重放。</p>
+  <div class="layer">
+    <div class="card">
+      <h3>嵌入式层 Embedded</h3>
+      <div class="role">分层 BSP/Driver + FreeRTOS 服务任务事件驱动固件</div>
+      <dl class="kv">
+        <dt>唯一输入</dt><dd><span class="tok">physical_pvdf</span>（比较器唤醒 + ADC 确认）与木鱼页点击 <span class="tok">device_touch</span> 进<b>同一队列</b>，无第二计数路径；熄屏首触只唤醒。</dd>
+        <dt>产品事实源</dt><dd>不可变 <span class="tok">device_state</span> 快照；UI/音频/4G 只读，服务经 typed event 通信。</dd>
+        <dt>板级</dt><dd>BSP 独占 GPIO/总线/电源，封装上游 <span class="tok">managed_components</span>；USB-Serial-JTAG（IO19/20）为唯一调试通道，IO43/44 让给 4G UART。</dd>
+        <dt>反馈</dt><dd>音频/触屏失败不阻塞计数与同步；高速连击合并音效；动画不丢字。</dd>
+        <dt>网络</dt><dd>仅 Air780EGP 4G HTTPS 一条业务链路；BLE/Wi‑Fi/GPS 不进入 MVP。</dd>
+      </dl>
+    </div>
+    <div class="card">
+      <h3>软件层 Software</h3>
+      <div class="role">backend 权威 · JSON 零库 · uni-app 小程序只呈现</div>
+      <dl class="kv">
+        <dt>backend</dt><dd>Spring Boot 3.3.7 + Java 17（miaowu 骨架），<span class="tok">/api/v1</span> + <span class="tok">{code,message,data}</span> 信封 + 微信单设备映射；权威 = 已确认高水位、游标/轮次/完成、统计、命令。</dd>
+        <dt>持久化</dt><dd>零数据库，JSON 原子文件（<span class="tok">data/</span>）；重启全恢复。schema 由 <span class="tok">sync-contract</span> 收敛，不在主干冻结。</dd>
+        <dt>小程序</dt><dd>uni-app（Vue3+TS+Vite）仅微信小程序；不产生敲击；按 backend 确认顺序逐字呈现，离线先回放再接实时。</dd>
+        <dt>命令</dt><dd><span class="tok">command_revision</span> = 「设备已应用修订高水位」，随每次窗口携带、幂等翻转，<b>不依赖单次 ACK</b>。</dd>
+      </dl>
+    </div>
+  </div>
+  <div class="band">跨层事实：<b>设备屏幕可展示本地即时镜像（含未确认新字）但须标「待同步」</b>；<b>小程序只呈现已确认进度</b>；本地待同步绝不混入正式统计。</div>
+
+  <div class="diagram">
+    <p style="margin:4px 6px 2px;font-size:.82rem;color:var(--muted)">活动窗口 · 幂等高水位收敛（设备 local_total 先行，backend acked_total 滞后追平）</p>
+    <svg class="syncsvg" viewBox="0 0 860 220" role="img" aria-label="两轨高水位追赶示意">
+      <line x1="30" y1="60" x2="830" y2="60" stroke="var(--line)" stroke-width="2"/>
+      <line x1="30" y1="150" x2="830" y2="150" stroke="var(--line)" stroke-width="2"/>
+      <text x="34" y="26" fill="var(--wood)" font-size="13" font-family="Noto Sans SC">设备 local_total</text>
+      <path d="M40 60 H230 L330 60 L520 60" stroke="var(--wood)" stroke-width="3" fill="none" stroke-linecap="round"/>
+      <circle cx="330" cy="60" r="6" fill="var(--wood)"/>
+      <circle cx="520" cy="60" r="6" fill="var(--wood)"/>
+      <text x="330" y="42" text-anchor="middle" fill="var(--wood)" font-size="11">敲击</text>
+      <text x="520" y="42" text-anchor="middle" fill="var(--wood)" font-size="11">离线敲击(不丢)</text>
+      <text x="34" y="196" fill="var(--moss)" font-size="13" font-family="Noto Sans SC">backend acked_total</text>
+      <path d="M40 150 L230 150" stroke="var(--moss)" stroke-width="3" fill="none" stroke-linecap="round"/>
+      <rect x="600" y="120" width="190" height="72" rx="12" fill="var(--accent)" opacity=".12"/>
+      <rect x="600" y="120" width="190" height="72" rx="12" fill="none" stroke="var(--accent)" stroke-dasharray="5 4"/>
+      <text x="695" y="164" text-anchor="middle" fill="var(--accent)" font-size="12" font-weight="700">活动窗口 · HTTPS 一次上报</text>
+      <text x="695" y="182" text-anchor="middle" fill="var(--accent)" font-size="10.5">幂等差值推进 + 确认回传</text>
+      <path d="M600 60 H760 L840 60" stroke="var(--accent)" stroke-width="3" fill="none" stroke-linecap="round"/>
+      <path d="M600 150 H760 L840 150" stroke="var(--accent)" stroke-width="3" fill="none" stroke-linecap="round"/>
+      <text x="832" y="48" fill="var(--ink)" font-size="11">追平</text>
+    </svg>
+    <div class="legend">
+      <span><i style="background:var(--wood)"></i>本地计数</span>
+      <span><i style="background:var(--moss)"></i>已确认计数</span>
+      <span><i style="background:var(--accent)"></i>一次活动窗口补传</span>
+    </div>
+  </div>
+</section>
+
+<section>
+  <h2><span class="no">02</span>跨层同步时序</h2>
+  <p class="sub">一次活动窗口内：本地先反馈 → 幂等上报 → backend 确认并回传轮次状态 → WebSocket 推送差量 → 回低功耗。</p>
+  <div class="diagram">
+<pre class="mermaid">
+sequenceDiagram
+  participant D as 设备 Embedded
+  participant A as Air780EGP 4G
+  participant B as backend
+  participant M as 小程序
+  D->>D: 本地落盘 local_total · 动画/音效即时反馈
+  D->>A: 活动窗口发起 HTTPS 上报(高水位 + round_id/游标 + 已应用修订)
+  A->>B: POST 幂等同步包
+  B->>B: 按高水位推进一次 · 按确认时间归档 · 翻转已应用命令
+  B-->>A: acked_total · 差量 · 确认后轮次 · 待应用命令 · 可信时间
+  A-->>D: 响应；设备以确认轮次收敛本地镜像并应用命令
+  B-->>M: WebSocket 推送已确认差量(序号 > 快照水位 S)
+  D->>D: 回到低功耗离线记录
+</pre>
+  </div>
+  <div class="panel">
+    <div class="eyebrow" style="font-size:.68rem">同步字段（权威语义 → sync-contract）</div>
+    <div style="margin-top:8px;display:flex;flex-wrap:wrap;gap:7px">
+      <span class="tok">device_id</span><span class="tok">local_total</span><span class="tok">acked_total</span><span class="tok">scripture_version</span>
+      <span class="tok" style="border-color:var(--accent);color:var(--accent)">round_id ★</span><span class="tok">round_state</span><span class="tok">round_cursor</span>
+      <span class="tok">command_revision</span><span class="tok">battery_percent</span><span class="tok">network_mode</span><span class="tok">audio_config_version</span><span class="tok">firmware_version</span>
+    </div>
+    <p style="font-size:.8rem;color:var(--muted);margin:8px 0 0">★ <span class="tok">round_id</span>（单调轮次标识）为本轮新增：跨轮归属与「未确认完成的从头开始」以此对齐（AD-3/AD-19）；<span class="tok">command_revision</span> = 设备已应用修订高水位（AD-5）。</p>
+    <div style="margin-top:12px" class="eyebrow" style="font-size:.68rem">状态词表（跨端唯一）</div>
+    <div class="status" style="margin-top:6px">
+      <span class="chip tagaccent">本地已记录</span><span class="chip">同步中</span><span class="chip tagok">已同步</span><span class="chip tagwarn">待同步</span><span class="chip tagwarn">同步失败</span><span class="chip">待设备应用（命令·独立维度）</span>
+    </div>
+  </div>
+</section>
+
+<section>
+  <h2><span class="no">03</span>不变量一览 · 19 条 AD</h2>
+  <p class="sub">完整 Binds/Prevents/Rule 见 <span class="tok">ARCHITECTURE-SPINE.md</span>。这里给每条一句话定位。</p>
+  <div class="grid2">
+    <div>
+      <details open><summary style="color:var(--accent)">跨层同步（AD-1…6 · AD-19）</summary>
+        <div class="body">
+          <div class="adrow"><span class="adid">AD-1<small>统一输入</small></span><span>两类正式输入进同一队列，无第二计数路径；熄屏首触只唤醒；一敲即一「可消费」字。</span></div>
+          <div class="adrow"><span class="adid">AD-2<small>云端权威</small></span><span>backend 是已确认高水位/游标/轮次/完成/统计/命令的唯一权威；小程序只呈现已确认，设备本地镜像须标同步态。</span></div>
+          <div class="adrow"><span class="adid">AD-3<small>幂等同步</small></span><span>活动窗口 + 高水位幂等；轮次只由设备推进、backend 校验确认并回传，不按经文长度盲推。</span></div>
+          <div class="adrow"><span class="adid">AD-4<small>经文版本</small></span><span>单一文本源、构建期一致、版本不一致即停；只含所需字形，不选经不导入。</span></div>
+          <div class="adrow"><span class="adid">AD-5<small>命令修订</small></span><span>command_revision = 已应用修订高水位，随窗口携带幂等翻转，不依赖单次 ACK。</span></div>
+          <div class="adrow"><span class="adid">AD-6<small>可信时间</small></span><span>日统计归 backend 配置时区；设备「今日」非权威、未校时显「待校时」。</span></div>
+          <div class="adrow"><span class="adid">AD-19<small>消费语义</small></span><span>一敲一字、标点随附不耗敲；不预览未来经文；从头开始新建轮次、退出保留完成态。</span></div>
+        </div>
+      </details>
+      <details open><summary style="color:var(--wood)">嵌入式层（AD-7…15）</summary>
+        <div class="body">
+          <div class="adrow"><span class="adid">AD-7<small>服务范式</small></span><span>FreeRTOS 服务任务 + typed event；ISR 只投事件；命令型事件不得静默丢。</span></div>
+          <div class="adrow"><span class="adid">AD-8<small>BSP 独占</small></span><span>BSP 独占引脚/总线/电源并封装 managed_components；新芯片登记 CMake。</span></div>
+          <div class="adrow"><span class="adid">AD-9<small>事实源</small></span><span>device_state 不可变快照，服务只发 typed update，UI/音频/4G 只读。</span></div>
+          <div class="adrow"><span class="adid">AD-10<small>单一仲裁</small></span><span>共享 I²C / AT UART / LVGL 任务各一入口，单一事务所有权。</span></div>
+          <div class="adrow"><span class="adid">AD-11<small>调试通道</small></span><span>USB-Serial-JTAG(IO19/20) 唯一烧录/日志/JTAG；IO43/44 让给 4G。</span></div>
+          <div class="adrow"><span class="adid">AD-12<small>不阻塞</small></span><span>音频/触屏失败不阻塞计数持久化同步；连击合并音效；动画不丢字。</span></div>
+          <div class="adrow"><span class="adid">AD-13<small>电源</small></span><span>分轨供电；低电先落盘计数；充电暂停输入；PWR 关机归板级电路。</span></div>
+          <div class="adrow"><span class="adid">AD-14<small>单 4G</small></span><span>仅 Air780EGP 4G HTTPS 产品链路；BLE/Wi‑Fi/GPS 不进 MVP。</span></div>
+          <div class="adrow"><span class="adid">AD-15<small>本地持久化</small></span><span>高水位/游标跨重启可恢复；设置保留；不存绝对敲击时间。</span></div>
+        </div>
+      </details>
+    </div>
+    <div>
+      <details open><summary style="color:var(--moss)">软件层（AD-16…18）</summary>
+        <div class="body">
+          <div class="adrow"><span class="adid">AD-16<small>后端骨架</small></span><span>miaowu Spring Boot 3.3.7 + /api/v1 信封；零库 JSON 原子文件、单实例、重启可恢复。</span></div>
+          <div class="adrow"><span class="adid">AD-17<small>前端差量</small></span><span>WebSocket 推送 + 快照水位 S 补齐基准；只消费序号 &gt; S，空洞先查再续播；回放接实时。</span></div>
+          <div class="adrow"><span class="adid">AD-18<small>前端基线</small></span><span>uni-app（Vue3+TS+Vite）仅微信小程序；单 VITE_API_BASE_URL + 统一请求封装。</span></div>
+        </div>
+      </details>
+      <div class="panel" style="background:var(--code-bg);border-style:dashed">
+        <div class="eyebrow" style="font-size:.68rem">跨层铁律（易踩）</div>
+        <ul style="margin:8px 0 0;padding-left:18px;font-size:.9rem">
+          <li>小程序<b>没有可点木鱼</b>，不是输入源。</li>
+          <li>设备不存、不上报 <b>PVDF 原始波形</b>；单一外壳只标定一次。</li>
+          <li>backend <b>不按 total % 经文长度</b>自行推游标/完成——只校验并确认设备上报。</li>
+          <li>「待设备应用」≠ 已生效：靠已应用修订高水位翻转，不靠单次 ACK。</li>
+          <li>断线补齐以<b>查询响应快照水位</b>为基准，前端不自算「已展示游标」。</li>
+        </ul>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section>
+  <h2><span class="no">04</span>板级要览 · seed</h2>
+  <p class="sub">器件选型与接线（未核验参数在样机/原理图前不得冻结，冲突须先改主干再调整）。</p>
+  <div class="gotable">
+    <div class="gocard"><span class="chipname">主控</span><p>ESP32-S3-N16R8（16MB/8MB PSRAM），原生 USB-Serial-JTAG</p></div>
+    <div class="gocard"><span class="chipname">实体敲击</span><p>PVDF 压电 + 低功耗比较器唤醒(IO11) + ADC 确认(IO9)</p></div>
+    <div class="gocard"><span class="chipname">4G</span><p>Air780EGP 完整模组（UART IO43/44），AT/HTTPS；GPS 默认关</p></div>
+    <div class="gocard"><span class="chipname">显示/触摸</span><p>CO5300 QSPI AMOLED 410×502 + CST9217（legbot 同款）</p></div>
+    <div class="gocard"><span class="chipname">音频</span><p>ES8311 + NS4150B + 单声道扬声器；连击合并音效</p></div>
+    <div class="gocard"><span class="chipname">电量/姿态</span><p>CW2015 电量计；QMI8658C 上板默认不启用（仅 INT1/IO41）</p></div>
+  </div>
+  <details><summary>完整 GPIO 基线（来源：09-08 附录 §3.1）</summary>
+    <div class="body">
+      <div class="scroll"><table>
+        <thead><tr><th>功能</th><th>信号</th><th>GPIO</th><th>约束</th></tr></thead>
+        <tbody>
+          <tr><td>BOOT</td><td>BOOT0</td><td class="mono">IO0</td><td>启动绑带；下载路径</td></tr>
+          <tr><td>PWR</td><td>运行输入</td><td class="mono">IO46</td><td>启动绑带；长按开关机归板级电源</td></tr>
+          <tr><td>RESET</td><td>EN</td><td class="mono">EN</td><td>独立按键/测试点</td></tr>
+          <tr><td>PVDF</td><td>ADC</td><td class="mono">IO9</td><td>ADC1_CH8；前端限流/钳位</td></tr>
+          <tr><td>PVDF 唤醒</td><td>比较器</td><td class="mono">IO11</td><td>低功耗唤醒；醒后 ADC 确认</td></tr>
+          <tr><td>共享 I²C</td><td>SDA/SCL</td><td class="mono">IO1/2</td><td>四器件共用一组总线</td></tr>
+          <tr><td>CST9217</td><td>TP_RST/INT</td><td class="mono">IO38/39</td><td>触摸复位/中断</td></tr>
+          <tr><td>QMI8658C</td><td>INT1</td><td class="mono">IO41</td><td>未来扩展；INT2 不接、不占 IO45</td></tr>
+          <tr><td>CO5300</td><td>QSPI+EN</td><td class="mono">IO4/40/5/6/7/12/42/47</td><td>legbot 屏幕资源基线</td></tr>
+          <tr><td>ES8311</td><td>I2S</td><td class="mono">IO13/14/17/18/21</td><td>legbot 音频资源基线</td></tr>
+          <tr><td>NS4150B</td><td>PA_EN</td><td class="mono">IO48</td><td>静音/故障回到禁用</td></tr>
+          <tr><td>Air780EGP</td><td>UART</td><td class="mono">IO43/44</td><td>引脚常量自 main_control 抽离</td></tr>
+          <tr><td>Air780EGP</td><td>DTR/RST/NET/GNSS</td><td class="mono">IO10/15/16/8</td><td>休眠/复位/网络/GPS 开关</td></tr>
+          <tr><td>RGB</td><td>DATA</td><td class="mono">IO3</td><td>状态灯，非调试灯</td></tr>
+          <tr><td>USB</td><td>D−/D+</td><td class="mono">IO19/20</td><td>原生 USB-Serial-JTAG</td></tr>
+        </tbody>
+      </table></div>
+      <p style="margin:8px 0 0">GPIO45 保持未接（影响 VDD_SPI 启动采样）；GPIO33–37 与 Octal Flash/PSRAM 相关不作通用脚。电源：Air780EGP 高电流轨 + 3.3V 轨 + 音频轨分轨；AMS1117 类不得承担 4G 主供电。</p>
+    </div>
+  </details>
+</section>
+
+<section>
+  <h2><span class="no">05</span>明确不做 · 与待定</h2>
+  <div class="grid2">
+    <div>
+      <div class="eyebrow" style="font-size:.68rem">非 MVP / 非目标</div>
+      <div class="status" style="margin-top:8px">
+        <span class="chip">BLE/Wi‑Fi 业务链路</span><span class="chip">GPS 业务</span><span class="chip">OTA</span><span class="chip">选经/导入经文</span>
+        <span class="chip">多设备/换机迁移</span><span class="chip">公开账号/社交</span><span class="chip">排行榜/提醒/付费</span><span class="chip">QMI8658C 计数</span><span class="chip">量产/多端前端</span>
+      </div>
+    </div>
+    <div>
+      <div class="eyebrow" style="font-size:.68rem">需实测/文档冻结（含 [ASSUMPTION]）</div>
+      <div class="status" style="margin-top:8px">
+        <span class="chip tagwarn">分区/NVS/低功耗参数</span><span class="chip tagwarn">PVDF 前端与比较器料号</span><span class="chip tagwarn">CO5300 FPC/首帧/CST 地址</span>
+        <span class="chip tagwarn">JSON schema（A-2，不冻结）</span><span class="chip">IDF ≥5.5.4 &lt;5.6.0（A-3）</span>
+        <span class="chip tagwarn">Spring Boot 3.3.7 EOL → 4.x（A-4）</span><span class="chip">wss/HTTPS 域名备案（A-7）</span>
+      </div>
+      <p style="font-size:.8rem;color:var(--muted);margin:10px 0 0">离线「完成→从头开始」竞态与 round 对账、JSON schema、WebSocket 帧格式三类须在 backend/embedded 模块 spec 拆分前经 <span class="tok">docs/contracts/sync-contract.md</span> 冻结。</p>
+    </div>
+  </div>
+</section>
+
+</main>
+
+<footer class="wrap">
+  <div class="eyebrow" style="font-size:.66rem">版本与依据核验（2026-09-08）</div>
+  <div style="margin-top:8px;display:grid;gap:3px">
+    <span>ESP-IDF v5.5 维护期 / 5.5.5 / v6.0 现行 —— Espressif release notes + legbot <span class="mono">dependencies.lock</span></span>
+    <span>Spring Boot 3.3.x OSS EOL 2025-06 —— endoflife.date + miaowu <span class="mono">pom.xml</span></span>
+    <span>LVGL 8.4 上游 2025-03 停更 / Java 17 → Temurin·Corretto —— endoflife.date</span>
+    <span>USB-Serial-JTAG / ESP32-S3 数据手册 —— 自旧根文档随迁的 Espressif 官方链接</span>
+  </div>
+  <p style="margin:14px 0 0">关联：同目录 <span class="tok">ARCHITECTURE-SPINE.md</span>（正文）· <span class="tok">.memlog.md</span>（决策日志）· <span class="tok">reviews/</span>（评审与对账）｜ 供评审用可视化，非正文替代。</p>
+</footer>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/mermaid/10.9.1/mermaid.min.js"></script>
+<script>
+  try{
+    mermaid.initialize({startOnLoad:true,theme:"neutral",securityLevel:"loose",fontFamily:"inherit"});
+    document.querySelectorAll(".mermaid").forEach(function(el){ el.style.textAlign="center"; });
+  }catch(e){ console.warn("mermaid 不可用", e); }
+</script>

@@ -9,7 +9,7 @@ updated: 2026-09-08
 
 ## 1. 文档职责
 
-本附录保存不适合进入 1–2 页产品简报、但会约束后续 PRD、UX、架构和原理图的细节。旧版 [产品简报](../brief-Electronic_Wooden_Fish-2026-09-07/brief.md)、现有 [PRD](../../prds/prd-Electronic_Wooden_Fish-2026-09-07/prd.md) 和根目录 [architecture.md](../../../../../architecture.md) 是历史输入；其中与本轮决策冲突的内容不再代表最新产品意图，后续应通过独立的 PRD/架构更新流程对齐。
+本附录保存不适合进入 1–2 页产品简报、但会约束后续 PRD、UX、架构和原理图的细节。旧版 [产品简报](../brief-Electronic_Wooden_Fish-2026-09-07/brief.md)、现有 [PRD](../../prds/prd-Electronic_Wooden_Fish-2026-09-07/prd.md) 和旧根目录 `architecture.md`（其硬件/同步内容已并入新的[架构主干](../../architecture/architecture-Electronic_Wooden_Fish-2026-09-08/ARCHITECTURE-SPINE.md)，原文件已删除）是历史输入；其中与本轮决策冲突的内容不再代表最新产品意图，后续应通过独立的 PRD/架构更新流程对齐。
 
 ## 2. 决策状态
 

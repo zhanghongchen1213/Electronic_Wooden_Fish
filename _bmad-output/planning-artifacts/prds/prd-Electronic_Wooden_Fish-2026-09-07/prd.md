@@ -14,7 +14,7 @@ updated: 2026-09-08
 文档层级如下：
 
 - 本 PRD：产品目标、用户旅程、跨层行为和验收标准。
-- `architecture.md`：硬件拓扑、GPIO、电源、总线、屏幕/音频实现、4G 传输和数据流架构。
+- `ARCHITECTURE-SPINE.md`（架构主干，不变量契约单一事实源，替代原根目录 architecture.md）：硬件拓扑、GPIO、电源、总线、屏幕/音频、4G 传输与数据流；见 `../../architecture/architecture-Electronic_Wooden_Fish-2026-09-08/ARCHITECTURE-SPINE.md`。
 - `docs/embedded/requirements.md`：固件实现规格。
 - `docs/backend/requirements.md`：后端实现规格。
 - `docs/frontend/requirements.md`：小程序实现规格。
@@ -332,7 +332,7 @@ WebSocket 断开时切换到查询/回放；重连后只补齐未展示的 backe
 
 ## 11. 工程验证入口
 
-工程验证结果回写 `architecture.md` 和对应 `docs/` 层级规格：
+工程验证结果回写架构主干 `ARCHITECTURE-SPINE.md`（见 `../../architecture/architecture-Electronic_Wooden_Fish-2026-09-08/`）和对应 `docs/` 层级规格：
 
 1. GPIO0/45/46 启动绑带、GPIO19/20 USB、GPIO9 ADC、GPIO11 比较器、GPIO43/44/10/15/16/8 Air780EGP 重映射。
 2. CO5300 FPC 供电、QSPI、亮屏/熄屏、CST9217 地址与触摸坐标。
