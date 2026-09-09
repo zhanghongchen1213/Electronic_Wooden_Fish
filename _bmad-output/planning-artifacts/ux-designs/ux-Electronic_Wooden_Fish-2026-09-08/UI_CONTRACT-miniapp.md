@@ -5,12 +5,14 @@ type: ui-contract
 surface: miniapp
 status: draft
 created: 2026-09-08
-updated: 2026-09-08
+updated: 2026-09-09
 sources:
   - "{planning_artifacts}/ux-designs/ux-Electronic_Wooden_Fish-2026-09-08/DESIGN.md"
   - "{planning_artifacts}/ux-designs/ux-Electronic_Wooden_Fish-2026-09-08/EXPERIENCE.md"
   - "{planning_artifacts}/prds/prd-Electronic_Wooden_Fish-2026-09-07/prd.md"
   - "{planning_artifacts}/architecture/architecture-Electronic_Wooden_Fish-2026-09-08/ARCHITECTURE-SPINE.md"
+selected_style: null
+style_candidates: 10
 authority: "UX spines (DESIGN.md / EXPERIENCE.md) > 本契约 > pen/HTML > uni-app pages"
 ---
 
@@ -33,18 +35,19 @@ authority: "UX spines (DESIGN.md / EXPERIENCE.md) > 本契约 > pen/HTML > uni-a
 | `{colors.brand.amber.400}` / `{colors.brand.amber.300}` | `$accent` / `$accent-bright` | 当前字/进度/完成/重点 |
 | `{colors.mini.divider}` | `$divider` | 分隔线 |
 | `{colors.mini.focus}` | 见 `$accent` | 阅读行当前字 |
-| typography | `$font-reading/…` | 30/16/12，行高 1.7 |
+| `{typography.miniapp.reading/body/caption}` | `$font-reading/…` | 30/16/12，行高 1.7 |
 
 ## 2. 命名规则
 
 `[UI][PAGE:<PageId>][ST:<StateId>][CMP:<CompId>][VAR:<Name>]`
 PageId：`LOGIN|READING|RECORDS|DEVICE|SETTINGS|OVERLAY`；CMP 只能使用 §5 的 canonical 名称。
+- 候选风格使用 `[STYLE:<style-id>]` 命名空间；每个候选 frame 固定 390×844，允许自由探索阅读构图、字阶、纸面材质、进度形态和光影，但不得只换颜色；结构 axes 只作审阅提示，不改变阅读流、数据和页面闭包。
 
 ## 3. 页面闭包表（pen/HTML 帧 → uni-app 页，绑定 FR-F）
 
 | PageId | uni-app 页面 | 内容 | 绑定 |
 | --- | --- | --- | --- |
-| READING | pages/reading | 阅读行逐字（在线/回放/断线）+ 完成弹窗 + 空态 | FR-F-002/003/004/005；S3.2~S3.5 |
+| READING | pages/reading | 持续累积心经正文（在线/回放/断线）+ 总进度百分比 + 完成弹窗 + 空态 | FR-F-002/003/004/005；S3.2~S3.5 |
 | RECORDS | pages/records | 今日/近7/近30/累计/连续 | FR-F-006；S4.1 |
 | DEVICE | pages/device | 电量/4G/最后同步/待同步/待设备应用/失败+刷新/立即同步/重试 | FR-F-007；S4.2 |
 | SETTINGS | pages/settings | 音量/亮度/熄屏 镜像下发（离线=待设备应用） | FR-F-008；S4.3 |
@@ -56,11 +59,11 @@ PageId：`LOGIN|READING|RECORDS|DEVICE|SETTINGS|OVERLAY`；CMP 只能使用 §5 
 ```
 [LOGIN][BASE] 启动直达引导
 [LOGIN][PERM_ERROR] 权限错误（一句话+重开授权）
-[READING][LIVE] 在线逐字：当前字琥珀放大、已诵弱化、进度
+[READING][LIVE] 在线追加：已有正文保留、当前字琥珀聚焦、总进度百分比
 [READING][REPLAY] 离线回放中（顶部提示「回放中 · 新事件排队」）
 [READING][OFFLINE] 断线（查询/回放模式 banner）
 [READING][EMPTY] 无历史/首登空态
-[READING][DONE] 完成弹窗：礼花 + 从头开始/退出
+[READING][DONE] 完成 100%：全文保留，等待完成弹窗操作
 [OVERLAY][DONE] 独立完成弹窗：礼花 + 从头开始/退出（覆盖阅读背景）
 [RECORDS][BASE] 五统计
 [RECORDS][EMPTY] 无历史空态
@@ -74,9 +77,11 @@ PageId：`LOGIN|READING|RECORDS|DEVICE|SETTINGS|OVERLAY`；CMP 只能使用 §5 
 
 | CompId | 组件 | 规格 |
 | --- | --- | --- |
-| readingline | 阅读行 | 当前字 `{colors.brand.amber.400}` 放大；已诵 `{colors.mini.text.muted}`；不预览未来字 |
-| char-focus | 当前字聚焦 | `{typography.miniapp.reading}` 字号 |
-| statcard | 统计卡 | `components.mini.statcard`；大数+label |
+| readingline | 累积阅读流 | 每个已确认字按序 append；已有前缀保留、自然换行、可回看；未来字不出现 |
+| char-focus | 当前字聚焦 | `{typography.miniapp.reading}` 字号；只强调当前已确认字 |
+| reading-archive | 已完成篇章 | 完成后保留全文；“从头开始”在下方开启新 `round_id` 区块，旧篇可折叠 |
+| scripture-progress | 心经总进度 | 显示 `confirmed_chars / scripture_chars_total · percent%`，轨道与文本同时表达，percent 限制 0–100 |
+| statcard | 统计卡 | `components.mini.statcard`；大数+label，单位明确为敲击/天 |
 | devstatus-row | 设备状态行 | 值=`{colors.mini.text.secondary}` |
 | state-banner | 全局状态条 | 四语义 tone：ok/pending/warn/danger（配 icon+字） |
 | sync-action | 立即同步/重试 | 触发态 busy/pending/fail |
@@ -91,6 +96,7 @@ PageId：`LOGIN|READING|RECORDS|DEVICE|SETTINGS|OVERLAY`；CMP 只能使用 §5 
 - uni-app 复刻（Stage5b）：`cloud/frontend/src/pages/…` + `styles/tokens.scss`（§1 映射）；数据接 Pinia store + mock（数据形状按 sync-contract frontend API 草案），暂不依赖真实 backend。
 - 对拍检查：每页与 HTML 布局/令牌/状态文案一致；状态清单覆盖 §4。
 - 闭包总数固定为 14（含独立 `[OVERLAY][DONE]`）；HTML 不得出现 `woodfish`、`device_touch` 或可计数点击入口。
+- 阅读流验收：`confirmed_chars=0` 显示“等待设备诵读”；首字到达后追加为第一字；N→N+1 时前 N 字内容与顺序不变，只在尾部追加；断线/回放按 `round_id` 与快照水位重建同一前缀；完成时全文保留且进度 100%；“从头开始”新建独立篇章区块，累计统计不清零。
 
 ## 7. FR / story 校验
 - 覆盖 FR-F-001~010 全部页面与空/失败态；对照 epics S3.1~S3.6、S4.1~S4.5。

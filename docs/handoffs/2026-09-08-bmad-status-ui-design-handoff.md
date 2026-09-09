@@ -1,6 +1,6 @@
 # 电子木鱼（EWF）交接：BMAD 当前阶段 + UI 设计任务接管
 
-- **状态**：生效；Stage 3 方向稿已产出，待作者签收（2026-09-08）
+- **状态**：生效；UX 视觉设计返工，Stage 3 风格候选重新开始（2026-09-09）
 - **读者**：下一个接手 agent（尤其具备视觉/前端能力的 agent）与人类作者 Hongchenke
 - **目的**：单文件自足——搞清 EWF 现在处于 BMAD 哪个阶段、正在执行什么任务、从哪继续、受哪些门禁约束；**无需回看其它文档即可从本节「接手者要做」开始干活**。本文档后续阶段变动时由执行者回写 `updated` 并追加变更记录。
 
@@ -18,12 +18,12 @@
 | PRD | PRD | `…/prds/prd-Electronic_Wooden_Fish-2026-09-07/{prd.md,addendum.md}` | final（FR-E/B/F、UJ、SM、跨层字段） |
 | 架构 | CA | `…/architecture/architecture-Electronic_Wooden_Fish-2026-09-08/ARCHITECTURE-SPINE.md` | final（AD-1~19、板级 GPIO 合同、Stack、Deferred） |
 | Epic/Story | CE | `_bmad-output/planning-artifacts/epics.md` | final（9 epic / 53 story：E1–E4、S0–S4） |
-| UX 契约 | CU | `…/ux-designs/ux-Electronic_Wooden_Fish-2026-09-08/{DESIGN.md,EXPERIENCE.md,UI_CONTRACT-device.md,UI_CONTRACT-miniapp.md,.memlog.md}` | **draft**（视觉方向已作者签收；Stage3 方向稿后再定稿） |
+| UX 契约 | CU | `…/ux-designs/ux-Electronic_Wooden_Fish-2026-09-08/{DESIGN.md,EXPERIENCE.md,UI_CONTRACT-device.md,UI_CONTRACT-miniapp.md,.memlog.md}` | **draft**（视觉返工中；style 候选签收后再定稿） |
 | docs | — | `docs/`（含本交接）、`docs/embedded/`（legbot 迁移） | 本任务产物 |
 
 **尚未进行：** SP sprint（菜单码 SP/SS）→ BD build（菜单码 BD，含 Developer 代理）。源码目录 `Embedded/`、`cloud/backend/`、`cloud/frontend/` **仍为空占位**（绿地，未进入实施）。
 
-**一句话现状：** planning 全部完成、UX 契约 draft、Stage 3 两轨方向稿已产出并等待作者签收；尚未进入 sprint/build。
+**一句话现状：** planning 全部完成、UX 契约 draft、上一版方向稿已回退；当前重新构建设备 10 种与小程序 10 种禅意风格候选，尚未进入 sprint/build。
 
 ---
 
@@ -34,15 +34,15 @@
 | Stage | 内容 | 状态 |
 | --- | --- | --- |
 | 0 | 脚手架：UX 运行目录、`lvgl-design/`、`miniapp-design/`、legbot 4 个工具收录 | ✅ 完成 |
-| 1 | UX 契约 DESIGN.md + EXPERIENCE.md（双轨；方向已签收） | ✅ 完成(draft) |
+| 1 | UX 契约 DESIGN.md + EXPERIENCE.md（双轨；待视觉返工收口） | 🔄 返工中(draft) |
 | 2 | 双轨 UI_CONTRACT（可校验闭包表） | ✅ 完成(draft) |
-| 3 | **视觉方向稿 + 首帧 pen/HTML（设备木鱼页主视觉 + 小程序阅读行主视觉）** | ⏸ **已产出，待作者签收** |
+| 3 | **10+10 风格候选 Pen/HTML（设备木鱼页 + 小程序心经阅读页）** | 🔄 **返工中，未签收** |
 | 4 | 全帧闭包 pen/HTML + 闭包校验脚本 | ⏳ |
 | 5a | 设备 SquareLine → LVGL C 导出与接入 | ⏳ |
 | 5b | 小程序 HTML → uni-app 复刻 | ⏳ |
 | 6 | 收口：作者逐屏签收 + 回写 epics/架构 Deferred | ⏳ |
 
-**原停摆原因：** 前序模型无视觉能力，Pencil 视觉产出质量不够，作者决定把视觉设计交由**具备视觉能力的 agent** 完成。当前已由本轮 agent 产出两轨方向稿，下一门禁是作者逐屏签收。
+**返工原因：** 上一版仅改变颜色、设备状态栏未组件化、木鱼不可辨识、小程序正文不是连续阅读流，并含重复进度和作者化提示。当前以用户最新需求为唯一视觉返工输入。
 
 ---
 
@@ -50,19 +50,19 @@
 
 > 全局：中文输出；每到达一个**门禁**即暂停请作者签收；HTML 帧命名与闭包是硬校验，缺帧视为未完成。
 
-### Stage 3 · 两轨视觉方向稿（pen → HTML）【门禁：方向签收】
-- **输入**：`DESIGN.md`（tokens：设备=暖禅·墨玉 `device.*/brand.*`；小程序=同源浅底 `mini.*/brand.*`）、`EXPERIENCE.md`、`UI_CONTRACT-device.md`（画布 410×502/圆角110/命名规则）与 `UI_CONTRACT-miniapp.md`。设备端可参考蓝本 `legbot_watch/lvgl-design/watch-lvgl.pen` 的画布与分层结构（**视觉按木鱼新定，不套手表样式**）。
-- **动作**：用 Pencil 各做一张方向屏（设备=木鱼页主视觉：7字带占位低对比/电子木鱼/本轮进度/今日计数/顶部状态栏；小程序=阅读行主视觉：当前字聚焦/阅读纸面），并导出**静态自包含 HTML**（Tailwind+内联 SVG；每屏一个 410×502 圆角黑底块——小程序用手机比例块；帧内节点加 `data-pencil-name="[UI][PAGE:…][CMP:…]"` 逻辑名）。
-- **产物**：`lvgl-design/ewf-device-direction.pen(+.html)`、`miniapp-design/ewf-miniapp-direction.pen(+.html)`（已产出；HTML 已做离线自包含后处理）。
-- **DoD**：作者对两轨方向签收（这是视觉返工成本最低的改点）。
+### Stage 3 · 两轨 10+10 风格候选（pen → HTML）【门禁：候选板签收】
+- **输入**：`DESIGN.md`、`EXPERIENCE.md`、两份 UI_CONTRACT、PRD/简报和 `frontend-design-pro` 规则。上一版 Pen/HTML 不作为视觉真源。
+- **动作**：清空旧 Pen 画布，在每份 Pen 中建立 `[UI][STYLES]` 风格板和 10 个真实 sibling frame；每个候选至少改变构图、字体层级、材质/物件处理、进度表达、光影/签名细节中的三项。
+- **设备必备**：可复用 `gGgAm` statusbar、四信号组件、右侧电池、7 字窗口、心经进度字数+百分比、今日敲击、累计敲击；木鱼主视觉复用 `cmp_woodfish_mark` 与参考轮廓资产，页面保留器物/触区语义。
+- **小程序必备**：连续 append-only 心经正文、单一进度组件、字数+百分比+进度条、四项导航；不出现木鱼、孤立标点、重复进度或解释性节点。
+- **产物**：`lvgl-design/ewf-device-direction.pen/.html`、`miniapp-design/ewf-miniapp-direction.pen/.html`，另附两份 10 风格并排审阅 HTML。
+- **DoD**：候选板通过 hygiene/几何/组件/风格差异校验；作者分别选择 1 个风格。
 
-**本轮已锁定的方向细节**：设备木鱼居中、7 字带上置；小程序单行聚焦、四项底部导航；小程序独立 `[OVERLAY][DONE]` 帧已写入契约；方向稿样例经文/计数/电量均为非权威视觉样例。
-
-### Stage 4 · 全帧闭包（pen/HTML）【门禁：闭包校验通过 + 作者抽查】
-- **动作**：按 `UI_CONTRACT-device.md` §3/§4（页面/状态帧清单，设备 15 帧）与 `UI_CONTRACT-miniapp.md` §3/§4（14 帧）逐帧补齐 pen → 导出/刷新 HTML。
+### Stage 4 · 选中风格全帧闭包（pen/HTML）【门禁：闭包校验通过 + 作者抽查】
+- **前置**：只有在作者为两端各选择一个 style 后才能开始。按两份 UI_CONTRACT 逐帧补齐设备 15 帧与小程序 14 帧；选中 style 是唯一视觉母版。
 - **动作**：写/复用校验脚本：解析 HTML 全部 `data-pencil-name`，与契约闭包做差集；**差集为空才算完成**（可为 python 单文件，放 `lvgl-design/` 或 `tools/`，README 注明）。
 - **产物**：`lvgl-design/ewf-device-ui.pen/.html`、`miniapp-design/ewf-miniapp-ui.pen/.html`（HTML = 后续复刻/生成的**可解析事实源**）。
-- **DoD**：闭包差集为空；作者抽查逐屏通过。
+- **DoD**：闭包差集为空；无重复进度、作者化文案或孤立标点；作者抽查逐屏通过。
 
 ### Stage 5a · 设备轨 → SquareLine → LVGL C【门禁：校验器全绿 + 帧可渲染】
 - **动作**（工具见 §6，注意工具目前是 legbot 定向、需按 ewf 页集重定向后再跑）：
@@ -91,7 +91,7 @@
 3. **两层分离（设备）**：`generated/` 只布局/字体/事件空桩；业务渲染/路由/typed intent 在 `bindings/`；LVGL 仅 `ui_task` 独占调用。
 4. **作者签收门禁**：方向稿 / 全帧闭包 / LVGL 集成 / 小程序对拍 各门禁由 Hongchenke 逐屏签收。
 
-**产品不变量（UI 不得突破）**：小程序**无点击木鱼、不产生敲击**（FR-F-002），只呈现 backend 已确认进度（AD-2）；设备本地镜像须带「同步中/待同步」标记（AD-2）；未校时显示「待校时」（AD-6）；7 字带空位低对比、**不预览未来经文**（AD-19）；后端持久化 JSON 零库（AD-16）；MVP 无 BLE/Wi-Fi/GPS 业务链路。
+**产品不变量（UI 不得突破）**：小程序**无点击木鱼、不产生敲击**（FR-F-002），只呈现 backend 已确认进度（AD-2）；设备本地镜像须带「同步中/待同步」标记（AD-2）；未校时显示「待校时」（AD-6）；7 字带空位低对比、**不预览未来经文**（AD-19）；心经进度显示已诵字数/总字数/百分比，今日敲击与累计敲击分开；小程序正文 append-only；后端持久化 JSON 零库（AD-16）；MVP 无 BLE/Wi-Fi/GPS 业务链路。最终页面禁止 AI 思维链、内部推理、Node ID、调试文案和作者提示。
 
 ---
 
@@ -123,7 +123,7 @@
 - **Pencil MCP 桌面连接修复记录**：现象=`get_editor_state` 报 `failed to connect to running Pencil app: trae`。根因=本会话启动时（2026-09-08 16:59）加载了旧配置指向的 **trae 版** pencil server（`~/.pencil/mcp/trae/… --app trae`），而作者打开的桌面 Pen.app 是 desktop 宿主、`connectedAgents:[]`。处置：`~/.claude.json` 的 `mcpServers.pencil` 现指向 `/Applications/Pen.app/… --app desktop --agent claudeCodeCLI`（与打开的 Pen 一致）；旧的 trae server 进程已 kill。
 - **接手时若仍连不上**：运行 `/mcp` 找到 `pencil` 并 **Reconnect**（或重启 Claude 会话），确认 Pen.app 顶部连接面板 `connectedAgents` 非空后再 `get_editor_state`。Pen 内打开 `legbot_watch/lvgl-design/watch-lvgl.pen` 可作设备画布参考（只读蓝本，勿改）。
 - **SquareLine 工具**（`lvgl-design/squareline_studio/tools/`）：`generate_squareline_project.py`(html→工程/字体)、`postprocess_squareline_export.py`(规范化导出)、`validate_squareline_project.py`(工程/页/屏/字体闭包)、`validate_font_coverage.py`(字形覆盖)。**注意**：均照搬自 legbot，现为 **legbot 定向**（页面集/字体子集是 watch 的），须在生成本仓 `ewf-device-ui.html` 与 `font_glyph_contract.json` 后按 ewf 页集**重定向/精简**（见 `lvgl-design/README.md` 与 UX `.memlog.md`）；未重定向前不要直接拿它们当 EWF 终验。
-- **EWF 方向稿校验器**：`lvgl-design/validate_ewf_ui_closure.py`（标准库；`--stage direction` 检查首帧，`--stage full` 检查 15/14 帧）；`postprocess_ewf_direction_html.py` 清除 Pencil 导出外链/工作区背景并保留逻辑名。
+- **EWF 方向稿校验器**：`lvgl-design/validate_ewf_ui_closure.py`（`--stage candidates` 检查每轨 10 个 style，`--stage full --style STYLE-ID` 检查选中 style 的 15/14 帧）；`ui_text_hygiene.py` 检查最终可见文案和 Node ID 泄漏。
 - **HTML 形态范式**：参考 legbot `lvgl-design/watch-lvgl.html`（静态 Tailwind+内联 SVG lucide；每屏 410×502 圆角黑底块；节点 `data-pencil-name`；单一根容器横向铺排）。
 
 ---
@@ -134,7 +134,7 @@
 
 **小程序轨（UI_CONTRACT-miniapp §4，14 帧）**：`LOGIN[BASE/PERM_ERROR]`、`READING[LIVE/REPLAY/OFFLINE/EMPTY/DONE]`、`RECORDS[BASE/EMPTY]`、`DEVICE[BASE/FAIL_RETRY]`、`SETTINGS[BASE/PENDING]`。
 
-**已签收的方向决策**：设备=**暖禅·墨玉**（近黑暖底 + 纸白字 + 檀木/琥珀金强调，单线木鱼 + 敲击暖金光晕）；小程序=**同源浅底·阅读向**（浅米纸面 + 墨字，琥珀仅当前字/进度/完成）。两轨令牌同源。
+**保留的产品边界**：设备必须保持圆弧屏、四信号状态组件、右侧电池、可辨识木鱼和心经进度；小程序必须保持浅米阅读基底、连续确认正文、总进度和无木鱼输入。具体视觉风格等待 10+10 候选签收。
 
 ---
 
@@ -146,9 +146,9 @@
 - **设计完成约束**：闭包校验 + 令牌/字体单一来源 + 两层分离 + 作者逐屏签收（详见 §4）。
 - 未提交 git 改动集中在 `_bmad-output/planning-artifacts/{epics.md,ux-designs}`、`lvgl-design/`、`miniapp-design/`、`docs/`、`AGENTS.md`。
 
-## 9. 2026-09-08 续作变更记录
+## 9. 2026-09-09 续作变更记录
 
-- 完成 Stage 3 两轨方向稿：设备 `ewf-device-direction.pen/.html`、小程序 `ewf-miniapp-direction.pen/.html`。
-- 新增 `lvgl-design/validate_ewf_ui_closure.py` 与测试，方向阶段设备/小程序均通过 1/1 闭包、离线资源和禁木鱼检查。
-- UX 四份契约完成最小机器可读性收口；小程序闭包明确包含独立 `[OVERLAY][DONE]`，一级导航锁定四项底部导航。
-- 当前门禁：等待 Hongchenke 对两张方向稿逐屏签收；签收前不得创建 `ewf-device-ui.*` / `ewf-miniapp-ui.*` 全帧稿，也不得进入 Stage 5 复刻。
+- 上一版方向稿已回退，不再作为视觉真源。
+- Stage 3 重新开始：先产出设备 10 种、小程序 10 种真正不同的禅意 style；候选板通过 hygiene/几何/组件校验后再由 Hongchenke 各选 1 种。
+- 本轮已重新保存两份真正重构的 Pen 候选板，并导出离线审阅 HTML；设备 10/10、小程序 10/10 候选闭包与文案 hygiene 均通过，HTML 已清除 `data-pencil-id` 与外部资源。候选已改为不同构图、阅读轴、材质/物件与进度表现，并由结构指纹校验拒绝只换色版本。
+- 当前门禁：等待 Hongchenke 从两份 10 风格候选板中各选择 1 种；选定前不得创建 `ewf-device-ui.*` / `ewf-miniapp-ui.*` 全帧稿，也不得进入 Stage 5 复刻。

@@ -2,7 +2,7 @@
 title: "产品简报：电子木鱼"
 status: draft
 created: 2026-09-08
-updated: 2026-09-08
+updated: 2026-09-09
 ---
 
 # 产品简报：电子木鱼

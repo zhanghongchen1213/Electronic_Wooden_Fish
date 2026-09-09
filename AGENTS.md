@@ -17,7 +17,7 @@
 
 ## 2. BMAD 状态指针
 
-- 阶段：planning 完成（PRD/架构/epics final）＋ UX 契约 draft ＋ UI 视觉设计**停摆待移交**；**未进入 sprint/build**。源码目录为空，绿地。
+- 阶段：planning 完成（PRD/架构/epics final）＋ UX 契约 draft ＋ UI 视觉设计**返工中**；当前先完成 10+10 风格候选与作者选型，**未进入 sprint/build**。源码目录为空，绿地。
 - 权威与下一步的**唯一入口**：`docs/handoffs/2026-09-08-bmad-status-ui-design-handoff.md`。
 - 菜单码：`SP` sprint → `BD` build；`CU` bmad-ux（UX 已在跑，后续 Update）。改动产出前先 `git status` 了解未提交集合。
 
@@ -54,6 +54,7 @@
 
 ### 3.5 EWF 差异红线（与 legbot 不同，勿照搬错误方向）
 - **无** BLE/Wi-Fi/GPS/外骨骼/云支付 业务链路；`lvgl-design` 与 docs 迁移内容中这些字句仅为排除说明。
+- 设备顶部可呈现 4G/Wi-Fi/蓝牙/GPS 信号组件及 connected/no-signal/disabled 状态；这些图标只表达本地能力状态，不改变 MVP 无 BLE/Wi-Fi/GPS 业务链路的边界。
 - 4G = **Air780EGP**（IO43/44 UART + DTR IO10/RST IO15/NET_STATUS IO16/GNSS_VCC IO8）。AT/联网经验已迁移至 **`docs/embedded/4g/`**（源 `main_control`，HEAD `fb458b9`）；勿从 legbot 引（其用 ML307R 不适用）。
 - 后端持久化 = **JSON 原子文件、零数据库**（AD-16，覆盖早期 SQLite）。
 - 键盘输入含 PVDF（比较器 IO11 唤醒 + ADC IO9 确认，ADC1_CH8），legbot 无此，按固件 story E2.5 实现。
@@ -63,6 +64,12 @@
 - **backend（`cloud/backend`，Spring Boot）**：接口统一 `/api/v1` + `{code,message,data}` 信封（code=0 成功）；错误码 = `{HTTP 状态}{两位序号}`；业务错误回 **HTTP 200 + 业务码**（GlobalExceptionHandler），不破坏 HTTP 语义；微信登录走 `WechatMiniClient` 模式（code2Session 先取 String body 再解析、AppID 三处对齐、session_key 清空与 openId 脱敏、access_token 提前 300s 缓存）；JWT 过滤器分级 + `ThreadLocal finally clear()`；持久化 **JSON 原子文件零库**（AD-16，**禁止引入 SQL/DB**）；单身份单设备（无角色/租户）。
 - **frontend（`cloud/frontend`，uni-app 仅微信小程序）**：单一 `VITE_API_BASE_URL` + 统一 `api/request`（信封+鉴权头，不散落请求）；**401 单飞刷新队列**（并发 401 只刷一次，失败唤醒所有等待防挂起，刷新后重试一次，仍失败 `uni.reLaunch` 登录页且不重复跳）；令牌本地提前过期判断；本地状态只放 Pinia/本地存储，不作权威数据（AD-2）；开发 `urlCheck:false`、生产在微信公众平台配 request 合法域名；分包控 2MB。
 - 经验与排除详见 `docs/backend/`、`docs/frontend/` 及其 README。
+
+### 3.7 最终页面文案与设计产物硬禁令
+- 最终设备 UI、Pen 画面、静态 HTML、uni-app 页面、前端可见文案和交付截图中，**严禁**出现 AI 思维链、内部推理、设计过程、调试说明、Node ID、`data-pencil-id`、`TODO`、`draft`、`placeholder` 或作者提示。
+- `qljP7`、`WfAs7`、`Z6Qge`、`e8Sgp`、`gGgAm`、`NtM6r` 等内部节点标识不得进入用户可见文本或生产 HTML 属性；交付 HTML 必须清除 `data-pencil-id`。
+- UI 只允许产品文案、状态文案和 canonical《心经》内容；解释设计意图的文字只能留在文档或工作日志。
+- 所有 UX 设计收口前必须运行 `python3 lvgl-design/ui_text_hygiene.py`；发现禁用词、重复进度、孤立标点、开发者说明或节点标识时视为失败。
 
 ## 4. 问题排查索引（症状 → 文档）
 

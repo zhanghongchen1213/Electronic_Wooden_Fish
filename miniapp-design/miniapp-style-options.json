@@ -1,0 +1,17 @@
+{
+  "surface": "miniapp",
+  "selected_style": null,
+  "canvas": {"width": 390, "height": 844, "safe_area_top": 62, "page_pad": 20, "bottom_nav_height": 56},
+  "styles": [
+    {"id":"MINI-01","name":"宋版长卷","category":"minimal-editorial","layout":"scroll","surface":"#f8f1e5","ink":"#2a241e","accent":"#a9652e","font":"Noto Serif SC","signature":"窄纵向经页栏与页码细线","axes":["composition","typography","material","progress"]},
+    {"id":"MINI-02","name":"茶席侘寂","category":"organic-soft","layout":"tea","surface":"#eee8dc","ink":"#3e3931","accent":"#9b7244","font":"Noto Serif SC","signature":"手工弧线与茶席侧轴","axes":["composition","typography","material","lighting"]},
+    {"id":"MINI-03","name":"莲池月影","category":"minimal-cinematic","layout":"lotus","surface":"#e9efed","ink":"#25383b","accent":"#bd8140","font":"Noto Serif SC","signature":"月相圆环包围当前字","axes":["composition","typography","progress","lighting"]},
+    {"id":"MINI-04","name":"山寺晨雾","category":"restrained-gradient","layout":"mountain","surface":"#dfe8e5","ink":"#2d403e","accent":"#a66d38","font":"Noto Sans SC","signature":"纵向阅读轴与山形线稿","axes":["composition","material","lighting","signature"]},
+    {"id":"MINI-05","name":"沉香册页","category":"tactile-editorial","layout":"book","surface":"#efe3d1","ink":"#39291f","accent":"#a36338","font":"Noto Serif SC","signature":"册页边框与章节页签","axes":["composition","typography","material","signature"]},
+    {"id":"MINI-06","name":"篆刻印谱","category":"swiss-grid","layout":"seal","surface":"#f4f0e5","ink":"#2c2823","accent":"#a66b3a","font":"Noto Serif SC","signature":"基线网格与印谱编号","axes":["composition","typography","progress","signature"]},
+    {"id":"MINI-07","name":"窗纸映光","category":"restrained-glass","layout":"window","surface":"#f6f4ec","ink":"#2c2a26","accent":"#bd8343","font":"Noto Sans SC","signature":"纸窗双栏与静态光带","axes":["composition","material","lighting","signature"]},
+    {"id":"MINI-08","name":"砂庭回纹","category":"texture-minimal","layout":"sand","surface":"#e9e1d4","ink":"#3a332c","accent":"#a56e36","font":"Noto Sans SC","signature":"低密度砂线与回纹","axes":["composition","material","progress","signature"]},
+    {"id":"MINI-09","name":"暮鼓檀音","category":"light-dim-pair","layout":"drum","surface":"#1d211f","ink":"#f5eee2","accent":"#d3a45c","font":"Noto Serif SC","signature":"上下双表面与鼓点刻度","axes":["composition","typography","progress","lighting"]},
+    {"id":"MINI-10","name":"古籍折页","category":"asymmetric-editorial","layout":"fold","surface":"#f5eee1","ink":"#302a22","accent":"#a66d39","font":"Noto Serif SC","signature":"非对称折页与右侧书签轨","axes":["composition","typography","progress","signature"]}
+  ]
+}

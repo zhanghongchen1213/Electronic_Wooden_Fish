@@ -23,9 +23,11 @@ DEVICE_DIRECTION = ROOT / "lvgl-design/ewf-device-direction.html"
 MINI_DIRECTION = ROOT / "miniapp-design/ewf-miniapp-direction.html"
 DEVICE_FULL = ROOT / "lvgl-design/ewf-device-ui.html"
 MINI_FULL = ROOT / "miniapp-design/ewf-miniapp-ui.html"
+DEVICE_MANIFEST = ROOT / "lvgl-design/device-style-options.json"
+MINI_MANIFEST = ROOT / "miniapp-design/miniapp-style-options.json"
 
 NAME_RE = re.compile(
-    r"^\[UI\]\[PAGE:(?P<page>[A-Z_]+)\]\[ST:(?P<state>[A-Z0-9_]+)\]"
+    r"^\[UI\](?:\[STYLE:(?P<style>[A-Z0-9-]+)\])?\[PAGE:(?P<page>[A-Z_]+)\]\[ST:(?P<state>[A-Z0-9_]+)\]"
     r"(?:\[CMP:(?P<cmp>[a-z0-9-]+)\])?(?:\[VAR:(?P<var>[A-Za-z0-9_-]+)\])?$"
 )
 COLOR_RE = re.compile(r"#[0-9a-fA-F]{6,8}")
@@ -57,7 +59,8 @@ def frame_key(name: str) -> str | None:
     match = NAME_RE.match(name)
     if not match:
         return None
-    return f"{match.group('page')}.{match.group('state')}"
+    prefix = f"{match.group('style')}:" if match.group("style") else ""
+    return f"{prefix}{match.group('page')}.{match.group('state')}"
 
 
 def component_name(name: str) -> str | None:
@@ -99,7 +102,10 @@ class DesignParser(HTMLParser):
                         "name": name,
                         "attrs": attrs,
                         "components": set(),
+                        "component_attrs": {},
+                        "component_counts": {},
                         "names": [],
+                        "nodes": [],
                         "depth": self._depth,
                     },
                 )
@@ -107,9 +113,16 @@ class DesignParser(HTMLParser):
             elif self._frame_stack:
                 current = self.frames[self._frame_stack[-1]]
                 current["names"].append(name)
+                current["nodes"].append((name, attrs))
                 cmp = component_name(name)
                 if cmp:
                     current["components"].add(cmp)
+                    # Count only the instance/master root. Descendant layers keep
+                    # the same CMP namespace for mapping, but are not additional
+                    # component instances.
+                    if "[VAR:master]" in name:
+                        current["component_counts"][cmp] = int(current["component_counts"].get(cmp, 0)) + 1
+                    current["component_attrs"].setdefault(cmp, []).append(attrs)
         self._depth += 1
 
     def handle_endtag(self, tag: str) -> None:
@@ -124,17 +137,17 @@ class DesignParser(HTMLParser):
 
 
 def required_components(surface: str, key: str) -> set[str]:
-    page = key.split(".", 1)[0]
+    page = key.split(":", 1)[-1].split(".", 1)[0]
     if surface == "device":
         return {
-            "MUYU": {"statusbar", "charcell", "progress-pill", "today-count", "woodfish"},
-            "JINGWEN": {"statusbar", "glyph-current", "progress-pill"},
-            "TONGJI": {"statusbar", "today-count"},
+            "MUYU": {"statusbar", "charcell", "scripture-progress", "today-taps", "total-taps", "woodfish", "woodfish-anatomy"},
+            "JINGWEN": {"statusbar", "glyph-current", "scripture-progress"},
+            "TONGJI": {"statusbar", "today-taps", "total-taps"},
             "SHEZHI": {"statusbar", "row", "slider", "sync-btn"},
             "OVERLAY": {"modal-done"},
         }.get(page, set())
     return {
-        "READING": {"readingline", "char-focus", "bottom-nav"},
+        "READING": {"readingline", "char-focus", "scripture-progress", "bottom-nav"},
         "RECORDS": {"statcard", "bottom-nav"},
         "DEVICE": {"devstatus-row", "state-banner", "sync-action", "bottom-nav"},
         "SETTINGS": {"setting-mirror", "bottom-nav"},
@@ -156,29 +169,110 @@ def contrast_ratio(foreground: str, background: str) -> float:
     return (light + 0.05) / (dark + 0.05)
 
 
-def validate(surface: str, html_path: Path, contract_path: Path, stage: str) -> dict[str, object]:
+def structural_fingerprint(frame: dict[str, object]) -> str:
+    """提取去除 style/variant/color 后的结构指纹，仅用于发现近重复候选。"""
+    parts: list[str] = []
+    for name, attrs in frame.get("nodes", []):
+        style = attrs.get("style", "")
+        style = re.sub(r"(?:background(?:-color)?|color|fill|stroke|box-shadow)\s*:[^;]+;?", "", style, flags=re.I)
+        style = re.sub(r"#[0-9a-f]{3,8}", "", style, flags=re.I)
+        style = re.sub(r"\s+", " ", style).strip()
+        if "[CMP:" in name:
+            semantic = re.sub(r"\[STYLE:[A-Z0-9-]+\]", "", name)
+            semantic = re.sub(r"\[VAR:[^\]]+\]", "", semantic)
+            parts.append(f"{semantic}|{style}|class={attrs.get('class','')}")
+    return "||".join(parts)
+
+
+def validate(
+    surface: str,
+    html_path: Path,
+    contract_path: Path,
+    stage: str,
+    style_id: str | None = None,
+    manifest_path: Path | None = None,
+) -> dict[str, object]:
     errors: list[dict[str, object]] = []
+    warnings: list[dict[str, object]] = []
     if not html_path.exists():
         return {"surface": surface, "stage": stage, "html": str(html_path), "errors": [{"code": "missing_html"}], "ok": False}
 
     source = html_path.read_text(encoding="utf-8")
     parser = DesignParser()
     parser.feed(source)
-    expected_full = expand_contract(contract_path)
-    expected = {"MUYU.BASE"} if surface == "device" and stage == "direction" else expected_full
-    if surface == "miniapp" and stage == "direction":
-        expected = {"READING.LIVE"}
-
     found = set(parser.frames)
-    missing = sorted(expected - found)
-    unexpected = sorted(found - expected)
+    style_ids = sorted({match.group("style") for frame in parser.frames.values() if (match := NAME_RE.match(str(frame["name"]))) and match.group("style")})
+    expected_full = expand_contract(contract_path)
+    if stage == "candidates":
+        expected = set()
+        expected_style_ids = (
+            {f"DEVICE-{index:02d}" for index in range(1, 11)}
+            if surface == "device"
+            else {f"MINI-{index:02d}" for index in range(1, 11)}
+        )
+        missing = []
+        unexpected = []
+        if len(found) != 10:
+            errors.append({"code": "candidate_count", "expected": 10, "actual": len(found)})
+        if set(style_ids) != expected_style_ids:
+            errors.append({"code": "candidate_style_ids", "expected": sorted(expected_style_ids), "actual": style_ids})
+        if manifest_path:
+            if not manifest_path.exists():
+                errors.append({"code": "missing_style_manifest", "path": str(manifest_path)})
+            else:
+                manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
+                manifest_styles = manifest.get("styles", [])
+                manifest_ids = {str(item.get("id")) for item in manifest_styles}
+                if len(manifest_styles) != 10 or manifest_ids != expected_style_ids:
+                    errors.append(
+                        {
+                            "code": "style_manifest_ids",
+                            "expected": sorted(expected_style_ids),
+                            "actual": sorted(manifest_ids),
+                        }
+                    )
+                advisory_axes = []
+                for item in manifest_styles:
+                    axes = {str(axis).lower() for axis in item.get("axes", []) if str(axis).lower() != "color"}
+                    if len(axes) < 3:
+                        advisory_axes.append({"style": item.get("id"), "axes": sorted(axes)})
+                if advisory_axes:
+                    warnings.append({"code": "style_axes_advisory", "items": advisory_axes})
+        fingerprints: dict[str, str] = {}
+        for key, frame in parser.frames.items():
+            match = NAME_RE.match(str(frame["name"]))
+            if not match or not match.group("style"):
+                continue
+            fingerprint = structural_fingerprint(frame)
+            if fingerprint in fingerprints:
+                errors.append({"code": "style_structure_duplicate", "styles": [fingerprints[fingerprint], match.group("style")]})
+            else:
+                fingerprints[fingerprint] = match.group("style")
+        for style_id in expected_style_ids & set(style_ids):
+            style_frames = [frame for key, frame in parser.frames.items() if key.startswith(style_id + ":")]
+            signatures = {
+                match.group("var")
+                for frame in style_frames
+                for name in frame["names"]
+                if (match := NAME_RE.match(name)) and match.group("cmp") == "style-signature" and match.group("var")
+            }
+            if not signatures:
+                errors.append({"code": "missing_style_signature", "style": style_id})
+    else:
+        expected = {"MUYU.BASE"} if surface == "device" and stage == "direction" else expected_full
+        if surface == "miniapp" and stage == "direction":
+            expected = {"READING.LIVE"}
+        if style_id:
+            expected = {f"{style_id}:{item}" for item in expected}
+        missing = sorted(expected - found)
+        unexpected = sorted(found - expected)
     if missing:
         errors.append({"code": "missing_frames", "items": missing})
     if unexpected:
         errors.append({"code": "unexpected_frames", "items": unexpected})
 
     names = [item[0] for item in parser.names]
-    duplicates = sorted({name for name in names if names.count(name) > 1})
+    duplicates = sorted({name for name in names if "[STYLE:" in name and names.count(name) > 1})
     if duplicates:
         errors.append({"code": "duplicate_names", "items": duplicates})
     invalid_names = sorted(name for name in names if not NAME_RE.match(name))
@@ -187,26 +281,70 @@ def validate(surface: str, html_path: Path, contract_path: Path, stage: str) -> 
 
     if re.search(r"(?:src|href)\s*=\s*[\"']https?://|url\(\s*[\"']?https?://|<script[^>]+src=", source, re.I):
         errors.append({"code": "external_resource"})
+    if re.search(r"url\(\s*[\"']?(?:\.\.?/)?assets/|(?:src|href)\s*=\s*[\"'](?:\.\.?/)?assets/", source, re.I):
+        errors.append({"code": "non_embedded_asset"})
+    if re.search(r"font-family\s*:[^;}]*(?:Inter|Roboto|Arial|system-ui)", source, re.I):
+        errors.append({"code": "uncontrolled_font"})
+    if "data-pencil-id" in source:
+        errors.append({"code": "node_id_leak"})
 
     for key, frame in parser.frames.items():
         attrs = frame["attrs"]
+        page = key.split(":", 1)[-1].split(".", 1)[0]
         width = css_dimension(attrs, "width")
         height = css_dimension(attrs, "height")
         expected_size = (410, 502) if surface == "device" else (390, 844)
         if (width, height) != expected_size:
             errors.append({"code": "frame_size", "frame": key, "expected": expected_size, "actual": (width, height)})
+        root_style = attrs.get("style", "")
+        if surface == "device" and (
+            not re.search(r"border-radius\s*:\s*110px", root_style, re.I)
+            or not re.search(r"overflow\s*:\s*hidden", root_style, re.I)
+        ):
+            errors.append({"code": "device_arc_frame", "frame": key, "expected": "border-radius:110px; overflow:hidden"})
         components = set(frame["components"])
         required = required_components(surface, key)
         absent = sorted(required - components)
         if absent:
             errors.append({"code": "missing_components", "frame": key, "items": absent})
 
-        if surface == "device" and "woodfish" in components:
+        component_attrs = frame["component_attrs"]
+        component_counts = frame["component_counts"]
+        if surface == "device":
+            statusbars = component_attrs.get("statusbar", [])
+            if not any(
+                css_dimension(item, "width") == 314
+                and css_dimension(item, "height") == 24
+                and re.search(r"left\s*:\s*48px", item.get("style", ""))
+                and re.search(r"top\s*:\s*20px", item.get("style", ""))
+                for item in statusbars
+            ):
+                errors.append({"code": "statusbar_geometry", "frame": key, "expected": "x48 y20 314x24"})
+        if surface == "miniapp" and page == "READING":
+            if component_counts.get("scripture-progress", 0) != 1:
+                errors.append({"code": "single_scripture_progress", "frame": key, "actual": component_counts.get("scripture-progress", 0)})
+            navs = component_attrs.get("bottom-nav", [])
+            if not any(
+                css_dimension(item, "width") == 350
+                and css_dimension(item, "height") == 56
+                and re.search(r"left\s*:\s*20px", item.get("style", ""))
+                and re.search(r"top\s*:\s*768px", item.get("style", ""))
+                for item in navs
+            ):
+                errors.append({"code": "bottom_nav_geometry", "frame": key, "expected": "x20 y768 350x56"})
+
+        if surface == "device" and "woodfish-anatomy" in components:
             for name, node_attrs, _depth in parser.names:
-                if component_name(name) == "woodfish" and "[VAR:idle]" in name:
+                if component_name(name) == "woodfish-anatomy" and "[VAR:idle]" in name:
                     size = (css_dimension(node_attrs, "width"), css_dimension(node_attrs, "height"))
                     if not size[0] or not size[1] or size[0] < 96 or size[1] < 96:
                         errors.append({"code": "touch_target", "frame": key, "actual": size})
+            for node_attrs in component_attrs.get("woodfish", []):
+                if "[VAR:tap-zone]" not in node_attrs.get("data-pencil-name", ""):
+                    continue
+                size = (css_dimension(node_attrs, "width"), css_dimension(node_attrs, "height"))
+                if not size[0] or not size[1] or size[0] < 96 or size[1] < 96:
+                    errors.append({"code": "touch_target", "frame": key, "actual": size})
 
     if surface == "miniapp" and re.search(r"woodfish|device_touch|电子木鱼", source, re.I):
         errors.append({"code": "miniapp_forbidden_woodfish"})
@@ -225,11 +363,12 @@ def validate(surface: str, html_path: Path, contract_path: Path, stage: str) -> 
         "surface": surface,
         "stage": stage,
         "html": str(html_path),
-        "expected_frames": len(expected),
+        "expected_frames": 10 if stage == "candidates" else len(expected),
         "found_frames": len(found),
         "frames": sorted(found),
         "contrast_ratio": round(ratios[surface], 3),
         "errors": errors,
+        "warnings": warnings,
         "ok": not errors,
     }
 
@@ -237,9 +376,11 @@ def validate(surface: str, html_path: Path, contract_path: Path, stage: str) -> 
 def main(argv: Iterable[str] | None = None) -> int:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--surface", choices=("device", "miniapp"), required=True)
-    parser.add_argument("--stage", choices=("direction", "full"), default="full")
+    parser.add_argument("--stage", choices=("direction", "candidates", "full"), default="full")
+    parser.add_argument("--style", help="作者选中的 style id，用于 full 阶段按单一 style 校验")
     parser.add_argument("--html", type=Path)
     parser.add_argument("--contract", type=Path)
+    parser.add_argument("--manifest", type=Path, help="候选 style manifest；每个候选至少声明 3 个非颜色变化轴")
     args = parser.parse_args(argv)
 
     defaults = {
@@ -247,7 +388,10 @@ def main(argv: Iterable[str] | None = None) -> int:
         "miniapp": (MINI_DIRECTION if args.stage == "direction" else MINI_FULL, MINI_CONTRACT),
     }
     html_path, contract_path = defaults[args.surface]
-    result = validate(args.surface, args.html or html_path, args.contract or contract_path, args.stage)
+    manifest_path = args.manifest
+    if args.stage == "candidates" and manifest_path is None:
+        manifest_path = DEVICE_MANIFEST if args.surface == "device" else MINI_MANIFEST
+    result = validate(args.surface, args.html or html_path, args.contract or contract_path, args.stage, args.style, manifest_path)
     print(json.dumps(result, ensure_ascii=False, indent=2))
     return 0 if result["ok"] else 1
 

@@ -3,16 +3,734 @@
   "children": [
     {
       "type": "frame",
-      "id": "bi8Au",
+      "id": "riK8r",
+      "x": 45,
+      "y": -133,
+      "name": "cmp_progress_ribbon",
+      "reusable": true,
+      "width": 350,
+      "height": 72,
+      "fill": "#fffdf8",
+      "cornerRadius": 16,
+      "layout": "none",
+      "children": [
+        {
+          "type": "rectangle",
+          "cornerRadius": 4,
+          "id": "SDg7e",
+          "x": 0,
+          "y": 10,
+          "name": "progress-track",
+          "fill": "#e6dfd5",
+          "width": 350,
+          "height": 8
+        },
+        {
+          "type": "rectangle",
+          "cornerRadius": 4,
+          "id": "YlxBF",
+          "x": 0,
+          "y": 10,
+          "name": "progress-fill",
+          "fill": "#b77732",
+          "width": 78,
+          "height": 8
+        },
+        {
+          "type": "ellipse",
+          "id": "hjutv",
+          "x": 72,
+          "y": 4,
+          "name": "progress-marker",
+          "fill": "#fffdf8",
+          "width": 20,
+          "height": 20,
+          "stroke": "#b77732",
+          "strokeWidth": 2
+        },
+        {
+          "type": "text",
+          "id": "MxETD",
+          "x": 0,
+          "y": 30,
+          "name": "progress-label",
+          "fill": "#2a2620",
+          "textGrowth": "fixed-width-height",
+          "width": 250,
+          "height": 28,
+          "content": "心经进度 42 / 260 字",
+          "textAlignVertical": "middle",
+          "fontFamily": "Noto Serif SC",
+          "fontSize": 13,
+          "fontWeight": "600"
+        },
+        {
+          "type": "text",
+          "id": "UIpWN",
+          "x": 280,
+          "y": 30,
+          "name": "progress-percent",
+          "fill": "#b77732",
+          "textGrowth": "fixed-width-height",
+          "width": 70,
+          "height": 28,
+          "content": "16.2%",
+          "textAlign": "right",
+          "textAlignVertical": "middle",
+          "fontFamily": "Noto Sans SC",
+          "fontSize": 14,
+          "fontWeight": "700"
+        }
+      ]
+    },
+    {
+      "type": "frame",
+      "id": "IgF5l",
+      "x": 45,
+      "y": -271,
+      "name": "cmp_bottom_nav_rich",
+      "reusable": true,
+      "width": 350,
+      "height": 56,
+      "fill": "#fffdf8",
+      "cornerRadius": 18,
+      "layout": "none",
+      "children": [
+        {
+          "type": "rectangle",
+          "id": "iKIv2",
+          "x": 16,
+          "y": 0,
+          "name": "nav-rule",
+          "fill": "#c8ad86",
+          "width": 318,
+          "height": 1
+        },
+        {
+          "type": "icon",
+          "id": "C9Kt36",
+          "x": 33,
+          "y": 7,
+          "name": "nav-icon-0",
+          "width": 20,
+          "height": 20,
+          "icon": "book-open",
+          "library": "lucide",
+          "fill": "#b77732"
+        },
+        {
+          "type": "text",
+          "id": "CI9h2",
+          "x": 12,
+          "y": 31,
+          "name": "nav-label-0",
+          "fill": "#b77732",
+          "textGrowth": "fixed-width-height",
+          "width": 63,
+          "height": 18,
+          "content": "阅读",
+          "textAlign": "center",
+          "textAlignVertical": "middle",
+          "fontFamily": "Noto Sans SC",
+          "fontSize": 11,
+          "fontWeight": "700"
+        },
+        {
+          "type": "icon",
+          "id": "dLY9P",
+          "x": 120.5,
+          "y": 7,
+          "name": "nav-icon-1",
+          "width": 20,
+          "height": 20,
+          "icon": "activity",
+          "library": "lucide",
+          "fill": "#8d877f"
+        },
+        {
+          "type": "text",
+          "id": "Cgqwt",
+          "x": 99.5,
+          "y": 31,
+          "name": "nav-label-1",
+          "fill": "#8d877f",
+          "textGrowth": "fixed-width-height",
+          "width": 63,
+          "height": 18,
+          "content": "记录",
+          "textAlign": "center",
+          "textAlignVertical": "middle",
+          "fontFamily": "Noto Sans SC",
+          "fontSize": 11
+        },
+        {
+          "type": "icon",
+          "id": "H83ie",
+          "x": 208,
+          "y": 7,
+          "name": "nav-icon-2",
+          "width": 20,
+          "height": 20,
+          "icon": "radio",
+          "library": "lucide",
+          "fill": "#8d877f"
+        },
+        {
+          "type": "text",
+          "id": "Q3nFm",
+          "x": 187,
+          "y": 31,
+          "name": "nav-label-2",
+          "fill": "#8d877f",
+          "textGrowth": "fixed-width-height",
+          "width": 63,
+          "height": 18,
+          "content": "设备",
+          "textAlign": "center",
+          "textAlignVertical": "middle",
+          "fontFamily": "Noto Sans SC",
+          "fontSize": 11
+        },
+        {
+          "type": "icon",
+          "id": "wFnSh",
+          "x": 295.5,
+          "y": 7,
+          "name": "nav-icon-3",
+          "width": 20,
+          "height": 20,
+          "icon": "sliders-horizontal",
+          "library": "lucide",
+          "fill": "#8d877f"
+        },
+        {
+          "type": "text",
+          "id": "Z5u3uG",
+          "x": 274.5,
+          "y": 31,
+          "name": "nav-label-3",
+          "fill": "#8d877f",
+          "textGrowth": "fixed-width-height",
+          "width": 63,
+          "height": 18,
+          "content": "设置",
+          "textAlign": "center",
+          "textAlignVertical": "middle",
+          "fontFamily": "Noto Sans SC",
+          "fontSize": 11
+        }
+      ]
+    },
+    {
+      "type": "frame",
+      "id": "IyFgK",
       "x": 0,
       "y": 0,
-      "name": "Frame",
-      "clip": true,
-      "width": 800,
-      "height": 600,
-      "fill": "#FFFFFF",
-      "layout": "none"
+      "name": "[UI][STYLES][MINIAPP]",
+      "width": 3819,
+      "height": 4700,
+      "fill": "#ffffffff",
+      "layout": "none",
+      "children": [
+        {
+          "type": "frame",
+          "id": "A358t",
+          "x": 32,
+          "y": 35,
+          "name": "[UI][STYLE:MINI-06][PAGE:READING][ST:LIVE]",
+          "clip": true,
+          "width": 390,
+          "height": 844,
+          "fill": "#f4f0e5",
+          "cornerRadius": 12,
+          "layout": "none",
+          "children": [
+            {
+              "type": "text",
+              "id": "NVJYL",
+              "x": 20,
+              "y": 24,
+              "name": "[UI][STYLE:MINI-06][PAGE:READING][ST:LIVE][CMP:page-header][VAR:title]",
+              "fill": "#2c2823",
+              "textGrowth": "fixed-width-height",
+              "width": 110,
+              "height": 28,
+              "content": "心经",
+              "lineHeight": 1.15,
+              "textAlignVertical": "middle",
+              "fontFamily": "Noto Serif SC",
+              "fontSize": 18,
+              "fontWeight": "600"
+            },
+            {
+              "type": "text",
+              "id": "LKcHQ",
+              "x": 286,
+              "y": 24,
+              "name": "[UI][STYLE:MINI-06][PAGE:READING][ST:LIVE][CMP:state-banner][VAR:status]",
+              "fill": "#8b8177",
+              "textGrowth": "fixed-width-height",
+              "width": 84,
+              "height": 24,
+              "content": "已同步",
+              "lineHeight": 1.15,
+              "textAlign": "right",
+              "textAlignVertical": "middle",
+              "fontFamily": "Noto Sans SC",
+              "fontSize": 11,
+              "fontWeight": "500"
+            },
+            {
+              "type": "text",
+              "id": "sk8QB",
+              "x": 20,
+              "y": 94,
+              "name": "[UI][STYLE:MINI-06][PAGE:READING][ST:LIVE][CMP:round-index][VAR:current]",
+              "fill": "#8b8177",
+              "textGrowth": "fixed-width-height",
+              "width": 120,
+              "height": 22,
+              "content": "第 1 次诵读",
+              "lineHeight": 1.15,
+              "textAlignVertical": "middle",
+              "fontFamily": "Noto Sans SC",
+              "fontSize": 12
+            },
+            {
+              "type": "rectangle",
+              "id": "n56yQV",
+              "x": 24,
+              "y": 164,
+              "name": "[UI][STYLE:MINI-06][PAGE:READING][ST:LIVE][CMP:style-signature][VAR:grid-h-0]",
+              "fill": "#9e7b5722",
+              "width": 342,
+              "height": 1
+            },
+            {
+              "type": "rectangle",
+              "id": "Cp16t",
+              "x": 24,
+              "y": 216,
+              "name": "[UI][STYLE:MINI-06][PAGE:READING][ST:LIVE][CMP:style-signature][VAR:grid-h-1]",
+              "fill": "#9e7b5722",
+              "width": 342,
+              "height": 1
+            },
+            {
+              "type": "rectangle",
+              "id": "r8TcJ3",
+              "x": 24,
+              "y": 268,
+              "name": "[UI][STYLE:MINI-06][PAGE:READING][ST:LIVE][CMP:style-signature][VAR:grid-h-2]",
+              "fill": "#9e7b5722",
+              "width": 342,
+              "height": 1
+            },
+            {
+              "type": "rectangle",
+              "id": "hv2Zc",
+              "x": 24,
+              "y": 320,
+              "name": "[UI][STYLE:MINI-06][PAGE:READING][ST:LIVE][CMP:style-signature][VAR:grid-h-3]",
+              "fill": "#9e7b5722",
+              "width": 342,
+              "height": 1
+            },
+            {
+              "type": "rectangle",
+              "id": "EdWCq",
+              "x": 24,
+              "y": 372,
+              "name": "[UI][STYLE:MINI-06][PAGE:READING][ST:LIVE][CMP:style-signature][VAR:grid-h-4]",
+              "fill": "#9e7b5722",
+              "width": 342,
+              "height": 1
+            },
+            {
+              "type": "rectangle",
+              "id": "StsJW",
+              "x": 24,
+              "y": 424,
+              "name": "[UI][STYLE:MINI-06][PAGE:READING][ST:LIVE][CMP:style-signature][VAR:grid-h-5]",
+              "fill": "#9e7b5722",
+              "width": 342,
+              "height": 1
+            },
+            {
+              "type": "rectangle",
+              "id": "NcwTK",
+              "x": 24,
+              "y": 476,
+              "name": "[UI][STYLE:MINI-06][PAGE:READING][ST:LIVE][CMP:style-signature][VAR:grid-h-6]",
+              "fill": "#9e7b5722",
+              "width": 342,
+              "height": 1
+            },
+            {
+              "type": "rectangle",
+              "id": "tEiwP",
+              "x": 48,
+              "y": 150,
+              "name": "[UI][STYLE:MINI-06][PAGE:READING][ST:LIVE][CMP:style-signature][VAR:grid-v-0]",
+              "fill": "#9e7b5722",
+              "width": 1,
+              "height": 388
+            },
+            {
+              "type": "rectangle",
+              "id": "WpgKQ",
+              "x": 104,
+              "y": 150,
+              "name": "[UI][STYLE:MINI-06][PAGE:READING][ST:LIVE][CMP:style-signature][VAR:grid-v-1]",
+              "fill": "#9e7b5722",
+              "width": 1,
+              "height": 388
+            },
+            {
+              "type": "rectangle",
+              "id": "xQ5JO",
+              "x": 160,
+              "y": 150,
+              "name": "[UI][STYLE:MINI-06][PAGE:READING][ST:LIVE][CMP:style-signature][VAR:grid-v-2]",
+              "fill": "#9e7b5722",
+              "width": 1,
+              "height": 388
+            },
+            {
+              "type": "rectangle",
+              "id": "X8c5Rl",
+              "x": 216,
+              "y": 150,
+              "name": "[UI][STYLE:MINI-06][PAGE:READING][ST:LIVE][CMP:style-signature][VAR:grid-v-3]",
+              "fill": "#9e7b5722",
+              "width": 1,
+              "height": 388
+            },
+            {
+              "type": "rectangle",
+              "id": "P9XeEH",
+              "x": 272,
+              "y": 150,
+              "name": "[UI][STYLE:MINI-06][PAGE:READING][ST:LIVE][CMP:style-signature][VAR:grid-v-4]",
+              "fill": "#9e7b5722",
+              "width": 1,
+              "height": 388
+            },
+            {
+              "type": "rectangle",
+              "id": "SsUFd",
+              "x": 328,
+              "y": 150,
+              "name": "[UI][STYLE:MINI-06][PAGE:READING][ST:LIVE][CMP:style-signature][VAR:grid-v-5]",
+              "fill": "#9e7b5722",
+              "width": 1,
+              "height": 388
+            },
+            {
+              "type": "rectangle",
+              "cornerRadius": 2,
+              "id": "Czd9q",
+              "x": 286,
+              "y": 150,
+              "name": "[UI][STYLE:MINI-06][PAGE:READING][ST:LIVE][CMP:style-signature][VAR:seal]",
+              "fill": "#a64c3e18",
+              "width": 64,
+              "height": 64,
+              "stroke": "#a64c3e88",
+              "strokeWidth": 1
+            },
+            {
+              "type": "text",
+              "id": "Wos4S",
+              "x": 296,
+              "y": 168,
+              "name": "[UI][STYLE:MINI-06][PAGE:READING][ST:LIVE][CMP:style-signature][VAR:seal-label]",
+              "fill": "#a64c3e",
+              "textGrowth": "fixed-width-height",
+              "width": 44,
+              "height": 20,
+              "content": "印谱",
+              "lineHeight": 1.15,
+              "textAlign": "center",
+              "textAlignVertical": "middle",
+              "fontFamily": "Noto Serif SC",
+              "fontSize": 11,
+              "fontWeight": "600"
+            },
+            {
+              "type": "text",
+              "id": "xx00W",
+              "x": 292,
+              "y": 222,
+              "name": "[UI][STYLE:MINI-06][PAGE:READING][ST:LIVE][CMP:style-signature][VAR:folio]",
+              "fill": "#8b8177",
+              "textGrowth": "fixed-width-height",
+              "width": 60,
+              "height": 18,
+              "content": "042",
+              "lineHeight": 1.15,
+              "textAlign": "right",
+              "textAlignVertical": "middle",
+              "fontFamily": "Noto Sans SC",
+              "fontSize": 10,
+              "fontWeight": "600"
+            },
+            {
+              "type": "text",
+              "id": "Y05DUi",
+              "x": 42,
+              "y": 268,
+              "name": "[UI][STYLE:MINI-06][PAGE:READING][ST:LIVE][CMP:readingline][VAR:confirmed-flow]",
+              "fill": "#2c2823",
+              "textGrowth": "fixed-width",
+              "width": 306,
+              "content": "观自在菩萨，行深般若波罗蜜多时，照见五蕴皆",
+              "lineHeight": 1.7,
+              "fontFamily": "Noto Serif SC",
+              "fontSize": 18,
+              "fontWeight": "500"
+            },
+            {
+              "type": "rectangle",
+              "id": "VmNmx",
+              "x": 114,
+              "y": 326,
+              "name": "[UI][STYLE:MINI-06][PAGE:READING][ST:LIVE][CMP:char-focus][VAR:underline]",
+              "fill": "#a66b3a",
+              "width": 26,
+              "height": 2
+            },
+            {
+              "id": "b8PH8e",
+              "type": "ref",
+              "ref": "IgF5l",
+              "name": "[UI][STYLE:MINI-06][PAGE:READING][ST:LIVE][CMP:bottom-nav][VAR:master]",
+              "x": 20,
+              "y": 768,
+              "width": 350,
+              "height": 56,
+              "fill": "#fffdf6"
+            },
+            {
+              "type": "text",
+              "id": "T5RAdX",
+              "x": 108,
+              "y": 297,
+              "name": "[UI][STYLE:MINI-06][PAGE:READING][ST:LIVE][CMP:char-focus][VAR:glyph]",
+              "fill": "#a66b3a",
+              "textGrowth": "fixed-width-height",
+              "width": 38,
+              "height": 30,
+              "content": "空",
+              "textAlign": "center",
+              "textAlignVertical": "middle",
+              "fontFamily": "Noto Serif SC",
+              "fontSize": 25,
+              "fontWeight": "700"
+            },
+            {
+              "type": "frame",
+              "id": "Hu0KA",
+              "x": 39,
+              "y": 603,
+              "name": "[UI][STYLE:MINI-05][PAGE:READING][ST:LIVE][CMP:scripture-progress][VAR:master]",
+              "width": 302,
+              "height": 55,
+              "layout": "none",
+              "children": [
+                {
+                  "type": "rectangle",
+                  "cornerRadius": 4,
+                  "id": "I8p83h",
+                  "x": 0,
+                  "y": 8,
+                  "name": "[UI][STYLE:MINI-05][PAGE:READING][ST:LIVE][CMP:scripture-progress][VAR:track]",
+                  "fill": "#d8c4ac",
+                  "width": 302,
+                  "height": 8
+                },
+                {
+                  "type": "rectangle",
+                  "cornerRadius": 4,
+                  "id": "Qw5yT",
+                  "x": 0,
+                  "y": 8,
+                  "name": "[UI][STYLE:MINI-05][PAGE:READING][ST:LIVE][CMP:scripture-progress][VAR:value]",
+                  "fill": "#a36338",
+                  "width": 57.38,
+                  "height": 8
+                },
+                {
+                  "type": "text",
+                  "id": "R3coe",
+                  "x": 0,
+                  "y": 24,
+                  "name": "[UI][STYLE:MINI-05][PAGE:READING][ST:LIVE][CMP:scripture-progress][VAR:count]",
+                  "fill": "#39291f",
+                  "textGrowth": "fixed-width-height",
+                  "width": 232,
+                  "height": 24,
+                  "content": "心经进度 42 / 260 字",
+                  "lineHeight": 1.15,
+                  "textAlignVertical": "middle",
+                  "fontFamily": "Noto Sans SC",
+                  "fontSize": 12,
+                  "fontWeight": "500"
+                },
+                {
+                  "type": "text",
+                  "id": "LzyMC",
+                  "x": 232,
+                  "y": 24,
+                  "name": "[UI][STYLE:MINI-05][PAGE:READING][ST:LIVE][CMP:scripture-progress][VAR:percent]",
+                  "fill": "#a36338",
+                  "textGrowth": "fixed-width-height",
+                  "width": 70,
+                  "height": 24,
+                  "content": "16.2%",
+                  "lineHeight": 1.15,
+                  "textAlign": "right",
+                  "textAlignVertical": "middle",
+                  "fontFamily": "Noto Sans SC",
+                  "fontSize": 13,
+                  "fontWeight": "700"
+                }
+              ]
+            }
+          ]
+        }
+      ]
     }
   ],
+  "variables": {
+    "mini-surface-0": {
+      "type": "color",
+      "value": "#faf7f2"
+    },
+    "mini-surface-1": {
+      "type": "color",
+      "value": "#ffffff"
+    },
+    "mini-surface-2": {
+      "type": "color",
+      "value": "#f1ece2"
+    },
+    "mini-text-primary": {
+      "type": "color",
+      "value": "#2a2620"
+    },
+    "mini-text-secondary": {
+      "type": "color",
+      "value": "#6f675c"
+    },
+    "mini-text-muted": {
+      "type": "color",
+      "value": "#a39a89"
+    },
+    "mini-divider": {
+      "type": "color",
+      "value": "#2A26201A"
+    },
+    "mini-focus": {
+      "type": "color",
+      "value": "#d9a441"
+    },
+    "brand-amber-600": {
+      "type": "color",
+      "value": "#a56f1f"
+    },
+    "brand-amber-300": {
+      "type": "color",
+      "value": "#e6bd69"
+    },
+    "font-mini": {
+      "type": "string",
+      "value": "Noto Sans SC"
+    },
+    "ewf-mini-surface": {
+      "type": "color",
+      "value": "#faf7f2"
+    },
+    "ewf-mini-card": {
+      "type": "color",
+      "value": "#ffffff"
+    },
+    "ewf-mini-muted-fill": {
+      "type": "color",
+      "value": "#f1ece2"
+    },
+    "ewf-mini-ink": {
+      "type": "color",
+      "value": "#2a2620"
+    },
+    "ewf-mini-ink-2": {
+      "type": "color",
+      "value": "#6f675c"
+    },
+    "ewf-mini-muted": {
+      "type": "color",
+      "value": "#a39a89"
+    },
+    "ewf-mini-divider": {
+      "type": "color",
+      "value": "#2A26201A"
+    },
+    "ewf-mini-accent": {
+      "type": "color",
+      "value": "#d9a441"
+    },
+    "ewf-mini-accent-deep": {
+      "type": "color",
+      "value": "#a56f1f"
+    },
+    "ewf-mini-font-sans": {
+      "type": "string",
+      "value": "Noto Sans SC"
+    },
+    "ewf-mini-font-serif": {
+      "type": "string",
+      "value": "Noto Serif SC"
+    },
+    "mini-surface": {
+      "type": "color",
+      "value": "#faf7f2"
+    },
+    "mini-card": {
+      "type": "color",
+      "value": "#ffffff"
+    },
+    "mini-fill-muted": {
+      "type": "color",
+      "value": "#f1ece2"
+    },
+    "mini-ink": {
+      "type": "color",
+      "value": "#2a2620"
+    },
+    "mini-ink-2": {
+      "type": "color",
+      "value": "#6f675c"
+    },
+    "mini-muted": {
+      "type": "color",
+      "value": "#a39a89"
+    },
+    "mini-accent": {
+      "type": "color",
+      "value": "#d9a441"
+    },
+    "mini-accent-deep": {
+      "type": "color",
+      "value": "#a56f1f"
+    },
+    "mini-font-sans": {
+      "type": "string",
+      "value": "Noto Sans SC"
+    },
+    "mini-font-serif": {
+      "type": "string",
+      "value": "Noto Serif SC"
+    }
+  },
   "fileToken": "e1f41e8a-f263-4904-84ec-a740b13f9945"
 }

@@ -5,12 +5,14 @@ type: ui-contract
 surface: device
 status: draft
 created: 2026-09-08
-updated: 2026-09-08
+updated: 2026-09-09
 sources:
   - "{planning_artifacts}/ux-designs/ux-Electronic_Wooden_Fish-2026-09-08/DESIGN.md"
   - "{planning_artifacts}/ux-designs/ux-Electronic_Wooden_Fish-2026-09-08/EXPERIENCE.md"
   - "{planning_artifacts}/prds/prd-Electronic_Wooden_Fish-2026-09-07/prd.md"
   - "{planning_artifacts}/architecture/architecture-Electronic_Wooden_Fish-2026-09-08/ARCHITECTURE-SPINE.md"
+selected_style: null
+style_candidates: 10
 authority: "UX spines (DESIGN.md / EXPERIENCE.md) > 本契约 > pen/HTML > SquareLine generated C"
 ---
 
@@ -29,6 +31,8 @@ authority: "UX spines (DESIGN.md / EXPERIENCE.md) > 本契约 > pen/HTML > Squar
 | 状态栏高 | 24 | `components.device.statusbar.height` |
 | 触区 | 木鱼页电子木鱼为唯一可敲触区（≥96×96）；滑动手势全区 | FR-E-007 |
 
+`gGgAm` 必须作为 reusable `cmp_statusbar_gGgAm` master：外框 `x=48,y=20,w=314,h=24`，内边距 ≥8；四个信号 slot 依次位于左侧，间距 6–8px；同步状态居中；电池值与电池符号位于右侧，并保留充电/低电量状态变体。所有子节点必须完整落在 master 与 410×502 圆弧屏安全区内。木鱼主视觉由 reusable `cmp_woodfish_mark` 使用 `lvgl-design/assets/woodfish-reference.png` 承载；`woodfish-anatomy` 是页面触区/器物语义实例，不得替换为与参考轮廓无关的图形。
+
 ## 2. 命名规则（pen / HTML / SquareLine 对象共用）
 
 `[UI][PAGE:<PageId>][ST:<StateId>][CMP:<CompId>][VAR:<Name>]`
@@ -36,6 +40,7 @@ authority: "UX spines (DESIGN.md / EXPERIENCE.md) > 本契约 > pen/HTML > Squar
 - PageId：`MUYU | JINGWEN | TONGJI | SHEZHI | SHELL | OVERLAY`
 - StateId：见 §4 状态闭包；CompId 只能使用 §5 的 canonical 名称；VAR 为值占位（如 `<vol>`、`<today>`）。
 - 状态栏不单独生成顶层屏幕；同步/充电/低电/故障以页面内 `statusbar` 的 `VAR` 标注。
+- 候选风格使用 `[STYLE:<style-id>]` 命名空间；每个设备候选 frame 固定 410×502，允许自由探索构图、字阶、材质/物件、进度表现和光影，但不得只换颜色；结构 axes 只作审阅提示，不改变页面状态或组件语义。
 
 ## 3. 页面闭包表（pen/HTML 必须各有帧；绑定 epics E3 story）
 
@@ -92,23 +97,24 @@ authority: "UX spines (DESIGN.md / EXPERIENCE.md) > 本契约 > pen/HTML > Squar
 
 上述页面状态展开后共有 15 个设备顶层帧；`SHELL` 行是帧内变体，不另计顶层帧。7 字带容量只表示可见窗口，不是诵读字数上限。
 
-> 熄屏/首触唤醒以「低亮空帧 + 说明」单帧表达（验证存在即可，不画复杂状态）。统计近7/30/连续不在设备。
+> 熄屏/首触唤醒以低亮状态帧表达（不放解释性说明文字）。统计近7/30/连续不在设备。
 
 ## 5. 组件清单（CompId → DESIGN 令牌）
 
 | CompId | 组件 | 令牌/规格 |
 | --- | --- | --- |
-| statusbar | 顶部状态栏 | 透明/`{colors.device.surface.0}`；左侧 connectivity-rail，右侧 battery-status，同步状态轻量呈现 |
+| statusbar | 顶部状态栏 | reusable `cmp_statusbar_gGgAm`；透明/`{colors.device.surface.0}`；左侧 connectivity-rail，右侧 battery-status，同步状态轻量呈现 |
 | connectivity-rail | 信号组件容器 | 固定承载 4G/Wi-Fi/蓝牙/GPS 四个 signal-status；每项支持 connected/no-signal/disabled |
 | signal-status | 单项信号 | 图标与线条/短文案双编码；图标可见不代表业务链路启用 |
 | battery-status | 电池组件 | 右侧电池符号+百分比；充电/低电量有独立图标或文案 |
 | charcell | 7字带字形槽 | 字形同槽位；已诵=`{typography.device.char}`/`{colors.device.text.primary}`，空位=`{typography.device.placeholder}`/`{colors.device.text.muted}` |
 | glyph-current | 当前字 | `{typography.device.glyph}`；关键帧可用 `{colors.brand.amber.400}` 微亮当前字 |
-| scripture-progress | 心经进度 | `{rounded.device.pill}`；显示 `confirmed_chars / scripture_chars_total · percent%`；达到 100% 后保持 N/N |
+| scripture-progress | 心经进度 | `{rounded.device.pill}`；显示 `round_consumed / scripture_chars_total · percent%`；达到 100% 后保持 N/N |
 | today-taps | 今日敲击 | `{typography.device.body}`；文案使用“今日敲击 N 次”，未校时显示“待校时” |
 | total-taps | 累计敲击 | `{typography.device.value}`；跨所有 `round_id` 保留，不随从头开始清零 |
 | round-index | 当前诵读标识 | 仅辅助显示“第 N 次诵读/进行中/已完成”，不表达字数上限 |
-| woodfish | 电子木鱼 | 单线檀木（`{colors.brand.sandal.600}`）；敲击光晕 `{colors.brand.amber.300}` 一次淡出 |
+| woodfish | 电子木鱼 | 使用 `woodfish-anatomy` 主体；敲击光晕 `{colors.brand.amber.300}` 100–180ms 淡出 |
+| woodfish-anatomy | 木鱼识别结构 | 鱼身、鱼头、嘴槽、眼点、尾鳍/底座、木纹、木槌均可辨；静止与敲击两态 |
 | row | 设置行 | 图标/标题/值/箭头 |
 | slider | 设置滑杆 | 轨道=`{colors.device.surface.2}`；旋钮=`{colors.brand.amber.600}` |
 | sync-btn | 立即同步 | 四态文案/点色 |

@@ -7,7 +7,7 @@ paradigm: "嵌入式：分层 BSP/Driver + FreeRTOS 服务任务事件驱动固�
 scope: 整个电子木鱼产品——嵌入式层 Embedded 与软件层 cloud/backend、cloud/frontend
 status: final
 created: 2026-09-08
-updated: 2026-09-08
+updated: 2026-09-09
 binds: [Embedded(FR-E-*), cloud/backend(FR-B-*), cloud/frontend(FR-F-*)]
 sources:
   - _bmad-output/planning-artifacts/briefs/brief-Electronic_Wooden_Fish-2026-09-08/brief.md
@@ -139,7 +139,7 @@ flowchart TD
 
 - **Binds:** 网络层、唤醒/活动窗口、固件无线配置
 - **Prevents:** BLE/Wi‑Fi 悄悄成为业务通道、常开无线耗电、GPS 业务蔓延
-- **Rule:** MVP 只配置 Air780EGP 4G（AT/HTTPS JSON）一条业务链路，在活动窗口内复用上下文、上报后回低功耗，不维持长连接（FR-E-008）。ESP32-S3 的 BLE/Wi‑Fi 仅作硬件能力保留，固件不配置为产品通道；GPS 保留控制能力但默认关闭；不引入 Air780EGP 独立业务云。
+- **Rule:** MVP 只配置 Air780EGP 4G（AT/HTTPS JSON）一条业务链路，在活动窗口内复用上下文、上报后回低功耗，不维持长连接（FR-E-008）。ESP32-S3 的 BLE/Wi‑Fi 仅作硬件能力保留，固件不配置为产品通道；GPS 保留控制能力但默认关闭；不引入 Air780EGP 独立业务云。设备 UI 可以把 4G/Wi‑Fi/蓝牙/GPS 作为被动状态组件呈现 connected/no-signal/disabled，但图标可见不代表新增业务链路，也不要求 frontend API 增加这些字段。
 
 #### AD-15 — 设置跨重启保留；计数以本地高水位持久化
 

@@ -1,0 +1,17 @@
+{
+  "surface": "device",
+  "selected_style": null,
+  "canvas": {"width": 410, "height": 502, "corner_radius": 110},
+  "styles": [
+    {"id":"DEVICE-01","name":"匠作写实·三分之四","category":"craft-realism","layout":"poster","surface":"#050505","ink":"#fbfaf0","accent":"#fbfaf0","woodfish":"#fbfaf0","signature":"大面积白色木鱼剪影与同心余韵环","axes":["composition","material","scale","signature"]},
+    {"id":"DEVICE-02","name":"漆器祭台·正面器物","category":"lacquer-altar","layout":"altar","surface":"#130b09","ink":"#f4e7d5","accent":"#d8a45d","woodfish":"#8e5036","signature":"漆牌、低台与竖向木槌导轨","axes":["composition","material","hierarchy","signature"]},
+    {"id":"DEVICE-03","name":"木雕剖面·中轴图","category":"woodcut-section","layout":"cross","surface":"#111111","ink":"#f2eee4","accent":"#d2b179","woodfish":"#80776c","signature":"左侧竖排字带与中轴剖面线","axes":["composition","typography","progress","signature"]},
+    {"id":"DEVICE-04","name":"手作案台·俯视","category":"workbench-top","layout":"desk","surface":"#1a0f09","ink":"#f4e2c9","accent":"#c88743","woodfish":"#a86f3d","signature":"木案横纹与斜向敲击轴","axes":["composition","material","perspective","signature"]},
+    {"id":"DEVICE-05","name":"山门窗棂·圆窗取景","category":"temple-window","layout":"window","surface":"#150e0a","ink":"#fff0d5","accent":"#e0a653","woodfish":"#9c5e2c","signature":"圆窗十字窗棂与环形进度","axes":["composition","progress","object","signature"]},
+    {"id":"DEVICE-06","name":"松烟木刻·版画","category":"ink-blockprint","layout":"woodcut","surface":"#101010","ink":"#ffffff","accent":"#ffffff","woodfish":"#ffffff","signature":"黑白反相、留白嘴槽与刻痕","axes":["composition","typography","material","contrast"]},
+    {"id":"DEVICE-07","name":"石窟浮雕·侧光","category":"cave-relief","layout":"cave","surface":"#24221e","ink":"#f1eee3","accent":"#d3a669","woodfish":"#8d7753","signature":"石案浮雕面与侧光铭刻","axes":["composition","material","lighting","depth"]},
+    {"id":"DEVICE-08","name":"香篆烟线·禅房器物","category":"incense-room","layout":"incense","surface":"#17110d","ink":"#f5e9d7","accent":"#d3a25b","woodfish":"#9b6840","signature":"静态香篆线围绕木鱼而不遮挡","axes":["composition","material","lighting","signature"]},
+    {"id":"DEVICE-09","name":"铜框陈设·木鱼与铜铃","category":"copper-display","layout":"copper","surface":"#101820","ink":"#edf4f4","accent":"#d4b06c","woodfish":"#a87849","signature":"双层铜框与底部刻度进度","axes":["composition","object","progress","material"]},
+    {"id":"DEVICE-10","name":"月白留白·三维轮廓","category":"moonlit-relief","layout":"moon","surface":"#0e1823","ink":"#f3f7f3","accent":"#e3c37d","woodfish":"#b07c48","signature":"月白圆盘背光与大比例剪影","axes":["composition","scale","lighting","negative-space"]}
+  ]
+}
