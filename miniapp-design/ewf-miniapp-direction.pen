@@ -235,8 +235,8 @@
         {
           "type": "frame",
           "id": "A358t",
-          "x": 32,
-          "y": 35,
+          "x": 39,
+          "y": 32,
           "name": "[UI][STYLE:MINI-06][PAGE:READING][ST:LIVE]",
           "clip": true,
           "width": 390,
