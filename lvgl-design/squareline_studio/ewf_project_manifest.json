@@ -1,0 +1,84 @@
+{
+  "schema_version": 1,
+  "status": "design-plan",
+  "surface": "device",
+  "source": {
+    "pencil": "../ewf-device-ui.pen",
+    "html": "../ewf-device-ui.html",
+    "selected_style": "DEVICE-01",
+    "visual_master": "hbTEa",
+    "identity_policy": "logical_name_is_authoritative; Pencil node ids are audit anchors only"
+  },
+  "evidence_from_legbot_watch": {
+    "project": "/Users/hongchenke/Documents/Github/legbot_watch/lvgl-design/squareline_studio",
+    "squareline_version": "1.6.1",
+    "export_lvgl_version": "8.3.11",
+    "firmware_lvgl_version": "8.4.0",
+    "canvas": {"width": 410, "height": 502, "shape": "rounded_rect", "corner_radius": 110, "critical_content_clearance": 8, "color_depth": "RGB565"},
+    "sll": {"separate_screen_save": false, "hierarchy_state_save": false, "custom_variable_prefix": "uic", "naming": "Name", "naming_force_lowercase": false},
+    "mount_model": {"resident_screen": "ui_scr_main_shell", "on_demand_settings": "ui_scr_settings", "settings_viewport": "378x344", "settings_content": "two vertical pages", "visible_rows_per_page": 4},
+    "personal_license_limits": {"screens": 10, "widgets": 150, "components": 1},
+    "observed_project": {"screens": 9, "widgets": 537, "components": 4, "save_status": "blocked_by_personal_license_over_150_widgets"}
+  },
+  "mount_model": {
+    "resident_screen": "ui_scr_main_shell",
+    "resident_screen_role": "410x502 viewport with horizontal pager",
+    "resident_page_roots": {
+      "muyu": {"pencil_id": "hbTEa", "logical_name": "ui_page_muyu_root", "position": [0, 0]},
+      "jingwen": {"pencil_id": "o1Uwn5", "logical_name": "ui_page_jingwen_root", "position": [410, 0]},
+      "tongji": {"pencil_id": "RsuSH", "logical_name": "ui_page_tongji_root", "position": [820, 0]}
+    },
+    "on_demand_screens": [
+      {"pencil_id": "W3247", "logical_name": "ui_scr_settings", "temporary": true, "scroll_axis": "vertical"}
+    ],
+    "screen_variants": [
+      {"pencil_id": "ZTLH6", "logical_name": "muyu_charging_pause", "reason": "input and audio boundary changes", "shared_components": ["statusbar", "charcell", "scripture-progress", "woodfish", "woodfish-anatomy", "tap-rings"], "screen_only_components": ["state-banner"]},
+      {"pencil_id": "VkR3m", "logical_name": "muyu_done_overlay", "reason": "completion lock and modal input boundary", "shared_components": ["statusbar", "charcell", "scripture-progress", "woodfish", "woodfish-anatomy", "tap-rings"], "screen_only_components": ["modal-done"]}
+    ],
+    "component_states_not_screens": ["muyu_empty", "muyu_mid", "muyu_full", "muyu_untrusted_time", "tongji_untrusted_time", "settings_sync_busy", "settings_sync_ok", "settings_sync_pending", "settings_sync_fail"]
+  },
+  "component_registry": [
+    {"id": "statusbar", "master": "VphYz", "pencil_name": "cmp_statusbar_gGgAm", "legacy_suffix": "gGgAm", "role": "resident shared status bar", "state_board": "qLhoo", "variants": ["signal connected", "signal no-signal", "signal disabled", "sync ok/pending/busy/fail", "charging", "low battery"], "implementation": "four signal slots plus runtime color/icon patch; no hidden duplicate slot tree"},
+    {"id": "woodfish", "role": "interactive composition and sole device_touch target", "children": ["woodfish-anatomy", "tap-rings"], "variants": ["idle", "pressed"]},
+    {"id": "woodfish-anatomy", "master": "n2gMHJ", "parent": "woodfish", "role": "non-interactive recognizable device anatomy"},
+    {"id": "tap-rings", "master": "n2eoh", "state_board": "JZhSx", "role": "three elliptical feedback rings", "variants": ["idle", "flash"], "flash_duration_ms": 160, "flash_stroke": "#e6bd69", "inputs": ["physical_pvdf", "device_touch"], "implementation": "idle outline is the exported static value; flash swaps outline colour to brand.amber.300 at runtime in bindings; no duplicated ring node tree"},
+    {"id": "charcell", "master": "mDOlU", "formal_reusable": true, "role": "seven-slot recent glyph window", "state_board": "ZauNI", "variants": [{"id": "empty", "node": "nrITi", "latest_slot": null, "slot_policy": "seven normal placeholders"}, {"id": "base", "node": "LMSQg", "latest_slot": 3, "slot_policy": "slots 1-2 + latest + placeholders 4-7"}, {"id": "mid", "node": "rmjpo", "latest_slot": 7, "slot_policy": "slots 1-6 + latest"}, {"id": "full", "node": "lPSjG", "latest_slot": 4, "slot_policy": "slots 1-3 + latest + placeholders 5-7"}], "latest_policy": "one visible glyph-current only; previous glyphs return to char tier", "slot_geometry": {"count": 7, "left_positions": [15, 63, 111, 159, 207, 255, 303], "width": 42, "height": 34}},
+    {"id": "scripture-progress", "master": "JmQTi", "formal_reusable": true, "role": "confirmed chars / total / percent", "state_board": "ZauNI", "variants": ["0", "12", "84", "196", "260"], "screen_variant_instances": {"charging": "mZiJw", "done": "n8HOn"}},
+    {"id": "scripture-history", "master": "lo9C1", "variants": [{"id": "tail", "node": "PawlG", "line_chars": 13, "punctuation_counts": true, "latest": "inline-after-prefix"}, {"id": "review", "node": "fevaG", "line_chars": 13, "punctuation_counts": true, "latest": "not-promoted-while-reviewing"}], "page_instance": "PawlG", "page_instance_variant": "tail", "geometry": {"width": 362, "height": 286, "line_height": 38, "latest_after_prefix": true}},
+    {"id": "today-taps", "master": "Z8rcP", "state_board": "Hlo77", "variant_instances": {"trusted": "c80PmD", "untrusted": "S0OtLc"}, "variants": ["trusted", "untrusted"], "variant_styles": {"trusted": {"value_color": "#fbfaf0", "label": "今日敲击 N 次"}, "untrusted": {"value_color": "#a6a29a", "label": "今日敲击 待校时"}}, "contexts": ["MUYU", "TONGJI"]},
+    {"id": "stat-card", "master": "ZtT4f", "instances": ["today-taps", "total-taps"], "scope": "device PRD today/total only; near-7d/30d/streak belong to the miniapp records page"},
+    {"id": "reading-progress", "master": "FKhdz", "role": "today page reading session progress", "elements": ["ring-track", "ring-value", "round-index"], "geometry": {"width": 378, "height": 176}, "reuses": ["scripture-progress", "round-index"]},
+    {"id": "settings-list", "role": "378x344 viewport; 520px content; two page groups; max four visible rows", "screen_variant": false, "component_priority": "viewport-and-row-skeleton-shared-by-all-sync-states"},
+    {"id": "brightness-selector", "states": [{"id": "low", "style": "dark capsule + muted label"}, {"id": "medium", "style": "amber selected capsule + dark label"}, {"id": "high", "style": "dark capsule + muted label"}]},
+    {"id": "timeout-selector", "states": [{"id": "5s", "style": "dark capsule + muted label"}, {"id": "15s", "style": "amber selected capsule + dark label"}, {"id": "30s", "style": "dark capsule + muted label"}]},
+    {"id": "volume-slider", "states": ["0-100 linear track", "default 50"]},
+    {"id": "sync-btn", "master": "cQ5wd", "variants": [{"id": "BASE", "style": "amber outline action"}, {"id": "BUSY", "style": "amber action text"}, {"id": "OK", "style": "muted green action text"}, {"id": "PENDING", "style": "amber action text"}, {"id": "FAIL", "style": "terracotta action text"}]},
+    {"id": "device-identity", "master": "j6zSeO", "instances": ["woodfish-version", "woodfish-id"], "source_style_anchors": ["tNUHq", "fTd0z"]}
+  ],
+  "settings_contract": {
+    "screen": "W3247",
+    "title": "设置",
+    "viewport": {"x": 16, "y": 72, "width": 378, "height": 344, "max_visible_rows": 4},
+    "row_geometry": {"width": 378, "height": 80, "gap": 8},
+    "page_1": ["brightness", "timeout", "volume", "sync"],
+    "page_2": ["woodfish-version", "woodfish-id"],
+    "default_values": {"brightness": "中", "timeout": "15秒", "volume": 50, "sync": "立即同步"},
+    "source_style_anchors": {"screen": "mH17G", "brightness": "achTu", "timeout": "Pz5g1", "version": "tNUHq", "id": "fTd0z"}
+  },
+  "state_patch_order": ["baseline_reset", "component_variant_patch", "screen_variant_patch", "model_projection"],
+  "capacity_audit": {
+    "resolved_pen_nodes": {"resident_shell": 91, "settings_screen": 51, "screen_subtree_total": 142},
+    "note": "Counts are from Pencil resolveInstances and exclude future SquareLine serialization overhead; verify again after Stage 5 export.",
+    "license_risk": "personal 150-widget limit is close once component masters are included; do not claim GUI save compatibility before a real SquareLine round-trip."
+  },
+  "font_coverage_audit": {
+    "contract": "font_glyph_contract.json",
+    "severity": "error_on_missing_glyph",
+    "policy": "rebuild .fcfg and sync generated C; never hand-edit bitmaps",
+    "canonical_scripture_source": "S0.3 pending"
+  },
+  "blocking_warnings": [
+    {"code": "squareline_project_not_generated", "status": "open", "resolution": "Stage 5 retarget generator and perform 1.6.1 -> LVGL 8.4.0 round-trip"},
+    {"code": "personal_license_capacity_needs_real_roundtrip", "status": "open", "resolution": "measure generated project; activate suitable license or reduce masters if required"}
+  ]
+}

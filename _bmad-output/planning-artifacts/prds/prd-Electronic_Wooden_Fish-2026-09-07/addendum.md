@@ -15,7 +15,7 @@
 - 小程序不提供电子木鱼点击，不产生正式敲击，只负责已确认经文的阅读行动画、统计、设备状态和命令。
 - 设备熄屏时实体敲击直接计数并短亮屏；第一次触摸只唤醒；充电期间暂停输入和音频。
 - QMI8658C 上板但默认不启用，只接 INT1→IO41；INT2 不接，GPIO45 不用于 IMU。
-- Air780EGP 按木鱼专属 GPIO 合同重映射，保留屏幕和音频的 `legbot_watch` 资源：UART IO43/44、DTR IO10、RST IO15、NET_STATUS IO16、GNSS_VCC IO8、PVDF 比较器 IO11、RGB IO3。
+- Air780EGP 按木鱼专属 GPIO 合同重映射，保留屏幕和音频的 `legbot_watch` 资源：UART IO43/44、DTR IO10、RST IO15、NET_STATUS 兼容位 IO16、PVDF 比较器 IO11、RGB IO3；`IO8` 释放为 BQ25895 `BQ_OTG_EN`，M100 `GNSS_VCC` 留 NC/测试点。
 - 后端持久化口径对齐架构主干 AD-16：由早期「单文件 SQLite」更新为「JSON 原子文件、零数据库」（临时文件 + fsync + rename，落 `cloud/backend/data/`），不引入任何数据库服务；PRD §2 分层图与 §6.1.9 FR-B-009 同步为 JSON 文件口径。
 
 ## 3. 技术细节边界

@@ -24,7 +24,7 @@ updated: 2026-09-09
 | 子系统 | 方案 | 状态与边界 |
 | --- | --- | --- |
 | 主控 | 标准 ESP32-S3-N16R8 模组 | 已决定；原生 USB-Serial-JTAG，不使用 CH340X |
-| 4G/GPS | `main_control` 已验证的完整 Air780EGP 模组组件 | 已决定；4G 进入 MVP，GPS 默认关闭，主板只接模组接口 |
+| 4G/GPS | `main_control` 已验证的完整 Air780EGP/M100EG-C2 模组组件 | 已决定；4G 进入 MVP，GPS 默认关闭；`GNSS_VCC` 留 NC/TP，IO8 释放为 BQ25895 `BQ_OTG_EN` |
 | 显示 | 410×502、CO5300、QSPI AMOLED | 已决定使用 `legbot_watch` 同款模组；FPC/电源/初始化仍受验证门禁约束 |
 | 触摸 | CST9217 | 已决定；地址、坐标方向和中断极性按目标模组实测 |
 | 实体敲击 | PVDF 压电薄膜 | 已决定为唯一 MVP 主传感器 |
@@ -33,7 +33,7 @@ updated: 2026-09-09
 | 电量 | CW2015 | 已决定；共享 I²C，实际地址和电芯曲线需上电核验 |
 | 状态灯 | 单路 RGB | 已决定；只表达敲击确认、待同步、低电量和故障 |
 | IMU | QMI8658C | 已决定上板但默认不启用；只接 INT1，不参与 MVP 计数 |
-| 电源 | 单节锂电池、USB-C、硬件 PWR、4G/3.3V/音频/AMOLED 分轨 | 功能级锁定；充电期间暂停输入与音频；具体 IC 和容量后续冻结 |
+| 电源 | 单节受保护锂电池、单 USB-C、硬件 PWR、`VBAT_SW`/`3V3`/`AUDIO_5V` 分轨；BQ25895 NVDC/PMID OTG | 功能级锁定；充电期间暂停输入与音频；具体外围和容量仍需样机验证 |
 
 ### 3.1 GPIO 基线
 
@@ -44,14 +44,15 @@ updated: 2026-09-09
 | RESET | EN | EN | 独立按键或测试点 |
 | PVDF | ADC | IO9 | ADC1_CH8；前端必须限流、钳位并控制输入范围 |
 | PVDF 唤醒 | 比较器数字输出 | IO11 | 低功耗 GPIO 唤醒；醒来后仍由 ADC 判断有效敲击 |
-| 共享 I²C | SDA / SCL | IO1 / IO2 | CW2015、CST9217、ES8311、QMI8658C 共用 |
+| 共享 I²C | SDA / SCL | IO1 / IO2 | BQ25895、CW2015、CST9217、ES8311、QMI8658C 共用；首版地址必须无冲突 |
 | CST9217 | TP_RST / TP_INT | IO38 / IO39 | 触摸复位与中断 |
 | QMI8658C | INT1 | IO41 | 未来 WoM 扩展；INT2 不接 |
 | CO5300 | RST / CS / SCL / D0 / D1 / D2 / D3 / EN | IO4 / IO40 / IO5 / IO6 / IO7 / IO12 / IO42 / IO47 | 沿用 `legbot_watch` 屏幕资源基线 |
 | ES8311 | I2S_DO / WS / DI / BCLK / MCLK | IO13 / IO14 / IO17 / IO18 / IO21 | 沿用 `legbot_watch` 音频资源基线 |
 | NS4150B | PA_EN | IO48 | 静音、暂停或故障时回到禁用状态 |
 | Air780EGP | UART_TX / UART_RX | IO43 / IO44 | 从 `main_control` 协议驱动中抽离板级引脚常量 |
-| Air780EGP | DTR / RST / NET_STATUS / GNSS_VCC | IO10 / IO15 / IO16 / IO8 | 保留模组休眠、复位、网络观测和 GPS 开关能力 |
+| Air780EGP | DTR / RST / NET_STATUS 兼容位 | IO10 / IO15 / IO16 | 保留休眠、复位、网络观测；载板无 NET_STATUS 时 IO16 仅 TP/NC |
+| BQ25895 | OTG_EN | IO8 | 控制 PMID OTG；M100 GNSS_VCC 不接 ESP32 |
 | RGB | DATA | IO3 | 用户状态灯，不作为调试专用灯 |
 | USB | D− / D+ | IO19 / IO20 | ESP32-S3 原生 USB-Serial-JTAG |
 

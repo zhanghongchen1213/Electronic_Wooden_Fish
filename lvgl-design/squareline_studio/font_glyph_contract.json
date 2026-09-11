@@ -1,0 +1,169 @@
+{
+  "schema_version": 1,
+  "status": "design-locked",
+  "description": "DEVICE-01 设备 UI 的静态与运行时字形合同。当前先覆盖 Stage 4 全帧 HTML 中出现的全部 UI 文案与示例经文字形；S0.3 canonical 经文产物生成后，必须把完整可消费字符集并入三种 Noto Serif SC 字形角色后才能进入 SquareLine/LVGL 终验。",
+  "design_source": "lvgl-design/ewf-device-ui.html",
+  "last_verified": "2026-09-11",
+  "verification_note": "组件母版与状态槽位调整未引入新的 UI 字符；设计快照仍覆盖全部静态与动态文本。",
+  "pending_canonical_source": "S0.3 canonical scripture artifact",
+  "design_snapshot": {
+    "source_path": "lvgl-design/ewf-device-ui.html",
+    "coverage": "all_visible_characters_in_stage4_design_source",
+    "characters": "已同步76%心经第 1 次诵读今日敲击128 次累计敲击 3,456 次心经进度 12 / 260 字 · 4.6%观自在····已同步76%心经第 1 次诵读观自在菩萨，行深般若波罗蜜多时，照见五蕴皆空心经进度 42 / 260 字 · 16.2%已同步76%统计今日敲击128次累计敲击3,456次本次诵读42 / 260 字已完成 16.2%第 1 次诵读已同步76%心经第 1 次诵读观自在····心经进度 12 / 260 字 · 4.6%今日敲击128 次累计敲击 3,456 次充电中 · 暂停敲击已同步76%心经第 1 次诵读般若末波罗蜜多心经进度 260 / 260 字 · 100%今日敲击128 次累计敲击 3,456 次本轮完成心经进度 260 / 260 字从头开始退出设置屏幕亮度低中高自动熄屏5秒15秒30秒音量50立即同步立即同步木鱼版本1.0.0木鱼IDEWF-07A3已同步76%心经第 1 次诵读今日敲击0 次累计敲击 3,328 次心经进度 0 / 260 字 · 0%·······已同步76%心经第 1 次诵读今日敲击128 次累计敲击 3,456 次心经进度 84 / 260 字 · 32.3%观自在行深般若已同步76%心经第 1 次诵读今日敲击128 次累计敲击 3,456 次心经进度 196 / 260 字 · 75.4%色即是空···已同步76%心经第 1 次诵读今日敲击待校时累计敲击 3,456 次心经进度 12 / 260 字 · 4.6%观自在····已同步76%统计今日敲击待校时累计敲击3,456次本次诵读42 / 260 字已完成 16.2%第 1 次诵读设置屏幕亮度低中高自动熄屏5秒15秒30秒音量50立即同步同步中木鱼版本1.0.0木鱼IDEWF-07A3设置屏幕亮度低中高自动熄屏5秒15秒30秒音量50立即同步已同步木鱼版本1.0.0木鱼IDEWF-07A3设置屏幕亮度低中高自动熄屏5秒15秒30秒音量50立即同步待同步木鱼版本1.0.0木鱼IDEWF-07A3设置屏幕亮度低中高自动熄屏5秒15秒30秒音量50立即同步同步失败木鱼版本1.0.0木鱼IDEWF-07A3"
+  },
+  "font_roles": {
+    "scripture_body": [
+      "nserif500_24"
+    ],
+    "muyu_latest": [
+      "nserif700_48"
+    ],
+    "jingwen_latest": [
+      "nserif700_52"
+    ],
+    "ui_status": [
+      "ns500_12",
+      "ns500_15"
+    ],
+    "ui_heading": [
+      "ns600_22"
+    ],
+    "ui_value": [
+      "ns600_34"
+    ],
+    "ui_action": [
+      "ns600_14"
+    ]
+  },
+  "runtime_sources": [],
+  "runtime_labels": [
+    {
+      "selector": "ui_muyu_glyph_current",
+      "font_codes": [
+        "nserif700_48"
+      ],
+      "texts": [
+        "在",
+        "若",
+        "空",
+        "末"
+      ],
+      "source_path": "lvgl-design/ewf-device-ui.html"
+    },
+    {
+      "selector": "ui_jingwen_history_prefix",
+      "font_codes": [
+        "nserif500_24"
+      ],
+      "texts": [
+        "观自在菩萨，行深般若波罗蜜",
+        "多时，照见五蕴皆"
+      ],
+      "source_path": "lvgl-design/ewf-device-ui.html"
+    },
+    {
+      "selector": "ui_jingwen_glyph_current",
+      "font_codes": [
+        "nserif700_52"
+      ],
+      "texts": [
+        "空"
+      ],
+      "source_path": "lvgl-design/ewf-device-ui.html"
+    },
+    {
+      "selector": "ui_scripture_progress",
+      "font_codes": [
+        "ns500_12"
+      ],
+      "texts": [
+        "心经进度 0 / 260 字 · 0%",
+        "心经进度 12 / 260 字 · 4.6%",
+        "心经进度 42 / 260 字 · 16.2%",
+        "心经进度 84 / 260 字 · 32.3%",
+        "心经进度 196 / 260 字 · 75.4%",
+        "心经进度 260 / 260 字 · 100%"
+      ],
+      "source_path": "lvgl-design/ewf-device-ui.html"
+    },
+    {
+      "selector": "ui_statusbar_sync",
+      "font_codes": [
+        "ns500_12"
+      ],
+      "texts": [
+        "已同步",
+        "同步中",
+        "待同步",
+        "同步失败"
+      ],
+      "source_path": "lvgl-design/ewf-device-ui.html"
+    },
+    {
+      "selector": "ui_today_taps",
+      "font_codes": [
+        "ns500_15"
+      ],
+      "texts": [
+        "今日敲击",
+        "0 次",
+        "128 次",
+        "待校时"
+      ],
+      "source_path": "lvgl-design/ewf-device-ui.html"
+    },
+    {
+      "selector": "ui_total_taps",
+      "font_codes": [
+        "ns500_15",
+        "ns600_34"
+      ],
+      "texts": [
+        "累计敲击 3,328 次",
+        "累计敲击 3,456 次"
+      ],
+      "source_path": "lvgl-design/ewf-device-ui.html"
+    },
+    {
+      "selector": "ui_settings_labels",
+      "font_codes": [
+        "ns500_15",
+        "ns600_20",
+        "ns600_18"
+      ],
+      "texts": [
+        "设置",
+        "屏幕亮度",
+        "低",
+        "中",
+        "高",
+        "自动熄屏",
+        "5秒",
+        "15秒",
+        "30秒",
+        "音量",
+        "50",
+        "立即同步",
+        "木鱼版本",
+        "1.0.0",
+        "木鱼ID",
+        "EWF-07A3"
+      ],
+      "source_path": "lvgl-design/ewf-device-ui.html"
+    },
+    {
+      "selector": "ui_completion_modal",
+      "font_codes": [
+        "ns600_14",
+        "ns600_22"
+      ],
+      "texts": [
+        "本轮完成",
+        "从头开始",
+        "退出"
+      ],
+      "source_path": "lvgl-design/ewf-device-ui.html"
+    }
+  ],
+  "bounded_external_text": []
+}

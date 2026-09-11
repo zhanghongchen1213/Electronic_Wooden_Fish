@@ -13,6 +13,7 @@
 | 史诗/故事 | `_bmad-output/planning-artifacts/epics.md` | 53 个 story（E1–E4 / S0–S4），实施与验收依据 |
 | UX/视觉 | `_bmad-output/planning-artifacts/ux-designs/ux-Electronic_Wooden_Fish-2026-09-08/` | DESIGN.md / EXPERIENCE.md / UI_CONTRACT-{device,miniapp}.md（当前 draft） |
 | 设备实现/排障 | `docs/embedded/` | 固件实现规格与从 legbot 迁移的踩坑知识（见其 README） |
+| 硬件原理图基线 | `docs/hardware/` | GPIO/I²C/电源/FPC/网络清单与嘉立创 EDA 分层落图记录；`[必须样机验证]` 不得写成样机已通过 |
 | 交接 | `docs/handoffs/` | 面向后续 agent 的当前状态与任务（见 2026-09-08…handoff.md） |
 
 ## 目录导览
@@ -21,6 +22,7 @@
 - `embedded/` — 设备侧（Embedded/固件）实现与排障文档；多篇从 `legbot_watch/docs` 迁移/适配（详见其 README 的来源与排除表）。
 - `contracts/` — 跨层同步契约 `sync-contract.md`（**待 S0 冻结**，见 `epics.md` Story S0.1；本目录当前仅占位说明）。
 - `backend/`、`frontend/` — 后端/小程序**开发经验文档**（自 miaowu 迁移，见各 README）；PRD addendum §4 期望的模块实现规格 `requirements.md` 仍待对应 spec 阶段创建。
+- `hardware/` — 硬件原理图设计基线、机器网络清单、离线 HTML/SVG 复刻图和嘉立创 EDA 分层落图记录；两份用户提供的 PDF 仅作只读参考，不覆盖原文件。
 
 ## 事实流规约
 

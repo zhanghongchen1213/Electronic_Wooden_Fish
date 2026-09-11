@@ -5,6 +5,8 @@ date: 2026-09-08
 status: reconciled
 ---
 
+> **2026-09-09 硬件基线覆盖说明：** 后续批准的 `spec-electronic-wooden-fish-hardware-schematic-baseline.md` 与 `docs/hardware/电子木鱼-硬件网络清单.json` 覆盖本文中的历史 GPIO/电源草案；本文保留为对账记录，不作为当前落图依据。
+
 # 输入对账：电子木鱼 PRD 重构
 
 ## 已保留的产品主线
@@ -22,9 +24,9 @@ status: reconciled
 4. 原先的 PostgreSQL 依赖被更正为 backend 内部单文件 SQLite，部署运维不纳入产品 PRD。
 5. 本轮新增的 ESP32-S3-N16R8、CW2015、QMI8658C、CO5300、CST9217、ES8311、NS4150B、原生 USB-Serial-JTAG 和 RESET 路径已写入架构文档。
 
-## 保留为工程门禁的内容
+## 保留为工程门禁的内容（历史对账；当前细节以硬件基线为准）
 
-- GPIO45 启动绑带与 QMI8658C INT2 冲突，已迁移 INT2 至 GPIO8；GPIO9 作为 PVDF ADC 的工程候选。
+- GPIO45 启动绑带约束保留；QMI8658C 仅接 INT1→IO41，INT2 不接；IO9 为 PVDF ADC，IO8 已释放为 BQ25895 `BQ_OTG_EN`。
 - Air780E 需要独立高电流电池轨，AMS1117 不承担 4G 主供电。
 - CO5300 FPC 电源/时序、共享 I2C 实际地址、PVDF 模拟前端和音频电源仍需按最终器件资料与上电实测核验。
 - USB 原生下载/JTAG 可去掉 CH340X，但必须保留 GPIO0、EN/RESET、VBUS/GND 和正确启动绑带时序。

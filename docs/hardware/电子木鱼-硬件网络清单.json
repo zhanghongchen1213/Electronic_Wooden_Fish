@@ -1,0 +1,942 @@
+{
+  "schema_version": "1.0.0",
+  "manifest_type": "ewf_hardware_schematic_baseline",
+  "project": "Electronic_Wooden_Fish",
+  "status": "baseline_not_prototype_verified",
+  "source_of_truth": "_bmad-output/implementation-artifacts/spec-electronic-wooden-fish-hardware-schematic-baseline.md",
+  "sources": [
+    "_bmad-output/planning-artifacts/architecture/architecture-Electronic_Wooden_Fish-2026-09-08/ARCHITECTURE-SPINE.md",
+    "docs/hardware/电子木鱼-硬件原理图设计基线.md",
+    "docs/hardware/3593896291PY206-W38-V2(2).pdf",
+    "docs/hardware/SCH_遥控板_双TypeC_4G稳压_2026-09-07.pdf",
+    "/Users/hongchenke/Documents/Github/main_control/components/BSP/GPS/gps.h"
+  ],
+  "status_legend": {
+    "confirmed": "接口或边界已由批准 spec 冻结，不代表样机通过",
+    "recommended_initial": "首版落图候选值，必须在原理图/样机阶段复核",
+    "must_prototype_validate": "必须由目标板实测、示波器、电子负载或实物插合关闭"
+  },
+  "constraints": {
+    "required_mcu": "ESP32-S3-WROOM-1-N16R8",
+    "battery_topology": "single_protected_cell",
+    "usb_connector_count": 1,
+    "business_radio": "Air780EGP_4G_HTTPS_only",
+    "forbidden_components": [
+      "CH340X",
+      "AMS1117",
+      "TPS631000"
+    ],
+    "forbidden_business_links": [
+      "BLE",
+      "Wi-Fi",
+      "GPS"
+    ],
+    "forbidden_routes": [
+      {
+        "from_net": "BQ_SYS",
+        "to_net": "M100_VIN",
+        "reason": "BQ SYS 不得作为 4G 主供电"
+      },
+      {
+        "from_net": "M100_GNSS_VCC_NC",
+        "to_gpio": "IO8",
+        "reason": "IO8 已释放为 BQ_OTG_EN，GNSS_VCC 不接 ESP32"
+      },
+      {
+        "from_net": "USB_DP_BQ",
+        "to_net": "USB_D+",
+        "reason": "BQ D+ 与 ESP32 USB D+ 不得并联"
+      },
+      {
+        "from_net": "USB_DM_BQ",
+        "to_net": "USB_D-",
+        "reason": "BQ D- 与 ESP32 USB D- 不得并联"
+      }
+    ]
+  },
+  "gpio": [
+    {
+      "signal": "BOOT0",
+      "net": "BOOT0",
+      "gpio": "IO0",
+      "gpio_number": 0,
+      "direction": "input_strapping",
+      "verification_status": "confirmed",
+      "constraints": ["下载时拉低", "复位采样窗口不得被外设推错"]
+    },
+    {
+      "signal": "PWR_STATE",
+      "net": "PWR_STATE",
+      "gpio": "IO46",
+      "gpio_number": 46,
+      "direction": "input_strapping",
+      "verification_status": "confirmed",
+      "constraints": ["固件只读", "长按开关机由 TPS3424/板级电路处理"]
+    },
+    {
+      "signal": "RESET_N",
+      "net": "RESET_N",
+      "gpio": "EN",
+      "gpio_number": null,
+      "direction": "reset_input",
+      "verification_status": "confirmed",
+      "constraints": ["独立按键/测试点"]
+    },
+    {
+      "signal": "PVDF_ADC",
+      "net": "PVDF_ADC",
+      "gpio": "IO9",
+      "gpio_number": 9,
+      "direction": "analog_input",
+      "verification_status": "confirmed",
+      "constraints": ["ADC1_CH8", "前端 1MΩ 级限流", "低漏钳位，不得越过 ADC 安全范围"]
+    },
+    {
+      "signal": "PVDF_CMP_WAKE",
+      "net": "PVDF_CMP_WAKE",
+      "gpio": "IO11",
+      "gpio_number": 11,
+      "direction": "wake_input",
+      "verification_status": "confirmed",
+      "constraints": ["比较器输出", "仅唤醒，ADC 二次确认后才生成 physical_pvdf"]
+    },
+    {
+      "signal": "I2C_SDA",
+      "net": "I2C_SDA",
+      "gpio": "IO1",
+      "gpio_number": 1,
+      "direction": "bidirectional_open_drain",
+      "verification_status": "confirmed",
+      "constraints": ["I2C0 单一仲裁", "共享上拉"]
+    },
+    {
+      "signal": "I2C_SCL",
+      "net": "I2C_SCL",
+      "gpio": "IO2",
+      "gpio_number": 2,
+      "direction": "bidirectional_open_drain",
+      "verification_status": "confirmed",
+      "constraints": ["I2C0 单一仲裁", "共享上拉"]
+    },
+    {
+      "signal": "TP_RST",
+      "net": "TP_RST",
+      "gpio": "IO38",
+      "gpio_number": 38,
+      "direction": "output",
+      "verification_status": "confirmed",
+      "constraints": ["CST9217 RSTn，极性待实测"]
+    },
+    {
+      "signal": "TP_INT",
+      "net": "TP_INT",
+      "gpio": "IO39",
+      "gpio_number": 39,
+      "direction": "input",
+      "verification_status": "confirmed",
+      "constraints": ["CST9217 中断，极性待实测"]
+    },
+    {
+      "signal": "IMU_INT1",
+      "net": "IMU_INT1",
+      "gpio": "IO41",
+      "gpio_number": 41,
+      "direction": "input",
+      "verification_status": "confirmed",
+      "constraints": ["QMI8658C INT1 预留", "INT2 不接、不占 IO45"]
+    },
+    {
+      "signal": "LCD_RST",
+      "net": "LCD_RST",
+      "gpio": "IO4",
+      "gpio_number": 4,
+      "direction": "output",
+      "verification_status": "confirmed",
+      "constraints": ["CO5300 L_RES"]
+    },
+    {
+      "signal": "LCD_CS",
+      "net": "LCD_CS",
+      "gpio": "IO40",
+      "gpio_number": 40,
+      "direction": "output",
+      "verification_status": "confirmed",
+      "constraints": ["CO5300 CS"]
+    },
+    {
+      "signal": "LCD_SCLK",
+      "net": "LCD_SCLK",
+      "gpio": "IO5",
+      "gpio_number": 5,
+      "direction": "output",
+      "verification_status": "confirmed",
+      "constraints": ["CO5300 L_SCLK"]
+    },
+    {
+      "signal": "LCD_D0",
+      "net": "LCD_D0",
+      "gpio": "IO6",
+      "gpio_number": 6,
+      "direction": "bidirectional",
+      "verification_status": "confirmed",
+      "constraints": ["CO5300 L_IO0"]
+    },
+    {
+      "signal": "LCD_D1",
+      "net": "LCD_D1",
+      "gpio": "IO7",
+      "gpio_number": 7,
+      "direction": "bidirectional",
+      "verification_status": "confirmed",
+      "constraints": ["CO5300 L_IO1"]
+    },
+    {
+      "signal": "LCD_D2",
+      "net": "LCD_D2",
+      "gpio": "IO12",
+      "gpio_number": 12,
+      "direction": "bidirectional",
+      "verification_status": "confirmed",
+      "constraints": ["CO5300 L_IO2"]
+    },
+    {
+      "signal": "LCD_D3",
+      "net": "LCD_D3",
+      "gpio": "IO42",
+      "gpio_number": 42,
+      "direction": "bidirectional",
+      "verification_status": "confirmed",
+      "constraints": ["CO5300 L_IO3"]
+    },
+    {
+      "signal": "LCD_EN",
+      "net": "LCD_EN",
+      "gpio": "IO47",
+      "gpio_number": 47,
+      "direction": "output",
+      "verification_status": "confirmed",
+      "constraints": ["CO5300 OLED_EN，有效极性/时序待实测"]
+    },
+    {
+      "signal": "I2S_DOUT",
+      "net": "I2S_DOUT",
+      "gpio": "IO13",
+      "gpio_number": 13,
+      "direction": "output",
+      "verification_status": "confirmed",
+      "constraints": ["ESP32 → ES8311"]
+    },
+    {
+      "signal": "I2S_WS",
+      "net": "I2S_WS",
+      "gpio": "IO14",
+      "gpio_number": 14,
+      "direction": "output",
+      "verification_status": "confirmed",
+      "constraints": ["ES8311 word select"]
+    },
+    {
+      "signal": "I2S_DIN",
+      "net": "I2S_DIN",
+      "gpio": "IO17",
+      "gpio_number": 17,
+      "direction": "input",
+      "verification_status": "confirmed",
+      "constraints": ["ES8311 → ESP32"]
+    },
+    {
+      "signal": "I2S_BCLK",
+      "net": "I2S_BCLK",
+      "gpio": "IO18",
+      "gpio_number": 18,
+      "direction": "output",
+      "verification_status": "confirmed",
+      "constraints": ["ES8311 bit clock"]
+    },
+    {
+      "signal": "I2S_MCLK",
+      "net": "I2S_MCLK",
+      "gpio": "IO21",
+      "gpio_number": 21,
+      "direction": "output",
+      "verification_status": "confirmed",
+      "constraints": ["ES8311 master clock"]
+    },
+    {
+      "signal": "PA_EN",
+      "net": "PA_EN",
+      "gpio": "IO48",
+      "gpio_number": 48,
+      "direction": "output",
+      "verification_status": "confirmed",
+      "constraints": ["AUDIO_5V 稳定后再拉高", "静音/充电/故障时拉低"]
+    },
+    {
+      "signal": "M100_TXD",
+      "net": "M100_TXD",
+      "gpio": "IO43",
+      "gpio_number": 43,
+      "direction": "output",
+      "verification_status": "confirmed",
+      "constraints": ["ESP32 UART TX → M100 RXD", "单一 AT 事务所有权"]
+    },
+    {
+      "signal": "M100_RXD",
+      "net": "M100_RXD",
+      "gpio": "IO44",
+      "gpio_number": 44,
+      "direction": "input",
+      "verification_status": "confirmed",
+      "constraints": ["M100 TXD → ESP32 UART RX"]
+    },
+    {
+      "signal": "M100_DTR",
+      "net": "M100_DTR",
+      "gpio": "IO10",
+      "gpio_number": 10,
+      "direction": "open_drain_output",
+      "verification_status": "confirmed",
+      "constraints": ["DTR 有效极性待整模组手册/样机验证"]
+    },
+    {
+      "signal": "M100_RST",
+      "net": "M100_RST",
+      "gpio": "IO15",
+      "gpio_number": 15,
+      "direction": "high_z_or_open_drain",
+      "verification_status": "confirmed",
+      "constraints": ["载板 RST 方向/低有效性待验证"]
+    },
+    {
+      "signal": "M100_NET_STATUS_COMPAT",
+      "net": "M100_NET_STATUS_COMPAT",
+      "gpio": "IO16",
+      "gpio_number": 16,
+      "direction": "input",
+      "verification_status": "confirmed",
+      "constraints": ["载板无对应脚时只放 TP/NC", "非业务必需"]
+    },
+    {
+      "signal": "BQ_OTG_EN",
+      "net": "BQ_OTG_EN",
+      "gpio": "IO8",
+      "gpio_number": 8,
+      "direction": "output",
+      "verification_status": "confirmed",
+      "constraints": ["BQ25895 OTG pin", "不连接 M100 GNSS_VCC"]
+    },
+    {
+      "signal": "RGB_DATA",
+      "net": "RGB_DATA",
+      "gpio": "IO3",
+      "gpio_number": 3,
+      "direction": "output",
+      "verification_status": "confirmed",
+      "constraints": ["用户状态灯，不作调试灯"]
+    },
+    {
+      "signal": "USB_D-",
+      "net": "USB_D-",
+      "gpio": "IO19",
+      "gpio_number": 19,
+      "direction": "bidirectional_usb",
+      "verification_status": "confirmed",
+      "constraints": ["USB-Serial-JTAG", "不得与 BQ D- 并联"]
+    },
+    {
+      "signal": "USB_D+",
+      "net": "USB_D+",
+      "gpio": "IO20",
+      "gpio_number": 20,
+      "direction": "bidirectional_usb",
+      "verification_status": "confirmed",
+      "constraints": ["USB-Serial-JTAG", "不得与 BQ D+ 并联"]
+    }
+  ],
+  "i2c": {
+    "bus_name": "I2C0",
+    "sda_gpio": "IO1",
+    "scl_gpio": "IO2",
+    "speed_hz_initial": 100000,
+    "speed_verification_status": "recommended_initial",
+    "arbitration": "single_bsp_owner",
+    "pullup": "shared_pullup_value_tbd",
+    "devices": [
+      {
+        "reference": "U1",
+        "part": "BQ25895",
+        "address_7bit": "0x6A",
+        "address_int": 106,
+        "address_source": "TI_datasheet_fixed",
+        "verification_status": "confirmed",
+        "role": "charger_nvdc_pmid_otg"
+      },
+      {
+        "reference": "U13",
+        "part": "CW2015",
+        "address_7bit": "0x62",
+        "address_int": 98,
+        "address_source": "reference_target_part",
+        "verification_status": "recommended_initial",
+        "role": "fuel_gauge"
+      },
+      {
+        "reference": "U10",
+        "part": "CST9217",
+        "address_7bit": "0x5A",
+        "address_int": 90,
+        "address_source": "PY206_reference",
+        "verification_status": "recommended_initial",
+        "role": "touch_controller"
+      },
+      {
+        "reference": "U11",
+        "part": "ES8311",
+        "address_7bit": "0x18",
+        "address_int": 24,
+        "address_source": "CE_CDATA_configuration_reference",
+        "verification_status": "recommended_initial",
+        "role": "audio_codec"
+      },
+      {
+        "reference": "U14",
+        "part": "QMI8658C",
+        "address_7bit": "0x6B",
+        "address_int": 107,
+        "address_source": "SA0_high_to_avoid_BQ_0x6A",
+        "verification_status": "recommended_initial",
+        "role": "imu_future_wom_only",
+        "int1_net": "IMU_INT1",
+        "int2": "NC"
+      }
+    ],
+    "scan_required": true,
+    "scan_acceptance": "all addresses ACK without duplicates; mismatch requires spine update first"
+  },
+  "recommended_peripherals": {
+    "BQ25895": {
+      "mpn": "BQ25895RTWR",
+      "lcsc": "C80200",
+      "package": "QFN-24-EP(4x4)",
+      "values": {
+        "inductor": "1uH_Isat_ge_6A",
+        "vbus_cap": "10uF_25V_X7R_plus_100nF",
+        "sys_cap": "22uF_6.3V_X7R",
+        "pmid_cap": "47uF_10V_X7R",
+        "regn_cap": "4.7uF",
+        "btst_cap": "47nF",
+        "vref_cap": "10nF",
+        "ilim_resistor": "180ohm_candidate_for_2A_input_limit",
+        "stat_int_pullup": "10kohm_to_3V3",
+        "ts": "5.23kohm_over_30.1kohm_with_10kohm_NTC"
+      },
+      "status": "recommended_initial",
+      "verification": "charge_current_ntc_otg_limit_and_thermal_test"
+    },
+    "TPS3424": {
+      "mpn": "TPS3424A11C13ADRLR",
+      "lcsc": null,
+      "package": "SOT-5X3_DRL_8pin",
+      "values": {
+        "long_press": "about_2s_candidate",
+        "spt": "50ms_candidate",
+        "lpt": "4.7nF_candidate",
+        "reset_int_testpoints": true
+      },
+      "status": "recommended_initial",
+      "verification": "calculate_short_long_press_timing_per_purchased_revision"
+    },
+    "TPS22965": {
+      "mpn": "TPS22965DSGR",
+      "lcsc": "C122837",
+      "package": "UDFN-8-EP(2x2)",
+      "values": {
+        "cin": "22uF_plus_100nF",
+        "cout": "2.2_to_4.7uF_candidate",
+        "ct": "10nF_candidate",
+        "on_bias": "must_not_float"
+      },
+      "status": "recommended_initial",
+      "verification": "rise_time_inrush_and_vbat_sw_drop"
+    },
+    "TLV62569": {
+      "mpn": "TLV62569DBVR",
+      "lcsc": "C141836",
+      "package": "SOT-23-5",
+      "values": {
+        "inductor": "2.2uH_Isat_ge_2.5A",
+        "cin": "10uF_plus_100nF",
+        "cout": "2x22uF",
+        "feedback_top": "453kohm",
+        "feedback_bottom": "100kohm",
+        "nominal_output": "3.3V_candidate"
+      },
+      "status": "recommended_initial",
+      "verification": "dropout_below_2.5V_efficiency_ripple_and_thermal_test"
+    },
+    "TPS22919": {
+      "mpn": "TPS22919DCKR",
+      "lcsc": "C2149796",
+      "package": "SC-70-6",
+      "values": {
+        "cin": "10uF",
+        "cout": "22uF",
+        "on_pulldown": "100kohm",
+        "qod": "per_datasheet"
+      },
+      "status": "recommended_initial",
+      "verification": "pmid_valid_audio_enable_and_load_step"
+    },
+    "PVDF_FRONT_END": {
+      "buffer_mpn": "TLV2369IDGKR",
+      "buffer_lcsc": "C2057867",
+      "comparator_mpn": "TLV7042",
+      "comparator_lcsc": null,
+      "values": {
+        "series_limit": "1Mohm",
+        "bias_bleed": "10Mohm",
+        "adc_series": "1kohm",
+        "adc_filter": "100nF"
+      },
+      "status": "recommended_initial",
+      "verification": "clamp_leakage_common_mode_threshold_hysteresis_and_adc_range"
+    },
+    "ES8311": {
+      "mpn": "ES8311",
+      "lcsc": "C962342",
+      "package": "QFN-20-EP(3x3)",
+      "values": {
+        "i2c_pullups": "4.7kohm",
+        "pvdd_dvdd_decoupling": "100nF_each",
+        "avdd": "1uF",
+        "ref_caps": "1uF_each",
+        "output_coupling": "1uF_each_plus_0ohm_series",
+        "optional_i2s_caps": "22pF_DNP"
+      },
+      "status": "recommended_initial",
+      "verification": "address_ce_cdata_i2s_mode_gain_and_noise"
+    },
+    "NS4150B": {
+      "mpn": "NS4150B",
+      "lcsc": "C189961",
+      "package": "MSOP-8",
+      "values": {
+        "vcc_caps": "1uF_plus_2x22uF",
+        "bypass": "1uF",
+        "input_coupling": "100nF_each",
+        "input_bias": "100kohm_each",
+        "pa_en_pulldown": "100kohm",
+        "output_emi_option": "1nF_each_and_0ohm_series_DNP"
+      },
+      "status": "recommended_initial",
+      "verification": "speaker_impedance_power_pop_noise_temperature"
+    }
+  },
+  "power_rails": [
+    {
+      "name": "VBUS_5V",
+      "class": "input",
+      "source": "J1.USB_C_VBUS",
+      "nominal_voltage": "5V",
+      "current_target": "2A_input",
+      "consumers": ["U1.BQ25895.VBUS", "USB_MUX_VBUS_SENSE"],
+      "status": "confirmed",
+      "verification": "input_ovp_and_line_drop_must_be_measured"
+    },
+    {
+      "name": "BAT_PROTECTED",
+      "class": "battery",
+      "source": "J2.BATT+",
+      "nominal_voltage": "single_cell_3.0_to_4.2V",
+      "current_target": "cell_and_protection_rating_tbd",
+      "consumers": ["U1.BQ25895.BAT", "U2.TPS3424.VIN"],
+      "status": "confirmed",
+      "verification": "cell_capacity_protection_ntc_and_safety_must_be_measured"
+    },
+    {
+      "name": "BQ_SYS",
+      "class": "charger_system_reserved",
+      "source": "U1.BQ25895.SYS",
+      "nominal_voltage": "NVDC_system_voltage",
+      "current_target": "tbd",
+      "consumers": ["charger_housekeeping_or_testpoint_only"],
+      "forbidden_consumers": ["M100_VIN", "4G_main_supply"],
+      "status": "confirmed",
+      "verification": "confirm_no_pcb_route_to_m100_vin"
+    },
+    {
+      "name": "PMID_OTG_5V",
+      "class": "otg_source",
+      "source": "U1.BQ25895.PMID",
+      "nominal_voltage": "5V_otg",
+      "current_target": "tbd",
+      "consumers": ["U5.TPS22919.VIN"],
+      "status": "confirmed",
+      "verification": "boost_startup_and_current_limit_must_be_measured"
+    },
+    {
+      "name": "VBAT_SW",
+      "class": "switched_battery_high_current",
+      "source": "U3.TPS22965.OUT",
+      "control": "U2.TPS3424_latched_enable",
+      "nominal_voltage": "3.3_to_4.2V",
+      "current_target": "continuous_gt_1A_peak_gt_2A",
+      "consumers": ["J4.M100EGC2.VIN", "U4_3V3_REG.IN"],
+      "status": "confirmed",
+      "verification": "air780egp_tx_peak_voltage_drop_and_restart_margin"
+    },
+    {
+      "name": "3V3",
+      "class": "logic",
+      "source": "U4_3V3_REG.OUT",
+      "nominal_voltage": "3.3V",
+      "current_target": "regulator_selection_tbd",
+      "consumers": ["ESP32", "I2C_DEVICES", "DISPLAY_LOGIC", "PVDF_COMPARATOR", "RGB_OPTIONAL"],
+      "status": "confirmed",
+      "verification": "regulator_part_ripple_efficiency_and_thermal_test"
+    },
+    {
+      "name": "AUDIO_5V",
+      "class": "switched_audio",
+      "source": "U5.TPS22919.OUT",
+      "control": "PMID_valid_then_audio_enable",
+      "nominal_voltage": "5V_target",
+      "current_target": "speaker_load_tbd",
+      "consumers": ["U7.NS4150B.VCC", "RGB_5V_OPTIONAL_ONLY_WITH_LEVEL_SHIFT"],
+      "status": "confirmed",
+      "verification": "load_step_and_pa_startup_sequence"
+    },
+    {
+      "name": "GND",
+      "class": "return",
+      "source": "J1/J2",
+      "nominal_voltage": "0V",
+      "current_target": "layout_dependent",
+      "consumers": ["all_components"],
+      "status": "confirmed",
+      "verification": "return_path_and_audio_noise_review"
+    }
+  ],
+  "connectors": [
+    {
+      "reference": "J1",
+      "type": "USB-C_receptacle",
+      "mpn": "TYPEC-304-ACP16",
+      "lcsc": "C165948",
+      "critical": true,
+      "status": "confirmed",
+      "pins": [
+        {"pin": "A1/B1/A12/B12", "name": "GND", "net": "GND"},
+        {"pin": "A4/B4/A9/B9", "name": "VBUS", "net": "VBUS_5V"},
+        {"pin": "A6", "name": "D+", "net": "USB_DP_C"},
+        {"pin": "B6", "name": "D+", "net": "USB_DP_C"},
+        {"pin": "A7", "name": "D-", "net": "USB_DM_C"},
+        {"pin": "B7", "name": "D-", "net": "USB_DM_C"},
+        {"pin": "A5", "name": "CC1", "net": "USB_CC1"},
+        {"pin": "B5", "name": "CC2", "net": "USB_CC2"},
+        {"pin": "A8", "name": "SBU1", "net": "NC"},
+        {"pin": "B8", "name": "SBU2", "net": "NC"},
+        {"pin": "shell", "name": "SHIELD", "net": "USB_SHIELD"}
+      ]
+    },
+    {
+      "reference": "J2",
+      "type": "protected_single_cell_battery",
+      "mpn": "B3B-PH-K-S(LF)(SN)",
+      "lcsc": "C131339",
+      "critical": true,
+      "status": "recommended_initial",
+      "interface_status": "confirmed_3pin_batt_plus_batt_minus_ntc",
+      "pins": [
+        {"pin": 1, "name": "BATT+", "net": "BAT_PROTECTED"},
+        {"pin": 2, "name": "BATT-", "net": "GND"},
+        {"pin": 3, "name": "NTC_OPTIONAL", "net": "BAT_NTC"}
+      ]
+    },
+    {
+      "reference": "J3",
+      "type": "PY206-W38-V2_24pin_FPC",
+      "mpn": "FH34SRJ-24S-0.5SH(50)",
+      "lcsc": "C324726",
+      "critical": true,
+      "status": "recommended_initial",
+      "source": "docs/hardware/3593896291PY206-W38-V2(2).pdf_pages_3_4",
+      "orientation": "must_verify_on_real_fpc",
+      "pins": [
+        {"pin": 1, "name": "TP-VDD_3V", "net": "3V3"},
+        {"pin": 2, "name": "TP_SCL_3V", "net": "I2C_SCL"},
+        {"pin": 3, "name": "TP-SDA_3V", "net": "I2C_SDA"},
+        {"pin": 4, "name": "TP_INT_3V", "net": "TP_INT"},
+        {"pin": 5, "name": "TP_RST_3V", "net": "TP_RST"},
+        {"pin": 6, "name": "TP-GND", "net": "GND"},
+        {"pin": 7, "name": "VDD_3V", "net": "3V3"},
+        {"pin": 8, "name": "VBAT", "net": "LCD_VBAT"},
+        {"pin": 9, "name": "MTP_NC", "net": "NC"},
+        {"pin": 10, "name": "VDD_3V", "net": "3V3"},
+        {"pin": 11, "name": "GND", "net": "GND"},
+        {"pin": 12, "name": "L_RES", "net": "LCD_RST"},
+        {"pin": 13, "name": "GND", "net": "GND"},
+        {"pin": 14, "name": "L_IO0", "net": "LCD_D0"},
+        {"pin": 15, "name": "GND", "net": "GND"},
+        {"pin": 16, "name": "L_SCLK", "net": "LCD_SCLK"},
+        {"pin": 17, "name": "GND", "net": "GND"},
+        {"pin": 18, "name": "L_IO3", "net": "LCD_D3"},
+        {"pin": 19, "name": "NC", "net": "NC"},
+        {"pin": 20, "name": "L_IO2", "net": "LCD_D2"},
+        {"pin": 21, "name": "CS", "net": "LCD_CS"},
+        {"pin": 22, "name": "L_IO1", "net": "LCD_D1"},
+        {"pin": 23, "name": "OLED_EN", "net": "LCD_EN"},
+        {"pin": 24, "name": "LTE_TE", "net": "LCD_TE"}
+      ]
+    },
+    {
+      "reference": "J4",
+      "type": "M100EG-C2_Air780EGP_carrier",
+      "mpn": "M100EG-C2_carrier_header",
+      "lcsc": null,
+      "critical": true,
+      "status": "confirmed",
+      "pinout_status": "carrier_revision_must_verify",
+      "pins": [
+        {"pin": "VIN", "name": "VIN", "net": "M100_VIN"},
+        {"pin": "GND", "name": "GND", "net": "GND"},
+        {"pin": "TXD", "name": "TXD", "net": "M100_TXD"},
+        {"pin": "RXD", "name": "RXD", "net": "M100_RXD"},
+        {"pin": "DTR", "name": "DTR", "net": "M100_DTR"},
+        {"pin": "RST", "name": "RST", "net": "M100_RST"},
+        {"pin": "NET_STATUS", "name": "NET_STATUS", "net": "M100_NET_STATUS_COMPAT"},
+        {"pin": "GNSS_VCC", "name": "GNSS_VCC", "net": "M100_GNSS_VCC_NC"},
+        {"pin": "SIM", "name": "SIM_SIGNALS", "net": "M100_SIM"},
+        {"pin": "ANT", "name": "ANTENNA", "net": "M100_ANT"}
+      ]
+    },
+    {
+      "reference": "J5",
+      "type": "mono_speaker",
+      "critical": true,
+      "status": "recommended_initial",
+      "pins": [
+        {"pin": 1, "name": "SPK+", "net": "SPK_P"},
+        {"pin": 2, "name": "SPK-", "net": "SPK_N"}
+      ]
+    },
+    {
+      "reference": "J6",
+      "type": "PVDF_sensor",
+      "critical": true,
+      "status": "confirmed",
+      "pins": [
+        {"pin": 1, "name": "PVDF+", "net": "PVDF_RAW"},
+        {"pin": 2, "name": "PVDF-", "net": "GND"}
+      ]
+    }
+  ],
+  "carrier_pin_cross_reference": {
+    "carrier": "M100EG-C2_Air780EGP",
+    "source_for_protocol_only": "/Users/hongchenke/Documents/Github/main_control/components/BSP/GPS/gps.h",
+    "source_gpio_is_not_reused": true,
+    "rows": [
+      {"carrier_signal": "VIN", "legacy_source_gpio": null, "ewf_gpio": null, "ewf_net": "M100_VIN", "test_point": "TP_VBAT_SW", "note": "VBAT_SW only; never BQ_SYS"},
+      {"carrier_signal": "TXD", "legacy_source_gpio": "GPIO17", "ewf_gpio": "IO44", "ewf_net": "M100_RXD", "test_point": "TP_M100_TXD", "note": "carrier TXD -> ESP RX"},
+      {"carrier_signal": "RXD", "legacy_source_gpio": "GPIO18", "ewf_gpio": "IO43", "ewf_net": "M100_TXD", "test_point": "TP_M100_RXD", "note": "ESP TX -> carrier RX"},
+      {"carrier_signal": "DTR", "legacy_source_gpio": "GPIO7", "ewf_gpio": "IO10", "ewf_net": "M100_DTR", "test_point": "TP_M100_DTR", "note": "open-drain; polarity pending"},
+      {"carrier_signal": "RST", "legacy_source_gpio": "GPIO15", "ewf_gpio": "IO15", "ewf_net": "M100_RST", "test_point": "TP_M100_RST", "note": "direction/active level pending"},
+      {"carrier_signal": "NET_STATUS", "legacy_source_gpio": "GPIO16", "ewf_gpio": "IO16", "ewf_net": "M100_NET_STATUS_COMPAT", "test_point": "TP_NET_STATUS", "note": "NC/TP if carrier revision has no pin"},
+      {"carrier_signal": "GNSS_VCC", "legacy_source_gpio": "GPIO8", "ewf_gpio": null, "ewf_net": "M100_GNSS_VCC_NC", "test_point": "TP_GNSS_VCC_NC", "note": "not connected; IO8 is BQ_OTG_EN"}
+    ],
+    "status": "logical_cross_reference_only",
+    "physical_header_pin_numbers": "must_prototype_validate"
+  },
+  "nets": [
+    {"name": "VBUS_5V", "class": "power", "endpoints": ["J1.VBUS", "U1.BQ25895.VBUS"], "status": "confirmed"},
+    {"name": "BAT_PROTECTED", "class": "power", "endpoints": ["J2.BATT+", "U1.BQ25895.BAT", "U2.TPS3424.VIN"], "status": "confirmed"},
+    {"name": "BQ_SYS", "class": "power_reserved", "endpoints": ["U1.BQ25895.SYS", "TP_BQ_SYS"], "forbidden_endpoints": ["J4.VIN"], "status": "confirmed"},
+    {"name": "PMID_OTG_5V", "class": "power", "endpoints": ["U1.BQ25895.PMID", "U5.TPS22919.VIN"], "status": "confirmed"},
+    {"name": "VBAT_SW", "class": "power", "endpoints": ["U3.TPS22965.OUT", "J4.VIN", "U4_3V3_REG.IN", "TP_VBAT_SW"], "status": "confirmed"},
+    {"name": "3V3", "class": "power", "endpoints": ["U4_3V3_REG.OUT", "U7.ESP32.VDD3P3", "J3.FPC.VDD", "U1/U10/U11/U13/U14.I2C_LOGIC", "PVDF_COMPARATOR.VDD", "RGB.VDD_OPTIONAL"], "status": "confirmed"},
+    {"name": "AUDIO_5V", "class": "power", "endpoints": ["U5.TPS22919.OUT", "U12.NS4150B.VCC"], "status": "confirmed"},
+    {"name": "GND", "class": "return", "endpoints": ["J1.GND", "J2.BATT-", "J3.FPC.GND", "J4.GND", "all_ground_pins"], "status": "confirmed"},
+    {"name": "I2C_SDA", "class": "i2c", "endpoints": ["U7.IO1", "U1/U10/U11/U13/U14.SDA", "J3.FPC.pin3", "TP_I2C_SDA"], "status": "confirmed"},
+    {"name": "I2C_SCL", "class": "i2c", "endpoints": ["U7.IO2", "U1/U10/U11/U13/U14.SCL", "J3.FPC.pin2", "TP_I2C_SCL"], "status": "confirmed"},
+    {"name": "PVDF_RAW", "class": "analog_unprotected", "endpoints": ["J6.PVDF+", "R_PVDF_LIMIT.IN", "TP_PVDF_RAW"], "status": "confirmed"},
+    {"name": "PVDF_ADC", "class": "analog_protected", "endpoints": ["R_PVDF_LIMIT.OUT", "PVDF_CLAMP", "U7.IO9", "TP_PVDF_ADC"], "status": "confirmed"},
+    {"name": "PVDF_CMP_WAKE", "class": "wake_signal", "endpoints": ["PVDF_COMPARATOR.OUT", "U7.IO11", "TP_PVDF_CMP"], "status": "confirmed"},
+    {"name": "TP_RST", "class": "touch_signal", "endpoints": ["U7.IO38", "J3.FPC.pin5"], "status": "confirmed"},
+    {"name": "TP_INT", "class": "touch_signal", "endpoints": ["U7.IO39", "J3.FPC.pin4"], "status": "confirmed"},
+    {"name": "LCD_RST", "class": "qspi", "endpoints": ["U7.IO4", "J3.FPC.pin12"], "status": "confirmed"},
+    {"name": "LCD_CS", "class": "qspi", "endpoints": ["U7.IO40", "J3.FPC.pin21"], "status": "confirmed"},
+    {"name": "LCD_SCLK", "class": "qspi", "endpoints": ["U7.IO5", "J3.FPC.pin16"], "status": "confirmed"},
+    {"name": "LCD_D0", "class": "qspi", "endpoints": ["U7.IO6", "J3.FPC.pin14"], "status": "confirmed"},
+    {"name": "LCD_D1", "class": "qspi", "endpoints": ["U7.IO7", "J3.FPC.pin22"], "status": "confirmed"},
+    {"name": "LCD_D2", "class": "qspi", "endpoints": ["U7.IO12", "J3.FPC.pin20"], "status": "confirmed"},
+    {"name": "LCD_D3", "class": "qspi", "endpoints": ["U7.IO42", "J3.FPC.pin18"], "status": "confirmed"},
+    {"name": "LCD_EN", "class": "power_enable", "endpoints": ["U7.IO47", "J3.FPC.pin23"], "status": "confirmed"},
+    {"name": "LCD_VBAT", "class": "panel_power_candidate", "endpoints": ["J3.FPC.pin8", "VBAT_SW_or_panel_regulator"], "status": "recommended_initial"},
+    {"name": "LCD_TE", "class": "optional_signal", "endpoints": ["J3.FPC.pin24", "TP_LCD_TE_or_NC"], "status": "recommended_initial"},
+    {"name": "I2S_DOUT", "class": "i2s", "endpoints": ["U7.IO13", "U11.ES8311.DAC_DATA"], "status": "confirmed"},
+    {"name": "I2S_WS", "class": "i2s", "endpoints": ["U7.IO14", "U11.ES8311.WS"], "status": "confirmed"},
+    {"name": "I2S_DIN", "class": "i2s", "endpoints": ["U7.IO17", "U11.ES8311.ADC_DATA"], "status": "confirmed"},
+    {"name": "I2S_BCLK", "class": "i2s", "endpoints": ["U7.IO18", "U11.ES8311.BCLK"], "status": "confirmed"},
+    {"name": "I2S_MCLK", "class": "i2s", "endpoints": ["U7.IO21", "U11.ES8311.MCLK"], "status": "confirmed"},
+    {"name": "PA_EN", "class": "audio_enable", "endpoints": ["U7.IO48", "U12.NS4150B.EN"], "status": "confirmed"},
+    {"name": "SPK_P", "class": "audio", "endpoints": ["U12.NS4150B.OUTP", "J5.SPK+"], "status": "recommended_initial"},
+    {"name": "SPK_N", "class": "audio", "endpoints": ["U12.NS4150B.OUTN", "J5.SPK-"], "status": "recommended_initial"},
+    {"name": "M100_VIN", "class": "4g_power", "endpoints": ["VBAT_SW", "J4.VIN"], "forbidden_sources": ["BQ_SYS", "5V_boost"], "status": "confirmed"},
+    {"name": "M100_TXD", "class": "uart", "endpoints": ["U7.IO43", "J4.RXD"], "status": "confirmed"},
+    {"name": "M100_RXD", "class": "uart", "endpoints": ["J4.TXD", "U7.IO44"], "status": "confirmed"},
+    {"name": "M100_DTR", "class": "4g_control", "endpoints": ["U7.IO10", "J4.DTR"], "status": "confirmed"},
+    {"name": "M100_RST", "class": "4g_control", "endpoints": ["U7.IO15", "J4.RST", "TP_M100_RST"], "status": "confirmed"},
+    {"name": "M100_NET_STATUS_COMPAT", "class": "4g_status_optional", "endpoints": ["U7.IO16", "J4.NET_STATUS_if_present", "TP_NET_STATUS"], "status": "confirmed"},
+    {"name": "M100_GNSS_VCC_NC", "class": "no_connect", "endpoints": ["J4.GNSS_VCC", "TP_GNSS_VCC_NC"], "status": "confirmed"},
+    {"name": "BQ_OTG_EN", "class": "power_control", "endpoints": ["U7.IO8", "U1.BQ25895.OTG"], "status": "confirmed"},
+    {"name": "RGB_DATA", "class": "user_status_led", "endpoints": ["U7.IO3", "RGB.DATA"], "status": "confirmed"},
+    {"name": "USB_DP_C", "class": "usb_input", "endpoints": ["J1.D+", "U6.FSW7227.COM_DP"], "status": "confirmed"},
+    {"name": "USB_DM_C", "class": "usb_input", "endpoints": ["J1.D-", "U6.FSW7227.COM_DM"], "status": "confirmed"},
+    {"name": "USB_DP_BQ", "class": "usb_bq_path", "endpoints": ["U6.FSW7227.BQ_DP", "U1.BQ25895.D+"], "status": "confirmed"},
+    {"name": "USB_DM_BQ", "class": "usb_bq_path", "endpoints": ["U6.FSW7227.BQ_DM", "U1.BQ25895.D-"], "status": "confirmed"},
+    {"name": "USB_D+", "class": "usb_esp_path", "aliases": ["USB_D+", "USB_DP_ESP"], "endpoints": ["U6.FSW7227.ESP_DP", "U7.IO20"], "status": "confirmed"},
+    {"name": "USB_D-", "class": "usb_esp_path", "aliases": ["USB_D-", "USB_D−", "USB_DM_ESP"], "endpoints": ["U6.FSW7227.ESP_DM", "U7.IO19"], "status": "confirmed"},
+    {"name": "USB_CC1", "class": "usb_configuration", "endpoints": ["J1.CC1", "R_CC1_5K1", "GND"], "status": "recommended_initial"},
+    {"name": "USB_CC2", "class": "usb_configuration", "endpoints": ["J1.CC2", "R_CC2_5K1", "GND"], "status": "recommended_initial"},
+    {"name": "USB_MUX_SEL", "class": "configuration", "endpoints": ["U6.FSW7227.SEL", "JP_USB_FORCE_BQ", "JP_USB_FORCE_ESP"], "status": "recommended_initial"},
+    {"name": "USB_MUX_DSEL", "class": "configuration", "endpoints": ["U6.FSW7227.DSEL", "JP_USB_FORCE_BQ", "JP_USB_FORCE_ESP"], "status": "recommended_initial"}
+  ],
+  "bom": [
+    {"reference": "U1", "part": "BQ25895RTWR", "lcsc": "C80200", "role": "NVDC_charger_Pmid_OTG", "status": "confirmed", "address": "0x6A"},
+    {"reference": "U2", "part": "TPS3424A11C13ADRLR", "lcsc": null, "role": "pushbutton_power_latch", "status": "recommended_initial", "package": "SOT-5X3_DRL_8pin"},
+    {"reference": "U3", "part": "TPS22965DSGR", "lcsc": "C122837", "role": "VBAT_SW_high_current_load_switch", "status": "recommended_initial", "package": "UDFN-8-EP(2x2)"},
+    {"reference": "U4_3V3_REG", "part": "TLV62569DBVR", "lcsc": "C141836", "role": "VBAT_SW_to_3V3_regulator", "status": "recommended_initial", "package": "SOT-23-5", "selection_note": "不得使用 AMS1117/TPS631000；2.5V 以下掉压需验证"},
+    {"reference": "U5", "part": "TPS22919DCKR", "lcsc": "C2149796", "role": "PMID_to_AUDIO_5V_load_switch", "status": "recommended_initial", "package": "SC-70-6"},
+    {"reference": "U6", "part": "FSW7227YMS10G/TR", "lcsc": "C32713318", "role": "USB_D+/D-_MUX", "package": "MSOP-10", "status": "confirmed", "alternate_allowed": true},
+    {"reference": "U7", "part": "ESP32-S3-WROOM-1-N16R8", "lcsc": "C2913202", "role": "main_mcu", "status": "confirmed"},
+    {"reference": "U8", "part": "M100EG-C2_Air780EGP_carrier", "lcsc": null, "role": "4G_modem_carrier", "status": "confirmed", "vin_net": "VBAT_SW"},
+    {"reference": "U9", "part": "CO5300AF-51_PY206-W38-V2", "lcsc": null, "role": "AMOLED_display_controller", "status": "recommended_initial"},
+    {"reference": "U10", "part": "CST9217", "lcsc": null, "role": "touch_controller", "status": "recommended_initial", "address": "0x5A"},
+    {"reference": "U11", "part": "ES8311", "lcsc": "C962342", "role": "audio_codec", "status": "recommended_initial", "address": "0x18", "package": "QFN-20-EP(3x3)"},
+    {"reference": "U12", "part": "NS4150B", "lcsc": "C189961", "role": "class_d_amplifier", "status": "confirmed", "package": "MSOP-8"},
+    {"reference": "U13", "part": "CW2015", "lcsc": null, "role": "fuel_gauge", "status": "recommended_initial", "address": "0x62"},
+    {"reference": "U14", "part": "QMI8658C", "lcsc": null, "role": "future_wom_imu", "status": "recommended_initial", "address": "0x6B", "int2": "NC"},
+    {"reference": "U15", "part": "TLV2369IDGKR", "lcsc": "C2057867", "role": "PVDF_buffer", "status": "recommended_initial"},
+    {"reference": "U16", "part": "TLV7042", "lcsc": null, "role": "PVDF_comparator", "status": "recommended_initial", "selection_note": "料号、阈值、滞回与输出极性待样机"},
+    {"reference": "S1", "part": "PVDF_LDT0-028K_or_target_sensor", "lcsc": null, "role": "physical_tap_sensor", "status": "recommended_initial"},
+    {"reference": "LED1", "part": null, "lcsc": null, "role": "RGB_status_led", "status": "must_prototype_validate", "selection_note": "优先 3V3 兼容器件；5V 器件需电平转换"},
+    {"reference": "R_PVDF_SER", "part": null, "lcsc": null, "role": "PVDF_series_limit", "value": "1MΩ_recommended_initial", "status": "must_prototype_validate"},
+    {"reference": "R_PVDF_BIAS", "part": null, "lcsc": null, "role": "PVDF_bias_bleed", "value": "10MΩ_recommended_initial", "status": "must_prototype_validate"},
+    {"reference": "R_PVDF_ADC", "part": null, "lcsc": null, "role": "PVDF_ADC_series", "value": "1kΩ_recommended_initial", "status": "must_prototype_validate"},
+    {"reference": "C_PVDF_ADC", "part": null, "lcsc": null, "role": "PVDF_ADC_filter", "value": "100nF_recommended_initial", "status": "must_prototype_validate"},
+    {"reference": "R_CC1", "part": null, "lcsc": null, "role": "USB-C_CC1_Rd", "value": "5.1kΩ_recommended_initial", "status": "recommended_initial"},
+    {"reference": "R_CC2", "part": null, "lcsc": null, "role": "USB-C_CC2_Rd", "value": "5.1kΩ_recommended_initial", "status": "recommended_initial"},
+    {"reference": "J1", "part": "TYPEC-304-ACP16", "lcsc": "C165948", "role": "USB-C_16P_receptacle", "status": "recommended_initial"},
+    {"reference": "J2", "part": "B3B-PH-K-S(LF)(SN)", "lcsc": "C131339", "role": "battery_3P_PH_2mm_BATT_NTC", "status": "confirmed"},
+    {"reference": "J3", "part": "FH34SRJ-24S-0.5SH(50)", "lcsc": "C324726", "role": "display_FPC_24P_bottom_contact", "status": "recommended_initial"},
+    {"reference": "J4", "part": "M100EG-C2_carrier_header", "lcsc": null, "role": "4G_carrier_header", "status": "must_prototype_validate"}
+  ],
+  "test_points": [
+    "TP_VBUS_5V",
+    "TP_BAT_PROTECTED",
+    "TP_VBAT_SW",
+    "TP_BQ_SYS",
+    "TP_PMID",
+    "TP_3V3",
+    "TP_AUDIO_5V",
+    "TP_I2C_SDA",
+    "TP_I2C_SCL",
+    "TP_PVDF_RAW",
+    "TP_PVDF_ADC",
+    "TP_PVDF_CMP",
+    "TP_M100_TXD",
+    "TP_M100_RXD",
+    "TP_M100_DTR",
+    "TP_M100_RST",
+    "TP_NET_STATUS",
+    "TP_GNSS_VCC_NC",
+    "TP_USB_DP_C",
+    "TP_USB_DM_C",
+    "TP_USB_DP_BQ",
+    "TP_USB_DM_BQ",
+    "TP_USB_D+",
+    "TP_USB_D-"
+  ],
+  "schematic_pages": [
+    {
+      "id": "P01_POWER_USB",
+      "title": "USB-C / BQ25895 / 电源锁存与分轨",
+      "components": ["J1", "J2", "U1", "U2", "U3", "U4_3V3_REG", "U5", "U6"],
+      "nets": ["VBUS_5V", "BAT_PROTECTED", "BQ_SYS", "PMID_OTG_5V", "VBAT_SW", "3V3", "AUDIO_5V", "USB_DP_C", "USB_DM_C", "USB_DP_BQ", "USB_DM_BQ", "USB_D+", "USB_D-"],
+      "test_points": ["TP_VBUS_5V", "TP_BAT_PROTECTED", "TP_VBAT_SW", "TP_BQ_SYS", "TP_PMID", "TP_3V3", "TP_AUDIO_5V"],
+      "eda_status": "record_only_not_created"
+    },
+    {
+      "id": "P02_MCU_USB",
+      "title": "ESP32-S3 主控 / 启动复位 / USB-Serial-JTAG",
+      "components": ["U7", "U6"],
+      "nets": ["BOOT0", "PWR_STATE", "RESET_N", "USB_D+", "USB_D-", "BQ_OTG_EN"],
+      "test_points": ["TP_USB_D+", "TP_USB_D-"],
+      "eda_status": "record_only_not_created"
+    },
+    {
+      "id": "P03_DISPLAY_TOUCH",
+      "title": "CO5300 / CST9217 24-pin FPC",
+      "components": ["J3", "U9", "U10"],
+      "nets": ["3V3", "LCD_VBAT", "I2C_SDA", "I2C_SCL", "TP_RST", "TP_INT", "LCD_RST", "LCD_CS", "LCD_SCLK", "LCD_D0", "LCD_D1", "LCD_D2", "LCD_D3", "LCD_EN", "LCD_TE", "GND"],
+      "test_points": ["TP_LCD_TE_or_NC"],
+      "eda_status": "record_only_not_created"
+    },
+    {
+      "id": "P04_AUDIO_RGB",
+      "title": "ES8311 / NS4150B / 扬声器 / RGB",
+      "components": ["U11", "U12", "J5", "LED1"],
+      "nets": ["I2C_SDA", "I2C_SCL", "I2S_DOUT", "I2S_WS", "I2S_DIN", "I2S_BCLK", "I2S_MCLK", "AUDIO_5V", "PA_EN", "SPK_P", "SPK_N", "RGB_DATA"],
+      "test_points": ["TP_AUDIO_5V"],
+      "eda_status": "record_only_not_created"
+    },
+    {
+      "id": "P05_PVDF",
+      "title": "PVDF 限流 / 钳位 / 比较器 / ADC",
+      "components": ["J6", "S1", "R_PVDF_LIMIT", "U15"],
+      "nets": ["PVDF_RAW", "PVDF_ADC", "PVDF_CMP_WAKE", "3V3", "GND"],
+      "test_points": ["TP_PVDF_RAW", "TP_PVDF_ADC", "TP_PVDF_CMP"],
+      "eda_status": "record_only_not_created"
+    },
+    {
+      "id": "P06_MODEM",
+      "title": "M100EG-C2 / Air780EGP / SIM / 天线",
+      "components": ["U8", "J4"],
+      "nets": ["M100_VIN", "M100_TXD", "M100_RXD", "M100_DTR", "M100_RST", "M100_NET_STATUS_COMPAT", "M100_GNSS_VCC_NC", "M100_SIM", "M100_ANT", "VBAT_SW", "GND"],
+      "test_points": ["TP_M100_RST", "TP_NET_STATUS", "TP_GNSS_VCC_NC"],
+      "eda_status": "record_only_not_created"
+    },
+    {
+      "id": "P07_SHARED_SENSORS",
+      "title": "CW2015 / QMI8658C / I²C 测试点",
+      "components": ["U13", "U14"],
+      "nets": ["I2C_SDA", "I2C_SCL", "3V3", "GND", "IMU_INT1"],
+      "test_points": ["TP_I2C_SDA", "TP_I2C_SCL"],
+      "eda_status": "record_only_not_created"
+    }
+  ],
+  "open_items": [
+    {"id": "HW-OI-001", "topic": "受保护电池容量/保护板/NTC/机械安全", "verification": "电池规格与充放电热测试", "status": "must_prototype_validate"},
+    {"id": "HW-OI-002", "topic": "3V3 稳压器料号/效率/纹波", "verification": "电子负载与示波器", "status": "must_prototype_validate"},
+    {"id": "HW-OI-003", "topic": "TPS3424/TPS22965 外围与 PWR 时序", "verification": "ERC + 按键/掉压波形", "status": "must_prototype_validate"},
+    {"id": "HW-OI-004", "topic": "BQ25895 充电/ILIM/TS/OTG 参数", "verification": "5V/2A、满载、温升与寄存器", "status": "must_prototype_validate"},
+    {"id": "HW-OI-005", "topic": "FSW7227 SEL/DSEL 默认态与强制焊盘互斥", "verification": "BQ 检测、ESP 枚举、反灌电压", "status": "must_prototype_validate"},
+    {"id": "HW-OI-006", "topic": "PY206 FPC 方向/VBAT/VDD/OLED_EN/TE", "verification": "实物插合、首帧时序与波形", "status": "must_prototype_validate"},
+    {"id": "HW-OI-007", "topic": "共享 I²C 实际地址与上拉", "verification": "上电扫描且无地址重复", "status": "must_prototype_validate"},
+    {"id": "HW-OI-008", "topic": "PVDF 1M 限流/钳位/比较器阈值滞回", "verification": "ADC 不越界、1–20 cps 与环境振动", "status": "must_prototype_validate"},
+    {"id": "HW-OI-009", "topic": "M100 UART 电平/RST/DTR/NET_STATUS/GNSS_VCC 针脚", "verification": "载板资料、AT、休眠唤醒波形", "status": "must_prototype_validate"},
+    {"id": "HW-OI-010", "topic": "Air780EGP 发射峰值/电池轨掉压/天线散热", "verification": "弱网满功率示波器，无重启", "status": "must_prototype_validate"},
+    {"id": "HW-OI-011", "topic": "扬声器腔体/ES8311 增益/AUDIO_5V 负载", "verification": "目标外壳声学标定", "status": "must_prototype_validate"}
+  ],
+  "validation": {
+    "allowed_gpio_numbers": [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 38, 39, 40, 41, 42, 43, 44, 46, 47, 48],
+    "reserved_gpio_numbers": [22, 23, 24, 25, 26, 27, 28, 29, 30, 31, 32, 33, 34, 35, 36, 37, 45],
+    "required_gpio_signals": ["BOOT0", "PWR_STATE", "PVDF_ADC", "PVDF_CMP_WAKE", "I2C_SDA", "I2C_SCL", "TP_RST", "TP_INT", "IMU_INT1", "LCD_RST", "LCD_CS", "LCD_SCLK", "LCD_D0", "LCD_D1", "LCD_D2", "LCD_D3", "LCD_EN", "I2S_DOUT", "I2S_WS", "I2S_DIN", "I2S_BCLK", "I2S_MCLK", "PA_EN", "M100_TXD", "M100_RXD", "M100_DTR", "M100_RST", "M100_NET_STATUS_COMPAT", "BQ_OTG_EN", "RGB_DATA", "USB_D-", "USB_D+"],
+    "required_power_rails": ["VBUS_5V", "BAT_PROTECTED", "BQ_SYS", "PMID_OTG_5V", "VBAT_SW", "3V3", "AUDIO_5V", "GND"],
+    "required_connectors": ["J1", "J2", "J3", "J4", "J5", "J6"],
+    "required_nets": ["USB_D+", "USB_D-", "I2C_SDA", "I2C_SCL", "M100_VIN", "M100_TXD", "M100_RXD", "M100_DTR", "M100_RST", "M100_NET_STATUS_COMPAT", "M100_GNSS_VCC_NC", "BQ_OTG_EN", "PVDF_ADC", "PVDF_CMP_WAKE", "LCD_RST", "LCD_CS", "LCD_SCLK", "LCD_D0", "LCD_D1", "LCD_D2", "LCD_D3", "LCD_EN", "PA_EN", "RGB_DATA"],
+    "required_schematic_pages": ["P01_POWER_USB", "P02_MCU_USB", "P03_DISPLAY_TOUCH", "P04_AUDIO_RGB", "P05_PVDF", "P06_MODEM", "P07_SHARED_SENSORS"],
+    "expected_eda_status": "record_only_not_created",
+    "sample_validation_required": true
+  }
+}

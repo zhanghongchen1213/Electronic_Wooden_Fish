@@ -1,6 +1,7 @@
 {
   "surface": "miniapp",
-  "selected_style": null,
+  "selected_style": "MINI-06",
+  "source_master": "A358t",
   "canvas": {"width": 390, "height": 844, "safe_area_top": 62, "page_pad": 20, "bottom_nav_height": 56},
   "styles": [
     {"id":"MINI-01","name":"宋版长卷","category":"minimal-editorial","layout":"scroll","surface":"#f8f1e5","ink":"#2a241e","accent":"#a9652e","font":"Noto Serif SC","signature":"窄纵向经页栏与页码细线","axes":["composition","typography","material","progress"]},

@@ -1,9 +1,10 @@
 {
   "surface": "device",
-  "selected_style": null,
+  "selected_style": "DEVICE-01",
+  "source_master": "hbTEa",
   "canvas": {"width": 410, "height": 502, "corner_radius": 110},
   "styles": [
-    {"id":"DEVICE-01","name":"匠作写实·三分之四","category":"craft-realism","layout":"poster","surface":"#050505","ink":"#fbfaf0","accent":"#fbfaf0","woodfish":"#fbfaf0","signature":"大面积白色木鱼剪影与同心余韵环","axes":["composition","material","scale","signature"]},
+    {"id":"DEVICE-01","name":"匠作写实·三分之四","category":"craft-realism","layout":"poster","surface":"#050505","ink":"#fbfaf0","accent":"#d9a441","woodfish":"#fbfaf0","signature":"大面积白色木鱼剪影与同心余韵环","axes":["composition","material","scale","signature"]},
     {"id":"DEVICE-02","name":"漆器祭台·正面器物","category":"lacquer-altar","layout":"altar","surface":"#130b09","ink":"#f4e7d5","accent":"#d8a45d","woodfish":"#8e5036","signature":"漆牌、低台与竖向木槌导轨","axes":["composition","material","hierarchy","signature"]},
     {"id":"DEVICE-03","name":"木雕剖面·中轴图","category":"woodcut-section","layout":"cross","surface":"#111111","ink":"#f2eee4","accent":"#d2b179","woodfish":"#80776c","signature":"左侧竖排字带与中轴剖面线","axes":["composition","typography","progress","signature"]},
     {"id":"DEVICE-04","name":"手作案台·俯视","category":"workbench-top","layout":"desk","surface":"#1a0f09","ink":"#f4e2c9","accent":"#c88743","woodfish":"#a86f3d","signature":"木案横纹与斜向敲击轴","axes":["composition","material","perspective","signature"]},

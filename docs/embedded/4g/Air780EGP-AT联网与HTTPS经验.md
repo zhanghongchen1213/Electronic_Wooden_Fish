@@ -2,7 +2,7 @@
 # Air780EGP AT 联网与 HTTPS 经验
 
 > 状态：EWF 绿地阶段方法学迁移。底层经验全部提炼自 `main_control`（HEAD fb458b9，2026-09-05 实现）的 `components/BSP/GPS/gps.*`。该驱动面向 **M100EG-C2（Air780E 系 AT 固件）**，其中 `GPS_HTTP_SSL_CONTEXT_ID=153` 直接点名 Air780EGP——即 EWF 所用整颗模组。所有数值与流程未在 EWF 自有板闭环前一律 `DEFERRED`，不得从“代码能编译”推导出“通信可靠”。
-> 引脚/板级唯一权威：`_bmad-output/planning-artifacts/architecture/architecture-Electronic_Wooden_Fish-2026-09-08/ARCHITECTURE-SPINE.md` §板级合同（冲突一律以 spine 为准）。本文件不冻结任何未核验电平/引脚。
+> 引脚/板级唯一权威：`_bmad-output/planning-artifacts/architecture/architecture-Electronic_Wooden_Fish-2026-09-08/ARCHITECTURE-SPINE.md` §板级合同（冲突一律以 spine 为准）。本文件不冻结任何未核验电平/引脚；EWF 具体电源与载板网络见 `docs/hardware/电子木鱼-硬件原理图设计基线.md`。
 > 兄弟排障文档（AT 零响应故障树/恢复语义的展开版）：`docs/embedded/4g/troubleshooting/Air780EGP-AT零响应与恢复.md`。
 > 最近更新：2026-09-08
 
@@ -120,7 +120,7 @@ main_control 移植默认值（`gps_config.h`）：
 
 1. 在配置引脚前先把 DTR `gpio_set_level(GPS_DTR_SLEEP_LEVEL)`——让模组先处于休眠安全态，避免配置过程中电平毛刺；
 2. 配置 DTR 为**开漏输出**（`GPIO_MODE_OUTPUT_OD`，禁用上下拉）——由 ESP32 侧开漏驱动，配合模组侧上拉；
-3. `RST / NET_STATUS / GNSS_VCC` 配置为**输入 + 禁用上下拉（输入高阻）**，只读不驱动（RST 保持高阻、不做硬复位，NET_STATUS 只读观测，GNSS_VCC 归模组/板级管理，见⑧）；
+3. `RST / NET_STATUS` 按载板能力配置为**输入 + 禁用上下拉（输入高阻）**，只读不驱动（RST 保持高阻、不做硬复位，NET_STATUS 只读观测）；M100 `GNSS_VCC` 在 EWF 载板上留 `NC/TP`，ESP32 `IO8` 不进入本初始化路径（IO8 是 `BQ_OTG_EN`，见⑧）；
 4. 最后把 DTR 置为唤醒电平进入工作态。
 
 ### 运行期唤醒（`gps_modem_init` / `gps_recover_modem`）
@@ -223,10 +223,11 @@ URL、`X-Device-Token` 头、请求正文、响应正文均走脱敏分支：日
 
 ---
 
-## ⑧ GNSS 默认关与 GNSS_VCC
+## ⑧ GNSS 默认关与载板 NC 处理
 
-- main_control 用产品宏把 GNSS 整段编译隔离（`GPS_SCENIC_ENABLE`）：不启用时**不编译、不发送任何 `AT+CGNS*` 指令**，不执行 GNSS 轮询，`status.gnss_running` 恒为 false；启用时才发 `AT+CGNSAID=1,1,1,1`（AGNSS 辅助，失败继续冷启动）与 `AT+CGNSPWR=1`，之后按 1 s / 5 s 快慢轮询 `AT+CGNSINF`。进入休眠前启用态先 `AT+CGNSPWR=0`。
-- **GNSS_VCC（main_control GPIO8 / EWF spine IO8）是模组随 GNSS 开关同步输出的 3.3V 有源天线电源，ESP32 侧始终不驱动**：配成输入 + 无上下拉高阻，电源由模组/板级合同管理。EWF 的 GPS 默认关闭（AD-14「GPS 保留控制能力但默认关闭」），固件不得把 IO8 当普通输出驱动，也不得为了“省电”去拉低它。
+- main_control 用产品宏把 GNSS 整段编译隔离（`GPS_SCENIC_ENABLE`）：不启用时**不编译、不发送任何 `AT+CGNS*` 指令**，不执行 GNSS 轮询，`status.gnss_running` 恒为 false；启用时才发 GNSS 指令。EWF MVP 保持默认关闭，不建立 GPS 业务链路。
+- **EWF 板级差异（以硬件 spec 为准）**：原 main_control 的 `GPIO8=GNSS_VCC` 只作历史交叉核对；EWF 已将 `IO8` 释放为 `BQ_OTG_EN`，连接 BQ25895 OTG 脚。M100 载板的 `GNSS_VCC` 不接 ESP32，落图为 `M100_GNSS_VCC_NC`（NC/测试点），不得驱动、拉低或接入业务。
+- `NET_STATUS` 在 EWF 保留 `IO16=M100_NET_STATUS_COMPAT` 兼容逻辑位；若具体 M100 载板没有该针脚，IO16 只放测试点/NC，不把它当联网必需条件。M100 `RST=IO15` 仍保留载板交叉表，方向/极性待实测。
 - 解析参考（EWF 若日后启用 GPS 再迁移）：`AT+CGNSINF` payload 逗号切 24 字段，≥16 字段有效；run_status==1 && fix_status==1 且经纬度在合法范围才判有效定位；纬度/经度/UTC/海拔/速度/航向/定位模式/可见星/使用星按固定下标取值。
 
 ---
@@ -353,7 +354,7 @@ source 实现约定（EWF 必须沿用，违反即视为泄露缺陷）：
 | --- | --- | --- |
 | **发射峰值 / 掉压** | Air780EGP 高电流电池轨（持续 >1 A / 瞬时 >2 A 能力）。4G 发射峰值时电池轨不得掉压到触发 ESP32-S3 重启；需实测发射瞬态（弱网满功率发射 + 最大占空比上报场景）。 | spine AD-13 / §板级合同「电源分轨」；工程验证门禁「发射峰值电池轨无掉压重启」 |
 | **SIM 实名 / 资费** | HTTPS 需要 SIM 已实名且套餐含数据流量；停机/欠费/定向流量不足的表现要纳入 AT 恢复与上报失败语义验证。 | EWF 运营商选型自建；main_control 无覆盖 |
-| **模组 DTR 电平 / 天线** | ① DTR 有效极性、开漏驱动是否与 Air780EGP 整模组手册一致（对调 AWAKE/SLEEP 两宏即可适配，见⑤）；② 天线选型/布线/天线检测，弱网与天线失配场景的 CSQ 表现。 | 整模组硬件手册 + 原理图核验后才冻结 |
+| **载板控制脚 / 天线** | ① DTR（IO10）有效极性、开漏驱动是否与 Air780EGP 整模组手册一致（对调 AWAKE/SLEEP 两宏即可适配，见⑤）；② M100 RST（IO15）方向/极性、NET_STATUS（IO16）是否有载板针脚；③ GNSS_VCC 保持 NC/TP，IO8 已用于 BQ_OTG_EN；④ 天线选型/布线/天线检测与弱网 CSQ。 | 整模组/载板手册 + 原理图核验后才冻结 |
 
 ---
 
@@ -375,10 +376,10 @@ source 实现约定（EWF 必须沿用，违反即视为泄露缺陷）：
 - `components/BSP/GPS/gps.h` —— 引脚（EWF 不复制）+ `gps_status_t` / `gps_https_result_t` 类型 + API 声明。
 - `main/app_scenic_management/app_scenic_config.h` —— `SCENIC_HTTP_OPERATION_TIMEOUT_MS=65000`（整笔 HTTPS 截止预算出处）。
 - `docs/architecture/硬件架构与软件框架说明.md` §9.3 —— 波特率扫描/引脚/能力/后台任务/HTTPS 联调配置浓缩。
-- `docs/Function/设备功能全景文档.md` §20.1 —— GNSS_VCC 归模组、状态3不编译 `AT+CGNS*`、4G 驱动参数配置入口的归属说明（景区业务语义不迁）。
+- `docs/Function/设备功能全景文档.md` §20.1 —— 仅作历史 GNSS 默认关闭/不编译 `AT+CGNS*` 语义交叉核对；EWF IO8/载板 NC 口径以硬件基线为准（景区业务语义不迁）。
 
 ### EWF 落地目标
 
 - 本文件：`docs/embedded/4g/Air780EGP-AT联网与HTTPS经验.md`（§①-⑫）。
 - 兄弟排障：`docs/embedded/4g/troubleshooting/Air780EGP-AT零响应与恢复.md`。
-- 固件实现归 story E4.1/E4.2；引脚/电源权威 = `_bmad-output/planning-artifacts/architecture/architecture-Electronic_Wooden_Fish-2026-09-08/ARCHITECTURE-SPINE.md` §板级合同。
+- 固件实现归 story E4.1/E4.2；引脚/电源权威 = `_bmad-output/planning-artifacts/architecture/architecture-Electronic_Wooden_Fish-2026-09-08/ARCHITECTURE-SPINE.md` §板级合同；逐网/电源/载板交叉表见 `docs/hardware/电子木鱼-硬件网络清单.json`。

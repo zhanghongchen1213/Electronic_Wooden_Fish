@@ -39,6 +39,16 @@ class UiTextHygieneTest(unittest.TestCase):
             result = validate(path, "miniapp", "production")
             self.assertFalse(result["ok"])
 
+    def test_full_design_artifacts_are_clean(self):
+        repo = Path(__file__).resolve().parents[2]
+        cases = (
+            (repo / "lvgl-design/ewf-device-ui.html", "device"),
+            (repo / "miniapp-design/ewf-miniapp-ui.html", "miniapp"),
+        )
+        for path, surface in cases:
+            result = validate(path, surface, "candidates")
+            self.assertTrue(result["ok"], result)
+
 
 if __name__ == "__main__":
     unittest.main()

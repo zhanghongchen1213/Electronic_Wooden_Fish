@@ -1,6 +1,6 @@
 # docs/embedded/4g — Air780EGP 4G 轨（设备侧）
 
-> 范围：EWF 唯一 4G 业务链路 = **Air780EGP**（架构 AD-14；UART IO43/44 + DTR IO10/RST IO15/NET_STATUS IO16/GNSS_VCC IO8，引脚以 ARCHITECTURE-SPINE 板级合同为准）。经验源= `main_control`（HEAD fb458b9，2026-09-08 迁移），其 `components/BSP/GPS/gps.*` 底层即 Air780E 系 AT 固件（`GPS_HTTP_SSL_CONTEXT_ID=153` 直标 Air780EGP）。固件接入实现归 story E4.1/E4.2。
+> 范围：EWF 唯一 4G 业务链路 = **Air780EGP**（架构 AD-14；UART IO43/44 + DTR IO10/RST IO15/NET_STATUS 兼容位 IO16，引脚以 ARCHITECTURE-SPINE 板级合同为准）。`IO8` 已释放为 `BQ_OTG_EN`，M100 `GNSS_VCC` 留 NC/TP。经验源= `main_control`（HEAD fb458b9，2026-09-08 迁移），其 `components/BSP/GPS/gps.*` 底层即 Air780E 系 AT 固件（`GPS_HTTP_SSL_CONTEXT_ID=153` 直标 Air780EGP）。固件接入实现归 story E4.1/E4.2。
 
 ## 文档索引
 | 文件 | 内容 |
@@ -9,7 +9,7 @@
 | `troubleshooting/Air780EGP-AT零响应与恢复.md` | AT 零响应故障树与恢复/重试语义 |
 
 ## EWF 边界
-- 整颗 Air780EGP 模组（无 combo/外骨骼封装）；**无 MQTT、无 BLE 业务**；GPS 保留控制默认关，GNSS_VCC 的电源由模组/板级合同管理（不驱动为高阻输入语义见主文档）。
+- 整颗 Air780EGP 模组（无 combo/外骨骼封装）；**无 MQTT、无 BLE 业务**；GPS 默认关闭，M100 `GNSS_VCC` 在 EWF 板级留 `NC/TP`，不接 ESP32；`IO16` 无对应载板脚时同样留 `NC/TP`（详见主文档与硬件基线）。
 - 单事务串行所有权：UART 是模组唯一命令通道，应用层不得直读写 UART，只能过「有界上报调用」（EWF 仿 `gps_https_post_json` 语义）。
 
 ## 代码照搬清单（main_control，供 E4 实现期使用）

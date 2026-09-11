@@ -71,7 +71,7 @@ def validate(path: Path, surface: str, mode: str) -> dict[str, object]:
     if progress_count > frame_count:
         errors.append({"code": "duplicate_progress_text", "count": progress_count, "frames": frame_count})
     legacy_tokens = re.compile(
-        r"(?<![A-Za-z0-9_-])(?:line-[123]|prefix-note|focus-rule)(?![A-Za-z0-9_-])|\bWfAs7\b|\bZ6Qge\b",
+        r"(?<!\[VAR:)(?<![A-Za-z0-9_-])(?:line-[123]|prefix-note|focus-rule)(?![A-Za-z0-9_-])|\bWfAs7\b|\bZ6Qge\b",
         re.I,
     )
     if legacy_tokens.search(source):

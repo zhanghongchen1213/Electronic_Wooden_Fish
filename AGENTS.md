@@ -17,7 +17,8 @@
 
 ## 2. BMAD 状态指针
 
-- 阶段：planning 完成（PRD/架构/epics final）＋ UX 契约 draft ＋ UI 视觉设计**返工中**；当前先完成 10+10 风格候选与作者选型，**未进入 sprint/build**。源码目录为空，绿地。
+- 阶段：planning 完成（PRD/架构/epics final）＋ UX 契约 draft；设备 `DEVICE-01`（母版 `hbTEa`）**已逐屏签收（2026-09-11）并冻结为 E3 视觉验收基线**，小程序 `MINI-06`（母版 `A358t`）待签收，**未进入 sprint/build**。源码目录为空，绿地。
+- 设备 Pen 的 SquareLine 规划已按 legbot 的 resident shell / on-demand settings 模型收口：三主页横向常驻，设置 viewport 首屏最多 4 行；组件与变体映射见 `lvgl-design/squareline_studio/ewf_project_manifest.json`。
 - 权威与下一步的**唯一入口**：`docs/handoffs/2026-09-08-bmad-status-ui-design-handoff.md`。
 - 菜单码：`SP` sprint → `BD` build；`CU` bmad-ux（UX 已在跑，后续 Update）。改动产出前先 `git status` 了解未提交集合。
 
@@ -55,7 +56,7 @@
 ### 3.5 EWF 差异红线（与 legbot 不同，勿照搬错误方向）
 - **无** BLE/Wi-Fi/GPS/外骨骼/云支付 业务链路；`lvgl-design` 与 docs 迁移内容中这些字句仅为排除说明。
 - 设备顶部可呈现 4G/Wi-Fi/蓝牙/GPS 信号组件及 connected/no-signal/disabled 状态；这些图标只表达本地能力状态，不改变 MVP 无 BLE/Wi-Fi/GPS 业务链路的边界。
-- 4G = **Air780EGP**（IO43/44 UART + DTR IO10/RST IO15/NET_STATUS IO16/GNSS_VCC IO8）。AT/联网经验已迁移至 **`docs/embedded/4g/`**（源 `main_control`，HEAD `fb458b9`）；勿从 legbot 引（其用 ML307R 不适用）。
+- 4G = **Air780EGP**（IO43/44 UART + DTR IO10/RST IO15/NET_STATUS 兼容位 IO16）；`IO8` 已按硬件原理图基线释放给 **`BQ_OTG_EN`**，M100 `GNSS_VCC` 留 NC/测试点，不连接 ESP32。AT/联网经验已迁移至 **`docs/embedded/4g/`**（源 `main_control`，HEAD `fb458b9`）；勿从 legbot 引（其用 ML307R 不适用）。完整电源/FPC/载板网络见 `docs/hardware/电子木鱼-硬件网络清单.json`。
 - 后端持久化 = **JSON 原子文件、零数据库**（AD-16，覆盖早期 SQLite）。
 - 键盘输入含 PVDF（比较器 IO11 唤醒 + ADC IO9 确认，ADC1_CH8），legbot 无此，按固件 story E2.5 实现。
 - 引脚/板级唯一权威：`ARCHITECTURE-SPINE.md` §板级合同；冲突先改 spine 再调代码。

@@ -4,7 +4,7 @@ description: "一敲一字的电子木鱼双端体验：设备诵经与小程序
 type: design
 status: draft
 created: 2026-09-08
-updated: 2026-09-09
+updated: 2026-09-11
 sources:
   - "{planning_artifacts}/briefs/brief-Electronic_Wooden_Fish-2026-09-08/brief.md"
   - "{planning_artifacts}/briefs/brief-Electronic_Wooden_Fish-2026-09-08/addendum.md"
@@ -12,11 +12,27 @@ sources:
   - "{planning_artifacts}/prds/prd-Electronic_Wooden_Fish-2026-09-07/addendum.md"
   - "{planning_artifacts}/architecture/architecture-Electronic_Wooden_Fish-2026-09-08/ARCHITECTURE-SPINE.md"
 selected_style:
-  device: null
-  miniapp: null
+  device: DEVICE-01
+  miniapp: MINI-06
 style_candidates:
   device: [DEVICE-01, DEVICE-02, DEVICE-03, DEVICE-04, DEVICE-05, DEVICE-06, DEVICE-07, DEVICE-08, DEVICE-09, DEVICE-10]
   miniapp: [MINI-01, MINI-02, MINI-03, MINI-04, MINI-05, MINI-06, MINI-07, MINI-08, MINI-09, MINI-10]
+style_lock:
+  aesthetic_direction: "Dark OLED Luxury × tactile craft realism；签名细节为三道椭圆环的短促金光与流尾字焦点"
+  device:
+    name: "匠作写实·三分之四"
+    source_master: hbTEa
+    surface: "#050505"
+    ink: "#fbfaf0"
+    current: "#d9a441"
+    tap_flash: "#e6bd69"
+  miniapp:
+    name: "篆刻印谱"
+    source_master: A358t
+    surface: "#f4f0e5"
+    ink: "#2c2823"
+    focus: "#a66b3a"
+    seal: "#a64c3e"
 colors:
   brand:
     amber:
@@ -28,14 +44,14 @@ colors:
       "600": "#8a5a2b"
   device:
     surface:
-      "0": "#17130f"
-      "1": "#211b14"
-      "2": "#2b241a"
+      "0": "#050505"
+      "1": "#121212"
+      "2": "#252525"
     text:
-      primary: "#f5efe2"
+      primary: "#fbfaf0"
       secondary: "#cfc4b0"
-      muted: "#8f8674"
-    divider: "#F5EFE21A"
+      muted: "#a6a29a"
+    divider: "#FBFAF01A"
     sync:
       amber: "#d9a441"
       ok: "#7fa98f"
@@ -51,31 +67,35 @@ colors:
       lowbatt: "#c9a66a"
   mini:
     surface:
-      "0": "#faf7f2"
-      "1": "#ffffff"
-      "2": "#f1ece2"
+      "0": "#f4f0e5"
+      "1": "#fffdf6"
+      "2": "#d7d0c4"
     text:
-      primary: "#2a2620"
-      secondary: "#6f675c"
-      muted: "#a39a89"
-    divider: "#2A26201A"
-    focus: "#d9a441"
+      primary: "#2c2823"
+      secondary: "#8b8177"
+      muted: "#8b8177"
+    divider: "#9E7B5722"
+    focus: "#a66b3a"
 typography:
   family:
-    device: "Noto Sans SC"
-    miniapp: "Noto Sans SC"
+    device: "Noto Serif SC"
+    device_ui: "Noto Sans SC"
+    miniapp: "Noto Serif SC"
+    miniapp_ui: "Noto Sans SC"
   device:
-    glyph: { size: 52, weight: 700, usage: "7字带当前字/经文页大字" }
-    char: { size: 26, weight: 500, usage: "7字带已诵字" }
-    placeholder: { size: 26, weight: 400, usage: "7字带空位低对比占位" }
+    glyph: { family: "Noto Serif SC", size: 52, weight: 700, usage: "7字带与经文页最新字" }
+    char: { family: "Noto Serif SC", size: 26, weight: 500, usage: "7字带已诵字" }
+    placeholder: { family: "Noto Serif SC", size: 26, weight: 400, usage: "7字带空位低对比占位" }
+    ui: { family: "Noto Sans SC", size: 16, weight: 400, usage: "状态、统计与设置" }
     value: { size: 34, weight: 600, usage: "统计大数" }
     title: { size: 22, weight: 500 }
     body: { size: 16, weight: 400 }
     label: { size: 13, weight: 400 }
   miniapp:
-    reading: { size: 30, weight: 600, usage: "阅读行当前字放大" }
-    body: { size: 16, weight: 400, lineHeight: 1.7 }
-    caption: { size: 12, weight: 400 }
+    reading: { family: "Noto Serif SC", size: 30, weight: 600, usage: "阅读流最新字放大" }
+    body: { family: "Noto Serif SC", size: 16, weight: 400, lineHeight: 1.7 }
+    caption: { family: "Noto Sans SC", size: 12, weight: 400 }
+    ui: { family: "Noto Sans SC", size: 13, weight: 500, usage: "导航、状态与进度" }
     stat: { size: 28, weight: 700 }
 rounded:
   device:
@@ -149,6 +169,21 @@ components:
       surface: "{colors.device.surface.0}"
       ink: "{colors.brand.sandal.600}"
       tapGlow: "{colors.brand.amber.300}"
+      tapSources: [physical_pvdf, device_touch]
+    tap-rings:
+      count: 3
+      shape: ellipse
+      idleStroke: "{colors.device.text.primary}"
+      flashStroke: "{colors.brand.amber.300}"
+      durationMs: 160
+      lifecycle: "idle→flash→idle"
+      coalesce: "restart-on-event"
+    scripture-history:
+      mode: append-only
+      axis: vertical
+      defaultAnchor: tail
+      onNewChar: "append-and-scroll-to-tail"
+      futurePreview: false
     row:
       parts: [icon, title, value, chevron]
     slider:
@@ -167,11 +202,15 @@ components:
       currentType: "{typography.miniapp.reading}"
       done: "{colors.mini.text.muted}"
       mode: "append-only flowing scripture"
+      latestOnly: true
+      underline: "always-under-latest"
     reading-archive:
       mode: "collapsible completed scripture segment"
     char-focus:
       type: "{typography.miniapp.reading}"
       color: "{colors.mini.focus}"
+      underline: "{colors.mini.focus}"
+      lifecycle: "persist-until-next-confirmed-char"
     statcard:
       card: "{colors.mini.surface.1}"
       value: "{typography.miniapp.stat}"
@@ -203,24 +242,41 @@ components:
       track: "{colors.mini.surface.2}"
       fill: "{colors.brand.amber.600}"
       fields: [confirmed_chars, scripture_chars_total, percent]
+
+component_id_namespace:
+  device:
+    stat-card: "今日/累计同构统计卡"
+    device-identity: "木鱼版本/木鱼ID"
+  miniapp:
+    statcard: "记录页今日/近7日/近30日/累计/连续卡"
 ---
 
 # Electronic_Wooden_Fish — DESIGN.md
 
-> 视觉身份权威。EXPERIENCE.md 行为权威；本文件与 EXPERIENCE.md 冲突时以两份 spines 为准；比任何 mock/wireframe 更高。当前 `style_candidates` 是待选方向，`selected_style` 在作者选择前保持空值；候选只改变视觉表达，不改变交互、数据或闭包。
+> 本文件是视觉权威，EXPERIENCE.md 是行为权威；两者均高于 mock/wireframe，冲突时按各自职责解释。`DEVICE-01` 与 `MINI-06` 已锁定为当前视觉母版；其余候选仅保留作审阅记录，不进入 Stage 4 全帧稿。
 
 ## Brand & Style
 
 一句话：**一盏烛下的木鱼，一段留白的经文。**
 
-- **设备轨**：四周圆弧屏承载一只高识别度的电子木鱼剪影/器物图像；风格候选可以在图标海报、漆器、版画、浮雕、窗棂、月白等方向大胆分化。
-- **小程序轨**：以可持续阅读的心经正文为核心；已确认正文连续保留，当前字与总进度是唯一高强调信息；候选可以在长卷、册页、窗纸、印谱、月相、夜读等方向展开更丰富的阅读叙事，纸面、夜读、光影和图形密度均可重新定义。
+- **设备轨（锁定 DEVICE-01）**：四周圆弧屏承载黑底白色海报式电子木鱼；木鱼周围三道透明椭圆环是唯一敲击光效，金色只在有效敲击的短暂反馈中出现。
+- **小程序轨（锁定 MINI-06）**：浅纸面、基线网格和印谱印记承载一篇连续心经；正文、最新字和总进度构成唯一阅读层级，不添加外层展示背景。
 - 两轨在视觉上不需要一致（PRD 允许），但**令牌同源**：同一支琥珀、同一族字体，才能让「设备敲出、手机上看到」是同一件事。
 - 语言：极简体中文；不堆词。反馈用语义短句与状态，不打断诵经节奏。
 
 ### Style Candidate Board
 
-Pen 文件各自包含 10 个候选 sibling frame。候选共享产品行为语义、必要组件和画布几何，但视觉探索不设固定色彩、材质或构图模板；可以改变构图、字体层级、材质/物件、进度形态、光影、图形密度和静态/响应签名。不得把只换色的版本当作独立 style。候选板上的 `axes` 与结构指纹只用于发现近重复和辅助审阅，最终以渲染结果、可读性、产品主题、硬件几何和作者选择为准。`selected_style.device` 与 `selected_style.miniapp` 在作者选定前为 `null`。
+Pen 文件保留 10 个候选 sibling frame 作为审阅档案。候选共享产品行为语义、必要组件和画布几何，但只有已锁定母版进入 Stage 4；候选名称、结构指纹和审阅标签不进入产品页面。
+
+### Locked Style
+
+- **设备 `DEVICE-01` / master `hbTEa`**：保留现有三分之四海报构图、黑色屏面（`#050505`）、白色木鱼轮廓（`#fbfaf0`）、Noto Serif SC 字形层级和透明椭圆环。环的 idle 为低对比描边，flash 为 `{colors.brand.amber.300}`，160ms 后恢复 idle。
+- **小程序 `MINI-06` / master `A358t`**：保留现有浅纸面（`#f4f0e5`）、低密度基线网格、印谱印记、Noto Serif SC 正文与 Noto Sans SC 状态/导航。最新字使用 `{colors.mini.focus}` 放大，2px 下划线始终贴在最新字下方。
+- `hbTEa` 与 `A358t` 只作为 Pen 内部复制锚点；派生页面使用各自唯一节点 ID，交付 HTML 不输出 Node ID 或 `data-pencil-id`。
+
+### Candidate Archive
+
+以下候选表只保留审阅与审计索引，不参与 Stage 4 的视觉实现。
 
 设备候选：
 
@@ -265,20 +321,21 @@ Pen 文件各自包含 10 个候选 sibling frame。候选共享产品行为语�
 | 占位 `…muted` | 7字带空位（低对比，**不预览未来**） | 禁用、提示弱化 |
 | 状态 | 已同步低饱和绿 / 待同步琥珀 / 故障陶红 / 低电暖黄（均低打扰） | 同类语义，更浅色系下加深墨轮廓 |
 
-对比基线：设备正文与主底对比 ≥ 7:1（纸白对近黑）；强调琥珀不承载正文承载。`[ASSUMPTION]` 精确对比值在 Stage3 方向稿实测后微调，不晚于 Stage6 冻结。
+对比基线：设备正文与主底对比 ≥ 7:1（纸白对近黑）；小程序正文与纸面满足可读对比；强调色不承载长段正文。选中母版的色值在 Stage 4 固定，不再因候选板调色。
 
 ## Typography
 
-- 设备：候选优先使用受控中文字体（Noto Sans SC、Noto Serif SC 或 Source Han Serif SC），按候选选择字重/字阶；**只嵌入《心经》所需字形子集**（AD-4），不引入通用中文字库。
-- 7字带字形居中；当前诵出字用 `typography.device.glyph`，已诵字 `typography.device.char`，空位 `typography.device.placeholder`（同为字形槽位、低对比）。
-- 小程序：正文使用受控中文字体并在候选间改变字阶、字面宽度或阅读轴；正文使用 `typography.miniapp.reading`、`typography.miniapp.body` 与 `typography.miniapp.caption`，行高 1.7 利于逐字滚动阅读。
+- 设备：DEVICE-01 使用 Noto Serif SC 表现木鱼页/经文页字形，Noto Sans SC 表现状态、统计与设置；**只嵌入《心经》所需字形子集**（AD-4），不引入通用中文字库。
+- 7字带字形居中；当前诵出字用 `typography.device.glyph` 并保持高亮直到下一有效字，已诵字用 `typography.device.char`，空位用 `typography.device.placeholder`。
+- 小程序：MINI-06 使用 Noto Serif SC 表现连续正文与最新字，Noto Sans SC 表现导航/状态/进度；正文行高 1.7，最新字放大且下划线不随时间消失。
 - 数字用等宽语义（统计大数对齐），`[ASSUMPTION]` 设备数字字体沿用 Noto Sans SC 数字。
 
 ## Layout & Spacing
 
 - 画布设备 **410×502**（CO5300 AMOLED），圆角 `{rounded.device.canvas}`（legbot 同款形态）；`{spacing.device.unit}=8`、屏幕边距 `{spacing.device.screen_edge}=16`、关键净空 `{spacing.device.critical_clearance}≥8`。
-- 设备主页布局（自上而下）：状态栏 24 → 内容区 → 底部木鱼/动作。左右滑动切三主页；下滑进入设置（返回保持原页）。
-- 小程序 `{spacing.miniapp.page_pad}=20px`；单栏内容流；四项底部导航始终可达。
+- 设备主页布局（自上而下）：状态栏 24 → 内容区 → 底部木鱼/动作。三页作为 `screen_shell` 的横向常驻 pager（位置 0/410/820）；下滑进入按需设置屏，返回保持原页。全帧只保留圆弧屏根帧，不加展示板或装饰背景。
+- 设置屏沿用 legbot 的 378×344 纵向 viewport；每行 378×80、间隔 8，首屏最多 4 行，木鱼版本与木鱼 ID 在第二滚动页。
+- 小程序 `{spacing.miniapp.page_pad}=20px`；单栏内容流；四项底部导航始终可达。全帧只保留 A358t 纸面根帧，不加外层卡片或渐变背景。
 
 ## Elevation & Depth
 
@@ -288,26 +345,45 @@ Pen 文件各自包含 10 个候选 sibling frame。候选共享产品行为语�
 ## Shapes
 
 - 设备画布 410×502 圆角 110；内部控件圆角 12/16/999（pill）。
-- 木鱼形：主识别轮廓以 `lvgl-design/assets/woodfish-reference.png` 为唯一视觉基准——黑底、白色双叶鱼身与连续斜向嘴槽；页面可在轮廓外围叠加眼点、木纹、底座或独立木槌来表达器物感，但不得改成与参考图无关的叶片/抽象 blob，也不得用照片替代。敲击瞬间暖金光晕 100–180ms 淡出（低打扰，无长驻呼吸）。
+- 木鱼形：主识别轮廓以 `lvgl-design/assets/woodfish-reference.png` 为唯一视觉基准——黑底、白色双叶鱼身与连续斜向嘴槽。`tap-rings` 由三道透明椭圆描边组成，只有有效敲击时切换为暖金并在 160ms 内恢复，无长驻呼吸或额外背景。
 
 ## Components
 
+### 设备 Pencil 母版与变体映射
+
+| 组件层 | 母版/状态板 | 变体样式与使用边界 |
+| --- | --- | --- |
+| 常驻组件 | `VphYz` statusbar + `qLhoo`、`n2gMHJ` woodfish-anatomy、`n2eoh` tap-rings + `JZhSx` | 每个页面只实例化一次；信号/电量/同步由运行时补丁切换；三环仅在木鱼页 flash（描边切金 160ms）。`qLhoo`/`JZhSx` 是母版区状态对照板，只用于审阅，不进入页面渲染 |
+| 字带组件 | `mDOlU` charcell + `ZauNI` | `EMPTY` 七个普通占位；`BASE` 最新字槽 3；`MID` 最新字槽 7；`FULL` 最新字槽 4；任何状态都只有一个可见 `glyph-current` |
+| 进度组件 | `JmQTi` scripture-progress + `ZauNI` | 0/12/84/196/260 只改变已完成段与文案，不生成新 Screen；充电/完成页继续实例化同一母版 |
+| 统计组件 | `ZtT4f` stat-card、`Z8rcP` today-taps + `Hlo77`、`FKhdz` reading-progress | 今日/累计同构卡；trusted/untrusted 只改变值色与状态词，不改变几何；本次诵读用环形进度，分母取运行时 `scripture_chars_total` |
+| 设置组件 | `YxGuI` brightness、`oLRuW` timeout、`cQ5wd` sync-btn、`j6zSeO` device-identity | 亮度/熄屏/音量骨架固定；同步五态只覆写 action；版本/ID 共用一行母版 |
+| 经文组件 | `lo9C1` tail、`fevaG` review、页面实例 `PawlG` | 同一 362×286 几何、每行 13 槽；tail 才提升流尾字，review 不制造第二套排版 |
+
 - `statusbar`：左侧四项信号、右侧电池符号+百分比；同步短语作为轻量状态。
-- `connectivity-rail` / `signal-status`：4G、Wi-Fi、蓝牙、GPS 各有 connected/no-signal/disabled；图标形状与短文案同时变化。Wi-Fi/蓝牙/GPS 的视觉状态不代表 MVP 业务链路。
-- `battery-status`：电池符号、百分比、充电标记和低电量标记同一组对齐。
-- `woodfish`：胖鱼身、鱼头、水平嘴槽、眼点、尾鳍/底座、两道木纹和独立木槌必须同时可辨；主视觉 + 唯一可点敲区（点击= `device_touch`）。
-- `charcell`：固定 7 槽；占位用低对比「空」而非未来字（反剧透 AD-19）。
+- `connectivity-rail` / `signal-status`：4G、Wi-Fi、蓝牙、GPS 各有 connected/no-signal/disabled；每个位置保留一个图标槽，由运行时颜色/图标补丁切换，不复制隐藏节点。Wi-Fi/蓝牙/GPS 的视觉状态不代表 MVP 业务链路。全部状态组合（信号四态、同步四态、电量满/中/低/充电）在母版区 `qLhoo` 对照板中穷举，页面本体不因此增加节点。
+- `battery-status`：电池符号、百分比、充电标记和低电量标记同一组对齐；满/中/低/充电分别用 `{colors.device.battery.fill}` 与 `{colors.device.battery.low}`。
+- `woodfish`：木鱼页的交互组合组件，拥有唯一可计数触区（点击=`device_touch`），内部组合 `woodfish-anatomy` 与 `tap-rings`。
+- `woodfish-anatomy`：`woodfish` 的非交互视觉子组件；胖鱼身、鱼头、水平嘴槽、眼点、尾鳍/底座、两道木纹和独立木槌必须同时可辨，不单独拥有点击语义。
+- `tap-rings`：三道同心椭圆描边；`physical_pvdf` 与 `device_touch` 在木鱼页共用 `idle→flash→idle` 反馈，flash 持续 160ms，连续输入只重启不叠加。母版只导出 idle 描边（白 `#fbfaf066` / `#fbfaf044` / `#fbfaf033`），flash 由 `bindings` 在运行时把描边切到 `{colors.brand.amber.300}` = `#e6bd69` —— **不建立金色环节点变体**，否则会与固件常量形成双真源；母版区的 `JZhSx` 仅作 IDLE/FLASH 视觉对照。HTML 侧同一语义由 `data-ewf-motion="flash"` 表达。
+- `charcell`：固定 7 槽；占位用低对比点位而非未来字（反剧透 AD-19），只有一个 `glyph-current` 可使用大字焦点。
+- `scripture-history`：经文页为同一篇 append-only 流；每行固定 13 个字符槽，标点占槽但不计敲击；最新字在流尾使用 `glyph-current`，旧字永久保留并可垂直回看，新字到达时自动回到流尾。
 - `scripture-progress` / `round-index`：心经已诵字数、总可消费字数、百分比和当前诵读状态；7 字带容量不是进度分母。
-- `today-taps` / `total-taps`：今日敲击与跨诵读周期累计敲击并列呈现。
-- `slider` / `row` / `sync-btn`：设置页音量/亮度/熄屏；立即同步行含进行中/成功/待同步/失败反馈。
+- `today-taps` / `total-taps`：今日敲击与跨诵读周期累计敲击并列呈现；统计页使用两个同构 `stat-card`。
+- `stat-card`：左侧琥珀刻线、标签、数字和单位；设备只展示今日与累计，不承载近 7/30 日或连续天数。
+- `reading-progress`：统计页本次诵读区块；环形进度（已诵占比）+ `已诵 / 总字数` + 百分比 + 第 N 次诵读。它是统计页第三块内容，与今日/累计两张 `stat-card` 同处一屏，不引入新指标。
+- `settings-list` / `slider` / `row` / `sync-btn`：设置页两页纵向列表；亮度与熄屏使用分段胶囊，音量使用 0–100 滑块，立即同步含进行中/成功/待同步/失败反馈。
+- `device-identity`：木鱼版本与木鱼 ID 共用同一行组件，不复制排版。
 - `modal-done`：完成遮罩 + 「从头开始 / 退出」。
-- `readingline` / `char-focus` / `reading-archive`：持续累积正文，当前尾字琥珀聚焦，已诵字墨色弱化，完成篇章可折叠归档。
-- `scripture-progress`：总进度轨道与百分比文本同时呈现。
+- `readingline` / `char-focus` / `reading-archive`：持续累积正文，最新尾字放大并用焦点色高亮，2px 下划线始终跟随最新字，已诵字墨色弱化，完成篇章可折叠归档。
 - `statcard` / `devstatus-row` / `state-banner` / `sync-action` / `setting-mirror` / `empty` / `confetti` / `bottom-nav`：记录页、设备页、设置页与全局状态。
+
+组件 ID 以表面为命名空间：`device/stat-card` 是设备今日/累计双卡，`mini/statcard` 是小程序五项记录卡，两者不是同一实现；其余同名组件才表示跨端语义一致。Pencil 节点 ID 仅作审计锚点，逻辑 CompId 才是下游绑定名。
 
 ## Do's and Don'ts
 
-- ✅ 金色只落在「这一字/这一步/这一瞬」；✅ 状态用轻点与短句；✅ 空位就是空位（低对比占位）。
+- ✅ 金色只落在「这一字/这一步/这一瞬」；✅ 三环反馈短促且可恢复；✅ 状态用轻点与短句；✅ 空位就是空位（低对比占位）。
+- ✅ 相同屏幕骨架优先复用组件状态；只有信息架构、布局或输入边界真实变化时才建立整屏变体。设置页同步状态只变化 `sync-btn`，亮度/自动熄屏/音量骨架不复制设计。
 - ✅ 每个候选 style 应以真实渲染差异呈现自己的构图、字阶、材质/物件与进度叙事；候选名称只用于风格板标注，不进入产品 UI 文案。结构指纹是近重复预警，不是视觉签收替代物。
 - ❌ 不要无语义的彩色/装饰堆叠、常驻动效、把待同步伪装成已同步（AD-2）；❌ 设备不放小程序的阅读型长文；小程序不出现可点击木鱼（FR-F-002）。
 - ❌ 最终页面不得出现 AI 思维链、作者说明、Node ID、调试标签或重复进度；解释性内容只存在于 UX 文档和审计日志。
