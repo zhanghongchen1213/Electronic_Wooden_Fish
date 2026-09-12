@@ -2,7 +2,7 @@
 title: '重构电子木鱼硬件二次开发文档'
 type: 'refactor'
 created: '2026-09-12'
-status: 'in-progress'
+status: 'done'
 route: 'dispatch'
 review_loop_iteration: 0
 baseline_commit: '54b014e09732c142a123a3193fa4507011005a5e'
@@ -48,9 +48,9 @@ context:
 ## Tasks & Acceptance
 
 **Execution:**
-- [ ] 重构主硬件文档，加入官方依据、GPIO 合法性结论、总线/电源审查、PCB 走线清单、开发路线和开放项矩阵。
-- [ ] 核对 JSON、spine、BSP、README 的关键 GPIO、I²C 地址和电源边界一致性。
-- [ ] 运行 JSON、GPIO、地址、文案卫生和 diff 检查。
+- [x] 重构主硬件文档，加入官方依据、GPIO 合法性结论、总线/电源审查、PCB 走线清单、开发路线和开放项矩阵。
+- [x] 核对 JSON、spine、BSP、README 的关键 GPIO、I²C 地址和电源边界一致性。
+- [x] 运行 JSON、GPIO、地址、文案卫生和 diff 检查。
 
 **Acceptance Criteria:**
 - Given 主文档，when 阅读 GPIO 和总线章节，then 每个已用 GPIO 都有方向、约束、合法性结论和验证状态。
@@ -60,6 +60,14 @@ context:
 ## Implementation Notes
 
 实施时保持现有未提交改动不动；只修改本任务涉及的硬件文档和必要的实现规格记录。官方资料如本地不存在，使用 Espressif 官方来源并在文档中保留可追溯链接或资料名称。
+
+## Review Triage Log
+
+- false — GPIO 分类表经过补充后覆盖全部 32 个已用普通 GPIO；IO8、IO38、IO39、IO41 已明确列出。
+- false — 启动模式已区分正常 SPI 启动（IO0=1）与联合下载（IO0=0、IO46=0），不会把下载电平写成正常运行要求。
+- false — GPIO3 的 JTAG strapping/eFuse 条件已补充，RGB_DATA 仍保留该启动约束。
+- false — ERC、PCB DRC 与样机功能验收已拆为独立阶段并要求分别归档证据。
+- false — 验证缺口审查未发现遗漏；JSON、GPIO、I²C、diff 检查均已执行。
 
 ## Verification
 
