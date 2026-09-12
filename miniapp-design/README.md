@@ -32,5 +32,8 @@
 - Pencil：`ewf-miniapp-ui.pen`；`A358t` 是阅读页母版。Pen 只保留 LOGIN/READING/RECORDS/DEVICE/SETTINGS 与真实 `OVERLAY.DONE` screen，局部状态进入组件状态板。
 - HTML 源导出：`ewf-miniapp-ui-export.html`；交付 HTML：`ewf-miniapp-ui.html`。组装命令：`python3 lvgl-design/assemble_ewf_full_html.py --input miniapp-design/ewf-miniapp-ui-export.html --output miniapp-design/ewf-miniapp-ui.html --surface miniapp --style MINI-06`。
 - 阅读页按 backend 已确认顺序 append；只有最新字符放大高亮，2px 下划线始终与该字符绑定；每帧只有一个 `scripture-progress`。
+- **无盒化**：全 app 只保留两处填充面（底部导航、完成弹窗卡）；记录页/设备页/设置页一律用 1px 刻线 + 留白分层，不出现 dashboard 式均质卡阵。
+- **印谱签名层**（`style-signature`）：48px 谱格、印章、版记 folio、刻线与刻度尺在六页共用但位置按页重组；`READING` 的进度含等高等亮刻度尺（纯质感，不编码数据）。
+- **空态不得伪造进度**：`READING.EMPTY` 的计数/百分比/填充条宽一并归零、焦点下划线同步隐藏（FR-F-002 / AD-2）；`READING.DONE` 填充条满格。这两处由组装器派生，改文案须同步改 `assemble_ewf_full_html.py`。
 - REPLAY/OFFLINE/EMPTY/DONE、权限失败、记录空态、设备重试与待设备应用均为组件变体；HTML 展开为 14 帧并标记 `data-ewf-screen-variant="false"`。
 - 校验：`python3 lvgl-design/validate_ewf_ui_closure.py --surface miniapp --stage full --style MINI-06 --html miniapp-design/ewf-miniapp-ui.html`。

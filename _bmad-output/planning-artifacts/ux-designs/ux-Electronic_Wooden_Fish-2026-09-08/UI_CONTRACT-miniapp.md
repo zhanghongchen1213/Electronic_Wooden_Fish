@@ -5,7 +5,7 @@ type: ui-contract
 surface: miniapp
 status: draft
 created: 2026-09-08
-updated: 2026-09-10
+updated: 2026-09-11
 selected_style: MINI-06
 source_master: A358t
 sources:
@@ -20,6 +20,8 @@ authority: "UX spines (DESIGN.md / EXPERIENCE.md) > 本契约 > pen/HTML > uni-a
 # UI_CONTRACT · 微信小程序轨（uni-app / 阅读纸面）
 
 > 本契约把 UX 契约落到**可校验闭包**。小程序**不提供电子木鱼，也不是输入源**（FR-F-002）；只呈现 backend 已确认进度（AD-2）。令牌只取自 `DESIGN.md` 的 `colors.mini` + `colors.brand`。Stage 4 只使用 `MINI-06` / `A358t` 的纸面、网格、印谱和字体层级。
+
+> **无盒化原则**：全 app 只保留两处填充面（底部导航、完成弹窗卡）；记录页/设备页/设置页一律用 1px 刻线 + 留白分层，不出现 dashboard 式均质卡阵。印谱签名层（48px 谱格 / 印章 / 版记 folio / 刻线 / 刻度尺）在六页共用、位置按页重组。
 
 ## 1. 画布与令牌映射（→ uni-app scss）
 
@@ -82,8 +84,8 @@ Pen 中每个 PageId 只保留 canonical screen；回放、断线、空态、失
 | --- | --- | --- |
 | readingline | 累积阅读流 | 每个 backend 已确认字按序 append；已有前缀保留、自然换行、可回看；未来字不出现；只保留一个最新焦点 |
 | char-focus | 当前字聚焦 | `{typography.miniapp.reading}` 字号与 `{colors.mini.focus}`；最新字保持高亮，直到下一次确认；2px 下划线始终位于最新字下方 |
-| reading-archive | 已完成篇章 | 完成后保留全文；“从头开始”在下方开启新 `round_id` 区块，旧篇可折叠 |
-| scripture-progress | 心经总进度 | 仅一组组件；显示 `confirmed_chars / scripture_chars_total · percent%`，轨道与文本同时表达，percent 限制 0–100 |
+| reading-archive | 已完成篇章 | **行为规格**：由 `READING.DONE` 承载，非独立视觉帧；完成后保留全文，“从头开始”在下方开启新 `round_id` 区块，旧篇可折叠 |
+| scripture-progress | 心经总进度 | 仅一组组件；显示 `confirmed_chars / scripture_chars_total · percent%`，轨道与文本同时表达，percent 限制 0–100。填充色 `{colors.mini.focus}`；含等高等亮的刻度尺（纯质感，不编码数据） |
 | statcard | 统计卡 | `components.mini.statcard`；大数+label，单位明确为敲击/天 |
 | devstatus-row | 设备状态行 | 值=`{colors.mini.text.secondary}` |
 | state-banner | 全局状态条 | 四语义 tone：ok/pending/warn/danger（配 icon+字） |
@@ -93,6 +95,12 @@ Pen 中每个 PageId 只保留 canonical screen；回放、断线、空态、失
 | modal-done | 完成弹窗 | 礼花 `{colors.brand.amber.300}`；动作：从头开始/退出 |
 | confetti | 礼花（完成确认后） | 仅在 backend 确认后展示 |
 | bottom-nav | 一级导航 | `阅读/记录/设备/设置` 四项；当前项强调，其余项弱化；每项触区 ≥44×44 |
+| page-header | 页标题带 | 标题左对齐 x20、状态右对齐至 370；y 62 起（safe_top） |
+| round-index | 篇章落款 | 「第 N 次诵读」，`{typography.miniapp.caption}`，置于篇末而非页首 |
+| login-title | 登录品牌语 | `{typography.miniapp.lede}` 42/600，左对齐，全 app 最大字 |
+| login-copy | 登录说明 | `{typography.miniapp.body}` 16/400 |
+| login-action | 登录按钮 | 350×56，`rounded.miniapp.control`，填充 `{colors.mini.text.primary}` |
+| style-signature | 印谱签名层 | 六页共用、位置按页重组：48px 谱格 / 印章（`{colors.mini.seal}`）/ 版记 folio / 1px 刻线 / 刻度尺 |
 
 ## 6. 复刻与对拍
 - Stage 4 pen/HTML 已按闭包表画齐；Stage 5b 再进行 uni-app 复刻与逐页对拍。

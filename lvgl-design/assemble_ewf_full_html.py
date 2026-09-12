@@ -4,6 +4,7 @@
 from __future__ import annotations
 
 import argparse
+import base64
 import html as html_lib
 import re
 from pathlib import Path
@@ -28,6 +29,51 @@ def frame_names(source: str, style: str) -> list[str]:
             seen.add(name)
             names.append(name)
     return names
+
+
+MATERIAL_MARKER = "[CMP:style-signature][VAR:texture]"
+MATERIAL_TILE = (
+    Path(__file__).resolve().parent.parent / "miniapp-design" / "assets" / "paper-fiber-128.png"
+)
+MATERIAL_TILE_PX = 128
+
+_INLINE_IMAGE = re.compile(r"background-image:\s*url\('data:[^']*'\);\s*")
+
+
+def strip_material_inline(frame: str) -> str:
+    """把材质节点的内联位图降级为一个标记属性。
+
+    Pencil 会按**节点尺寸**把材质重新编码成位图并内联（实测 350x684 约 82KB），
+    而派生帧是克隆 BASE 帧得到的，同一张底纹会在交付物里重复十几遍。
+    这里只保留几何与混合模式，真正的底纹由 build() 用原始平铺资产注入一次。
+    """
+    if MATERIAL_MARKER not in frame:
+        return frame
+
+    def visit(match: re.Match[str]) -> str:
+        opening = match.group(0)
+        if MATERIAL_MARKER not in opening:
+            return opening
+        opening = _INLINE_IMAGE.sub("", opening)
+        if "data-ewf-material" not in opening:
+            opening = opening[:-1] + ' data-ewf-material="true">'
+        return opening
+
+    return re.sub(r"<[^!/][^>]*>", visit, frame)
+
+
+def material_rule() -> str:
+    """材质底纹的样式规则；整份文档只内联一次。"""
+    if not MATERIAL_TILE.exists():
+        return ""
+    encoded = base64.b64encode(MATERIAL_TILE.read_bytes()).decode("ascii")
+    return (
+        '      [data-ewf-material="true"] {\n'
+        f"        background-image: url('data:image/png;base64,{encoded}');\n"
+        "        background-repeat: repeat;\n"
+        f"        background-size: {MATERIAL_TILE_PX}px {MATERIAL_TILE_PX}px;\n"
+        "      }\n"
+    )
 
 
 def annotate_components(frame: str, surface: str) -> str:
@@ -112,6 +158,20 @@ def element_span(frame: str, marker: str) -> tuple[int, int] | None:
     return None
 
 
+def element_style(frame: str, marker: str) -> str:
+    """取元素开标签的 style 串，用于读取既有几何（如进度轨道宽度）。"""
+    span = element_span(frame, marker)
+    if span is None:
+        return ""
+    match = re.search(r'style="([^"]*)"', frame[span[0] : span[1]])
+    return match.group(1) if match else ""
+
+
+def css_px(style: str, prop: str) -> float | None:
+    match = re.search(rf"(?<![-\w]){prop}\s*:\s*([\d.]+)px", style, re.I)
+    return float(match.group(1)) if match else None
+
+
 def replace_node(
     frame: str,
     name: str,
@@ -127,12 +187,16 @@ def replace_node(
     left: int | None = None,
     top: int | None = None,
     height: int | None = None,
+    width: int | None = None,
     line_height: int | None = None,
     latest: bool | None = None,
+    required: bool = False,
 ) -> str:
     target = f'data-pencil-name="{name}"'
     span = element_span(frame, target)
     if span is None:
+        if required:
+            raise ValueError(f"replace_node 未命中目标（说明节点被重命名或移动）: {name}")
         return frame
     start, end = span
     element = frame[start:end]
@@ -153,6 +217,7 @@ def replace_node(
         ("left", f"{left}px" if left is not None else None),
         ("top", f"{top}px" if top is not None else None),
         ("height", f"{height}px" if height is not None else None),
+        ("width", f"{width}px" if width is not None else None),
         ("line-height", f"{line_height}px" if line_height is not None else None),
     ):
         if value is not None:
@@ -347,9 +412,9 @@ def synthesize_miniapp_states(frames: list[tuple[str, str]], style: str) -> list
         return cloned.replace('data-ewf-frame="true"', f'data-ewf-frame="true" data-ewf-screen-variant="false" data-ewf-component-state="{target_state}"', 1)
 
     login = clone("LOGIN", "BASE", "PERM_ERROR")
-    login = replace_node(login, f"[UI][STYLE:{style}][PAGE:LOGIN][ST:PERM_ERROR][CMP:state-banner][VAR:status]", "授权失败", color="#a64c3e", variant="PERM_ERROR")
-    login = replace_node(login, f"[UI][STYLE:{style}][PAGE:LOGIN][ST:PERM_ERROR][CMP:state-banner][VAR:permission-copy]", "授权失败，请重新授权")
-    login = replace_node(login, f"[UI][STYLE:{style}][PAGE:LOGIN][ST:PERM_ERROR][CMP:login-action][VAR:label]", "重新授权")
+    login = replace_node(login, f"[UI][STYLE:{style}][PAGE:LOGIN][ST:PERM_ERROR][CMP:state-banner][VAR:status]", "授权失败", color="#a64c3e", variant="PERM_ERROR", required=True)
+    login = replace_node(login, f"[UI][STYLE:{style}][PAGE:LOGIN][ST:PERM_ERROR][CMP:state-banner][VAR:permission-copy]", "授权失败，请重新授权", required=True)
+    login = replace_node(login, f"[UI][STYLE:{style}][PAGE:LOGIN][ST:PERM_ERROR][CMP:login-action][VAR:label]", "重新授权", required=True)
     out.append((f"[UI][STYLE:{style}][PAGE:LOGIN][ST:PERM_ERROR]", login))
 
     reading_states = {
@@ -360,30 +425,43 @@ def synthesize_miniapp_states(frames: list[tuple[str, str]], style: str) -> list
     }
     for state, label in reading_states.items():
         reading = clone("READING", "LIVE", state)
-        reading = replace_node(reading, f"[UI][STYLE:{style}][PAGE:READING][ST:{state}][CMP:state-banner][VAR:status]", label, variant=state)
+        prefix = f"[UI][STYLE:{style}][PAGE:READING][ST:{state}]"
+        progress = f"{prefix}[CMP:scripture-progress]"
+        reading = replace_node(reading, f"{prefix}[CMP:state-banner][VAR:status]", label, variant=state, required=True)
+        # 轨道宽度从 pen 导出物实测，避免把进度几何硬编码进脚本
+        track_width = css_px(element_style(reading, f"{progress}[VAR:track]"), "width")
         if state == "EMPTY":
             for suffix in ("prefix-line-1", "prefix-line-2"):
-                reading = replace_node(reading, f"[UI][STYLE:{style}][PAGE:READING][ST:{state}][CMP:readingline][VAR:{suffix}]", "")
-            reading = replace_node(reading, f"[UI][STYLE:{style}][PAGE:READING][ST:{state}][CMP:char-focus][VAR:latest]", "", opacity=0)
+                reading = replace_node(reading, f"{prefix}[CMP:readingline][VAR:{suffix}]", "", required=True)
+            reading = replace_node(reading, f"{prefix}[CMP:char-focus][VAR:latest]", "", opacity=0, required=True)
+            # 空态不得伪造进度（FR-F-002 / AD-2）：计数归零、填充归零
+            reading = replace_node(reading, f"{progress}[VAR:count]", "心经进度 0 / 260 字", required=True)
+            reading = replace_node(reading, f"{progress}[VAR:percent]", "0%", required=True)
+            reading = replace_node(reading, f"{progress}[VAR:value]", width=0, required=True)
+            # 最新字已隐藏，焦点下划线必须同步隐藏，否则空纸上留一条孤立刻线
+            reading = replace_node(reading, f"{prefix}[CMP:char-focus][VAR:underline-latest]", opacity=0, required=True)
         if state == "DONE":
-            reading = replace_node(reading, f"[UI][STYLE:{style}][PAGE:READING][ST:{state}][CMP:scripture-progress][VAR:count]", "心经进度 260 / 260 字")
-            reading = replace_node(reading, f"[UI][STYLE:{style}][PAGE:READING][ST:{state}][CMP:scripture-progress][VAR:percent]", "100%")
+            reading = replace_node(reading, f"{progress}[VAR:count]", "心经进度 260 / 260 字", required=True)
+            reading = replace_node(reading, f"{progress}[VAR:percent]", "100%", required=True)
+            # 完成态文案已是 100%，填充必须满格，否则自相矛盾
+            if track_width is not None:
+                reading = replace_node(reading, f"{progress}[VAR:value]", width=int(track_width), required=True)
         out.append((f"[UI][STYLE:{style}][PAGE:READING][ST:{state}]", reading))
 
     records = clone("RECORDS", "BASE", "EMPTY")
-    records = replace_node(records, f"[UI][STYLE:{style}][PAGE:RECORDS][ST:EMPTY][CMP:state-banner][VAR:status]", "尚无诵读记录", variant="EMPTY")
+    records = replace_node(records, f"[UI][STYLE:{style}][PAGE:RECORDS][ST:EMPTY][CMP:state-banner][VAR:status]", "尚无诵读记录", variant="EMPTY", required=True)
     for suffix in ("today", "week", "month", "total", "streak"):
-        records = replace_node(records, f"[UI][STYLE:{style}][PAGE:RECORDS][ST:EMPTY][CMP:statcard][VAR:{suffix}-value]", "暂无")
+        records = replace_node(records, f"[UI][STYLE:{style}][PAGE:RECORDS][ST:EMPTY][CMP:statcard][VAR:{suffix}-value]", "暂无", required=True)
     out.append((f"[UI][STYLE:{style}][PAGE:RECORDS][ST:EMPTY]", records))
 
     device = clone("DEVICE", "BASE", "FAIL_RETRY")
-    device = replace_node(device, f"[UI][STYLE:{style}][PAGE:DEVICE][ST:FAIL_RETRY][CMP:state-banner][VAR:copy]", "同步失败，请重试", color="#a64c3e", variant="FAIL_RETRY")
-    device = replace_node(device, f"[UI][STYLE:{style}][PAGE:DEVICE][ST:FAIL_RETRY][CMP:sync-action][VAR:label]", "重试")
+    device = replace_node(device, f"[UI][STYLE:{style}][PAGE:DEVICE][ST:FAIL_RETRY][CMP:state-banner][VAR:copy]", "同步失败，请重试", color="#a64c3e", variant="FAIL_RETRY", required=True)
+    device = replace_node(device, f"[UI][STYLE:{style}][PAGE:DEVICE][ST:FAIL_RETRY][CMP:sync-action][VAR:label]", "重试", required=True)
     out.append((f"[UI][STYLE:{style}][PAGE:DEVICE][ST:FAIL_RETRY]", device))
 
     settings = clone("SETTINGS", "BASE", "PENDING")
-    settings = replace_node(settings, f"[UI][STYLE:{style}][PAGE:SETTINGS][ST:PENDING][CMP:state-banner][VAR:status]", "待设备应用", color="#a66b3a", variant="PENDING")
-    settings = replace_node(settings, f"[UI][STYLE:{style}][PAGE:SETTINGS][ST:PENDING][CMP:setting-mirror][VAR:state-value]", "待设备应用", color="#a66b3a")
+    settings = replace_node(settings, f"[UI][STYLE:{style}][PAGE:SETTINGS][ST:PENDING][CMP:state-banner][VAR:status]", "待设备应用", color="#a66b3a", variant="PENDING", required=True)
+    settings = replace_node(settings, f"[UI][STYLE:{style}][PAGE:SETTINGS][ST:PENDING][CMP:setting-mirror][VAR:state-value]", "待设备应用", color="#a66b3a", required=True)
     out.append((f"[UI][STYLE:{style}][PAGE:SETTINGS][ST:PENDING]", settings))
     return out
 
@@ -411,7 +489,7 @@ def build(source: str, surface: str, style: str) -> str:
     extracted: list[tuple[str, str]] = []
     for name in names:
         frame = normalize_frame(extract_div(source, f'data-pencil-name="{name}"'), surface)
-        extracted.append((name, annotate_components(frame, surface)))
+        extracted.append((name, strip_material_inline(annotate_components(frame, surface))))
     extracted = synthesize_component_only_states(extracted, surface, style)
     frames = [frame for _, frame in extracted]
     width, height = ((410, 502) if surface == "device" else (390, 844))
@@ -434,7 +512,7 @@ def build(source: str, surface: str, style: str) -> str:
       [data-ewf-ring-count="3"]:active [data-ewf-ring],
       [data-ewf-ring-count="3"][data-ewf-motion="flash"] [data-ewf-ring] {{ outline-color: #e6bd69 !important; opacity: 1 !important; }}
       @media (prefers-reduced-motion: reduce) {{ [data-ewf-ring-count="3"] [data-ewf-ring] {{ transition: none; }} }}
-    </style>
+{material_rule()}    </style>
   </head>
   <body>
     <main class="ewf-full-export" data-ewf-surface="{surface}" data-ewf-style="{style}">

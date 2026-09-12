@@ -76,6 +76,9 @@ colors:
       muted: "#8b8177"
     divider: "#9E7B5722"
     focus: "#a66b3a"
+    seal: "#a64c3e"
+    seal-wash: "#a64c3e18"
+    rule: "#9e7b5755"
 typography:
   family:
     device: "Noto Serif SC"
@@ -92,11 +95,15 @@ typography:
     body: { size: 16, weight: 400 }
     label: { size: 13, weight: 400 }
   miniapp:
-    reading: { family: "Noto Serif SC", size: 30, weight: 600, usage: "阅读流最新字放大" }
+    lede: { family: "Noto Serif SC", size: 42, weight: 600, usage: "仅 LOGIN 品牌语" }
+    reading: { family: "Noto Serif SC", size: 30, weight: 600, usage: "阅读流最新字（全 app 唯一放大字）" }
+    stat-hero: { family: "Noto Serif SC", size: 56, weight: 700, usage: "仅 RECORDS 今日敲击" }
+    stat: { family: "Noto Serif SC", size: 28, weight: 700, usage: "其余统计数字" }
+    title: { family: "Noto Serif SC", size: 18, weight: 600, usage: "页标题与阅读流正文" }
     body: { family: "Noto Serif SC", size: 16, weight: 400, lineHeight: 1.7 }
+    ui: { family: "Noto Sans SC", size: 13, weight: 500, usage: "行标签与行值、导航" }
     caption: { family: "Noto Sans SC", size: 12, weight: 400 }
-    ui: { family: "Noto Sans SC", size: 13, weight: 500, usage: "导航、状态与进度" }
-    stat: { size: 28, weight: 700 }
+    micro: { family: "Noto Sans SC", size: 11, weight: 500, usage: "区块标签、印章字、版记编号" }
 rounded:
   device:
     canvas: 110
@@ -212,11 +219,22 @@ components:
       underline: "{colors.mini.focus}"
       lifecycle: "persist-until-next-confirmed-char"
     statcard:
-      card: "{colors.mini.surface.1}"
+      layout: "boxless ledger rows — no fill card; separated by 1px rule"
+      hero: "{typography.miniapp.stat-hero}"
       value: "{typography.miniapp.stat}"
-      label: "{typography.miniapp.caption}"
+      label: "{typography.miniapp.micro}"
+      order: [today-hero, week-month-pair, total-right-aligned, streak]
     devstatus-row:
-      value: "{colors.mini.text.secondary}"
+      layout: "boxless ledger row; label left / value right-aligned to axis 370"
+      label: "{typography.miniapp.ui}"
+      value: "{typography.miniapp.ui}"
+    style-signature:
+      role: "篆刻印谱签名层，六页共用、位置按页重组"
+      parts: [grid, seal, seal-label, folio, rule, tick]
+      grid: "48px 谱格（横线 x20→370，竖线 y150 起）"
+      seal: "{colors.mini.seal} keyline + {colors.mini.seal-wash} fill"
+      folio: "{typography.miniapp.micro} 纯数字版记编号"
+      rule: "{colors.mini.rule} 1px 刻线"
     state-banner:
       tones: [ok, pending, warn, danger]
     sync-action:
@@ -235,6 +253,7 @@ components:
     bottom-nav:
       height: 56
       surface: "{colors.mini.surface.1}"
+      radius: "{rounded.miniapp.control}"
       active: "{colors.mini.focus}"
       inactive: "{colors.mini.text.muted}"
       items: [阅读, 记录, 设备, 设置]
