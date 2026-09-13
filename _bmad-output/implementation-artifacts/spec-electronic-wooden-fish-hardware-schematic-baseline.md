@@ -48,7 +48,7 @@ context:
 - `docs/embedded/bsp/外设硬件软件二开.md` -- 设备 BSP 的派生引脚/总线/外设说明；只更新与新硬件合同直接相关的段落。
 - `docs/embedded/4g/Air780EGP-AT联网与HTTPS经验.md`、`docs/embedded/4g/troubleshooting/Air780EGP-AT零响应与恢复.md` -- Air780EGP AT/DTR/RST 经验；保留软件流程，修正载板信号差异。
 - `/Users/hongchenke/Documents/Github/main_control/components/BSP/GPS/gps.h` -- M100EG-C2 原始宏定义的交叉核对来源，不复制其旧 GPIO。
-- `docs/hardware/3593896291PY206-W38-V2(2).pdf`、`docs/hardware/SCH_遥控板_双TypeC_4G稳压_2026-09-07.pdf` -- 屏幕针脚与音频/4G 子电路参考资料，PDF 原文件不改写。
+- `docs/hardware/参考原理图/3593896291PY206-W38-V2(2).pdf`、`docs/hardware/参考原理图/SCH_遥控板_双TypeC_4G稳压_2026-09-07.pdf` -- 屏幕针脚与音频/4G 子电路参考资料，PDF 原文件不改写。
 
 ## Tasks & Acceptance
 

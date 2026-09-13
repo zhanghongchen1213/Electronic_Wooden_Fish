@@ -32,4 +32,5 @@ _bmad
 .agents
 .DS_Store
 tmp/*   
-docs/hardware/bq25895.pdf
+docs/hardware/芯片手册
+docs/hardware/参考原理图
