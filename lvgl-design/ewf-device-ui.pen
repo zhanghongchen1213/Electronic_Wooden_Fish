@@ -7,6 +7,7 @@
       "x": -25,
       "y": 0,
       "name": "[UI][STYLE:DEVICE-01][PAGE:MUYU][ST:BASE]",
+      "context": "UX_LOCKED:DEVICE-01:2026-09-13",
       "clip": true,
       "width": 410,
       "height": 502,
@@ -22,7 +23,8 @@
           "x": 48,
           "y": 20,
           "width": 314,
-          "height": 24
+          "height": 24,
+          "context": "UX_LOCKED:DEVICE-01:2026-09-13"
         },
         {
           "type": "text",
@@ -30,6 +32,7 @@
           "x": 24,
           "y": 60,
           "name": "[UI][STYLE:DEVICE-01][PAGE:MUYU][ST:BASE][CMP:page-title][VAR:scripture]",
+          "context": "UX_LOCKED:DEVICE-01:2026-09-13",
           "fill": "#fbfaf0",
           "textGrowth": "fixed-width-height",
           "width": 150,
@@ -47,6 +50,7 @@
           "x": 246,
           "y": 64,
           "name": "[UI][STYLE:DEVICE-01][PAGE:MUYU][ST:BASE][CMP:round-index][VAR:current]",
+          "context": "UX_LOCKED:DEVICE-01:2026-09-13",
           "fill": "#a6a29a",
           "textGrowth": "fixed-width-height",
           "width": 140,
@@ -70,6 +74,7 @@
           "height": 28,
           "flipX": false,
           "flipY": false,
+          "context": "UX_LOCKED:DEVICE-01:2026-09-13",
           "descendants": {
             "e7IpI": {
               "flipX": false,
@@ -95,6 +100,7 @@
           "x": 216,
           "y": 233,
           "name": "[UI][STYLE:DEVICE-01][PAGE:MUYU][ST:BASE][CMP:total-taps][VAR:confirmed]",
+          "context": "UX_LOCKED:DEVICE-01:2026-09-13",
           "fill": "#fbfaf0",
           "textGrowth": "fixed-width-height",
           "width": 170,
@@ -113,6 +119,7 @@
           "x": 32,
           "y": 265,
           "name": "[UI][STYLE:DEVICE-01][PAGE:MUYU][ST:BASE][CMP:woodfish][VAR:tap-zone]",
+          "context": "UX_LOCKED:DEVICE-01:2026-09-13",
           "fill": "#00000000",
           "width": 348,
           "height": 216,
@@ -124,6 +131,7 @@
           "x": 46,
           "y": 275,
           "name": "[UI][STYLE:DEVICE-01][PAGE:MUYU][ST:BASE][CMP:woodfish][VAR:pressed]",
+          "context": "UX_LOCKED:DEVICE-01:2026-09-13",
           "fill": "#00000000",
           "width": 320,
           "height": 200,
@@ -137,7 +145,8 @@
           "x": 55,
           "y": 283,
           "width": 300,
-          "height": 180
+          "height": 180,
+          "context": "UX_LOCKED:DEVICE-01:2026-09-13"
         },
         {
           "id": "J6O6DV",
@@ -147,7 +156,8 @@
           "x": 32,
           "y": 265,
           "width": 348,
-          "height": 216
+          "height": 216,
+          "context": "UX_LOCKED:DEVICE-01:2026-09-13"
         },
         {
           "type": "frame",
@@ -155,6 +165,7 @@
           "x": 31,
           "y": 171,
           "name": "cmp_scripture_progress",
+          "context": "UX_LOCKED:DEVICE-01:2026-09-13",
           "reusable": true,
           "width": 346,
           "height": 68,
@@ -285,6 +296,7 @@
           "x": 23,
           "y": 99,
           "name": "cmp_charcell_recent_window",
+          "context": "UX_LOCKED:DEVICE-01:2026-09-13",
           "reusable": true,
           "width": 362,
           "height": 72,
@@ -428,6 +440,7 @@
       "x": 410,
       "y": 0,
       "name": "[UI][STYLE:DEVICE-01][PAGE:JINGWEN][ST:BASE]",
+      "context": "UX_LOCKED:DEVICE-01:2026-09-13",
       "metadata": {
         "type": "page",
         "page": "JINGWEN",
@@ -450,7 +463,8 @@
           "x": 48,
           "y": 20,
           "width": 314,
-          "height": 24
+          "height": 24,
+          "context": "UX_LOCKED:DEVICE-01:2026-09-13"
         },
         {
           "type": "text",
@@ -458,6 +472,7 @@
           "x": 24,
           "y": 60,
           "name": "[UI][STYLE:DEVICE-01][PAGE:JINGWEN][ST:BASE][CMP:page-title][VAR:scripture]",
+          "context": "UX_LOCKED:DEVICE-01:2026-09-13",
           "fill": "#fbfaf0",
           "textGrowth": "fixed-width-height",
           "width": 150,
@@ -475,6 +490,7 @@
           "x": 246,
           "y": 64,
           "name": "[UI][STYLE:DEVICE-01][PAGE:JINGWEN][ST:BASE][CMP:round-index][VAR:current]",
+          "context": "UX_LOCKED:DEVICE-01:2026-09-13",
           "fill": "#a6a29a",
           "textGrowth": "fixed-width-height",
           "width": 140,
@@ -493,6 +509,7 @@
           "x": 24,
           "y": 102,
           "name": "[UI][STYLE:DEVICE-01][PAGE:JINGWEN][ST:BASE][CMP:scripture-history][VAR:scrollable]",
+          "context": "UX_LOCKED:DEVICE-01:2026-09-13",
           "clip": true,
           "width": 362,
           "height": 286,
@@ -580,6 +597,7 @@
           "x": 32,
           "y": 410,
           "name": "[UI][STYLE:DEVICE-01][PAGE:JINGWEN][ST:BASE][CMP:scripture-progress][VAR:master]",
+          "context": "UX_LOCKED:DEVICE-01:2026-09-13",
           "clip": true,
           "width": 346,
           "height": 58,
@@ -634,6 +652,7 @@
       "x": 835,
       "y": 0,
       "name": "[UI][STYLE:DEVICE-01][PAGE:TONGJI][ST:BASE]",
+      "context": "UX_LOCKED:DEVICE-01:2026-09-13",
       "metadata": {
         "type": "page",
         "page": "TONGJI"
@@ -653,7 +672,8 @@
           "x": 48,
           "y": 20,
           "width": 314,
-          "height": 24
+          "height": 24,
+          "context": "UX_LOCKED:DEVICE-01:2026-09-13"
         },
         {
           "type": "text",
@@ -661,6 +681,7 @@
           "x": 92,
           "y": 60,
           "name": "[UI][STYLE:DEVICE-01][PAGE:TONGJI][ST:BASE][CMP:page-title][VAR:title]",
+          "context": "UX_LOCKED:DEVICE-01:2026-09-13",
           "fill": "#fbfaf0",
           "content": "统计",
           "textAlign": "center",
@@ -675,6 +696,7 @@
           "x": 16,
           "y": 99,
           "name": "[UI][STYLE:DEVICE-01][PAGE:TONGJI][ST:BASE][CMP:stat-divider][VAR:top]",
+          "context": "UX_LOCKED:DEVICE-01:2026-09-13",
           "fill": "#30343B",
           "width": 378,
           "height": 2
@@ -688,6 +710,7 @@
           "y": 112,
           "width": 378,
           "height": 64,
+          "context": "UX_LOCKED:DEVICE-01:2026-09-13",
           "descendants": {
             "j5Wkp5": {
               "content": "今日敲击"
@@ -709,6 +732,7 @@
           "y": 184,
           "width": 378,
           "height": 64,
+          "context": "UX_LOCKED:DEVICE-01:2026-09-13",
           "descendants": {
             "j5Wkp5": {
               "content": "累计敲击"
@@ -727,6 +751,7 @@
           "x": 16,
           "y": 264,
           "name": "[UI][STYLE:DEVICE-01][PAGE:TONGJI][ST:BASE][CMP:reading-progress][VAR:card]",
+          "context": "UX_LOCKED:DEVICE-01:2026-09-13",
           "clip": true,
           "width": 378,
           "height": 176,
@@ -815,7 +840,8 @@
               "height": 20,
               "content": "第 1 次诵读",
               "fontFamily": "Noto Sans SC",
-              "fontSize": 12
+              "fontSize": 12,
+              "fontWeight": "normal"
             }
           ]
         }
@@ -827,6 +853,7 @@
       "x": 1260,
       "y": 0,
       "name": "[UI][STYLE:DEVICE-01][PAGE:MUYU][ST:CHARGING_PAUSE]",
+      "context": "UX_LOCKED:DEVICE-01:2026-09-13",
       "clip": true,
       "width": 410,
       "height": 502,
@@ -842,7 +869,8 @@
           "x": 48,
           "y": 20,
           "width": 314,
-          "height": 24
+          "height": 24,
+          "context": "UX_LOCKED:DEVICE-01:2026-09-13"
         },
         {
           "type": "text",
@@ -850,6 +878,7 @@
           "x": 24,
           "y": 60,
           "name": "[UI][STYLE:DEVICE-01][PAGE:MUYU][ST:CHARGING_PAUSE][CMP:page-title][VAR:scripture]",
+          "context": "UX_LOCKED:DEVICE-01:2026-09-13",
           "fill": "#fbfaf0",
           "textGrowth": "fixed-width-height",
           "width": 150,
@@ -867,6 +896,7 @@
           "x": 246,
           "y": 64,
           "name": "[UI][STYLE:DEVICE-01][PAGE:MUYU][ST:CHARGING_PAUSE][CMP:round-index][VAR:current]",
+          "context": "UX_LOCKED:DEVICE-01:2026-09-13",
           "fill": "#a6a29a",
           "textGrowth": "fixed-width-height",
           "width": 140,
@@ -888,6 +918,7 @@
           "y": 98,
           "width": 362,
           "height": 72,
+          "context": "UX_LOCKED:DEVICE-01:2026-09-13",
           "descendants": {
             "n69jM": {
               "name": "[UI][STYLE:DEVICE-01][PAGE:MUYU][ST:CHARGING_PAUSE][CMP:charcell][VAR:slot-1]",
@@ -927,6 +958,7 @@
           "y": 183,
           "width": 346,
           "height": 68,
+          "context": "UX_LOCKED:DEVICE-01:2026-09-13",
           "descendants": {
             "B0bGs": {
               "name": "[UI][STYLE:DEVICE-01][PAGE:MUYU][ST:CHARGING_PAUSE][CMP:scripture-progress][VAR:track]"
@@ -968,7 +1000,8 @@
           "x": 24,
           "y": 237,
           "width": 170,
-          "height": 28
+          "height": 28,
+          "context": "UX_LOCKED:DEVICE-01:2026-09-13"
         },
         {
           "type": "text",
@@ -976,6 +1009,7 @@
           "x": 216,
           "y": 237,
           "name": "[UI][STYLE:DEVICE-01][PAGE:MUYU][ST:CHARGING_PAUSE][CMP:total-taps][VAR:confirmed]",
+          "context": "UX_LOCKED:DEVICE-01:2026-09-13",
           "fill": "#fbfaf0",
           "textGrowth": "fixed-width-height",
           "width": 170,
@@ -994,6 +1028,7 @@
           "x": 32,
           "y": 265,
           "name": "[UI][STYLE:DEVICE-01][PAGE:MUYU][ST:CHARGING_PAUSE][CMP:woodfish][VAR:tap-zone]",
+          "context": "UX_LOCKED:DEVICE-01:2026-09-13",
           "fill": "#00000000",
           "width": 348,
           "height": 216,
@@ -1005,6 +1040,7 @@
           "x": 46,
           "y": 275,
           "name": "[UI][STYLE:DEVICE-01][PAGE:MUYU][ST:CHARGING_PAUSE][CMP:woodfish][VAR:pressed]",
+          "context": "UX_LOCKED:DEVICE-01:2026-09-13",
           "fill": "#00000000",
           "width": 320,
           "height": 200,
@@ -1018,7 +1054,8 @@
           "x": 55,
           "y": 283,
           "width": 300,
-          "height": 180
+          "height": 180,
+          "context": "UX_LOCKED:DEVICE-01:2026-09-13"
         },
         {
           "id": "y78Qj",
@@ -1028,7 +1065,8 @@
           "x": 32,
           "y": 265,
           "width": 348,
-          "height": 216
+          "height": 216,
+          "context": "UX_LOCKED:DEVICE-01:2026-09-13"
         },
         {
           "type": "text",
@@ -1036,6 +1074,7 @@
           "x": 157,
           "y": 64,
           "name": "[UI][STYLE:DEVICE-01][PAGE:MUYU][ST:CHARGING_PAUSE][CMP:state-banner][VAR:charging]",
+          "context": "UX_LOCKED:DEVICE-01:2026-09-13",
           "fill": "#d9a441",
           "textGrowth": "fixed-width-height",
           "width": 96,
@@ -1055,6 +1094,7 @@
       "x": 1690,
       "y": 0,
       "name": "[UI][STYLE:DEVICE-01][PAGE:MUYU][ST:DONE_OVERLAY]",
+      "context": "UX_LOCKED:DEVICE-01:2026-09-13",
       "clip": true,
       "width": 410,
       "height": 502,
@@ -1070,7 +1110,8 @@
           "x": 48,
           "y": 20,
           "width": 314,
-          "height": 24
+          "height": 24,
+          "context": "UX_LOCKED:DEVICE-01:2026-09-13"
         },
         {
           "type": "text",
@@ -1078,6 +1119,7 @@
           "x": 24,
           "y": 60,
           "name": "[UI][STYLE:DEVICE-01][PAGE:MUYU][ST:DONE_OVERLAY][CMP:page-title][VAR:scripture]",
+          "context": "UX_LOCKED:DEVICE-01:2026-09-13",
           "fill": "#fbfaf0",
           "textGrowth": "fixed-width-height",
           "width": 150,
@@ -1095,6 +1137,7 @@
           "x": 246,
           "y": 64,
           "name": "[UI][STYLE:DEVICE-01][PAGE:MUYU][ST:DONE_OVERLAY][CMP:round-index][VAR:current]",
+          "context": "UX_LOCKED:DEVICE-01:2026-09-13",
           "fill": "#a6a29a",
           "textGrowth": "fixed-width-height",
           "width": 140,
@@ -1116,6 +1159,7 @@
           "y": 98,
           "width": 362,
           "height": 72,
+          "context": "UX_LOCKED:DEVICE-01:2026-09-13",
           "descendants": {
             "n69jM": {
               "name": "[UI][STYLE:DEVICE-01][PAGE:MUYU][ST:DONE_OVERLAY][CMP:charcell][VAR:slot-1]",
@@ -1169,6 +1213,7 @@
           "y": 183,
           "width": 346,
           "height": 68,
+          "context": "UX_LOCKED:DEVICE-01:2026-09-13",
           "descendants": {
             "B0bGs": {
               "name": "[UI][STYLE:DEVICE-01][PAGE:MUYU][ST:DONE_OVERLAY][CMP:scripture-progress][VAR:track]"
@@ -1219,7 +1264,8 @@
           "x": 24,
           "y": 237,
           "width": 170,
-          "height": 28
+          "height": 28,
+          "context": "UX_LOCKED:DEVICE-01:2026-09-13"
         },
         {
           "type": "text",
@@ -1227,6 +1273,7 @@
           "x": 216,
           "y": 237,
           "name": "[UI][STYLE:DEVICE-01][PAGE:MUYU][ST:DONE_OVERLAY][CMP:total-taps][VAR:confirmed]",
+          "context": "UX_LOCKED:DEVICE-01:2026-09-13",
           "fill": "#fbfaf0",
           "textGrowth": "fixed-width-height",
           "width": 170,
@@ -1245,6 +1292,7 @@
           "x": 32,
           "y": 265,
           "name": "[UI][STYLE:DEVICE-01][PAGE:MUYU][ST:DONE_OVERLAY][CMP:woodfish][VAR:tap-zone]",
+          "context": "UX_LOCKED:DEVICE-01:2026-09-13",
           "fill": "#00000000",
           "width": 348,
           "height": 216,
@@ -1256,6 +1304,7 @@
           "x": 46,
           "y": 275,
           "name": "[UI][STYLE:DEVICE-01][PAGE:MUYU][ST:DONE_OVERLAY][CMP:woodfish][VAR:pressed]",
+          "context": "UX_LOCKED:DEVICE-01:2026-09-13",
           "fill": "#00000000",
           "width": 320,
           "height": 200,
@@ -1269,7 +1318,8 @@
           "x": 55,
           "y": 283,
           "width": 300,
-          "height": 180
+          "height": 180,
+          "context": "UX_LOCKED:DEVICE-01:2026-09-13"
         },
         {
           "id": "sxgFT",
@@ -1279,7 +1329,8 @@
           "x": 32,
           "y": 265,
           "width": 348,
-          "height": 216
+          "height": 216,
+          "context": "UX_LOCKED:DEVICE-01:2026-09-13"
         },
         {
           "type": "rectangle",
@@ -1287,6 +1338,7 @@
           "x": 0,
           "y": 0,
           "name": "[UI][STYLE:DEVICE-01][PAGE:MUYU][ST:DONE_OVERLAY][CMP:modal-done][VAR:overlay]",
+          "context": "UX_LOCKED:DEVICE-01:2026-09-13",
           "fill": "#00000099",
           "width": 410,
           "height": 502
@@ -1297,6 +1349,7 @@
           "x": 36,
           "y": 150,
           "name": "[UI][STYLE:DEVICE-01][PAGE:MUYU][ST:DONE_OVERLAY][CMP:modal-done][VAR:card]",
+          "context": "UX_LOCKED:DEVICE-01:2026-09-13",
           "width": 338,
           "height": 190,
           "fill": "#121212",
@@ -1381,6 +1434,7 @@
       "x": 2120,
       "y": 0,
       "name": "[UI][STYLE:DEVICE-01][PAGE:SHEZHI][ST:BASE]",
+      "context": "UX_LOCKED:DEVICE-01:2026-09-13",
       "metadata": {
         "type": "page",
         "page": "SHEZHI",
@@ -1399,6 +1453,7 @@
           "x": 92,
           "y": 16,
           "name": "[UI][STYLE:DEVICE-01][PAGE:SHEZHI][ST:BASE][CMP:page-title][VAR:title]",
+          "context": "UX_LOCKED:DEVICE-01:2026-09-13",
           "fill": "#fbfaf0",
           "content": "设置",
           "textAlign": "center",
@@ -1413,6 +1468,7 @@
           "x": 16,
           "y": 66,
           "name": "[UI][STYLE:DEVICE-01][PAGE:SHEZHI][ST:BASE][CMP:settings-list][VAR:divider]",
+          "context": "UX_LOCKED:DEVICE-01:2026-09-13",
           "fill": "#30343B",
           "width": 378,
           "height": 2
@@ -1423,6 +1479,7 @@
           "x": 16,
           "y": 72,
           "name": "[UI][STYLE:DEVICE-01][PAGE:SHEZHI][ST:BASE][CMP:settings-list][VAR:viewport]",
+          "context": "UX_LOCKED:DEVICE-01:2026-09-13",
           "metadata": {
             "type": "settings-list",
             "component": "settings-list",
@@ -2034,6 +2091,7 @@
           "x": 399,
           "y": 88,
           "name": "[UI][STYLE:DEVICE-01][PAGE:SHEZHI][ST:BASE][CMP:settings-list][VAR:scroll-track]",
+          "context": "UX_LOCKED:DEVICE-01:2026-09-13",
           "fill": "#30343B",
           "width": 3,
           "height": 312
@@ -2044,6 +2102,7 @@
           "x": 399,
           "y": 88,
           "name": "[UI][STYLE:DEVICE-01][PAGE:SHEZHI][ST:BASE][CMP:settings-list][VAR:scroll-thumb]",
+          "context": "UX_LOCKED:DEVICE-01:2026-09-13",
           "fill": "#a6a29a",
           "width": 3,
           "height": 206
@@ -2055,6 +2114,7 @@
           "x": 181,
           "y": 479,
           "name": "[UI][STYLE:DEVICE-01][PAGE:SHEZHI][ST:BASE][CMP:settings-list][VAR:pull-handle]",
+          "context": "UX_LOCKED:DEVICE-01:2026-09-13",
           "fill": "#d9a441",
           "width": 48,
           "height": 5
@@ -2065,6 +2125,7 @@
           "x": 117,
           "y": 446,
           "name": "[UI][STYLE:DEVICE-01][PAGE:SHEZHI][ST:BASE][CMP:settings-list][VAR:return-zone]",
+          "context": "UX_LOCKED:DEVICE-01:2026-09-13",
           "metadata": {
             "type": "interaction-zone",
             "interaction": "swipe-up-or-back"
@@ -2093,6 +2154,7 @@
           "x": 8,
           "y": 3,
           "name": "signal-4g",
+          "context": "UX_LOCKED:DEVICE-01:2026-09-13",
           "width": 18,
           "height": 18,
           "icon": "signal",
@@ -2105,6 +2167,7 @@
           "x": 36,
           "y": 3,
           "name": "signal-wifi",
+          "context": "UX_LOCKED:DEVICE-01:2026-09-13",
           "width": 18,
           "height": 18,
           "icon": "wifi",
@@ -2117,6 +2180,7 @@
           "x": 64,
           "y": 3,
           "name": "signal-ble",
+          "context": "UX_LOCKED:DEVICE-01:2026-09-13",
           "width": 18,
           "height": 18,
           "icon": "bluetooth",
@@ -2129,6 +2193,7 @@
           "x": 92,
           "y": 3,
           "name": "signal-gps",
+          "context": "UX_LOCKED:DEVICE-01:2026-09-13",
           "width": 18,
           "height": 18,
           "icon": "navigation",
@@ -2141,6 +2206,7 @@
           "x": 140,
           "y": 8,
           "name": "sync-dot",
+          "context": "UX_LOCKED:DEVICE-01:2026-09-13",
           "fill": "$ewf-device-signal",
           "width": 7,
           "height": 7
@@ -2151,6 +2217,7 @@
           "x": 153,
           "y": 1,
           "name": "sync-label",
+          "context": "UX_LOCKED:DEVICE-01:2026-09-13",
           "fill": "$ewf-device-ink-2",
           "textGrowth": "fixed-width-height",
           "width": 52,
@@ -2167,6 +2234,7 @@
           "x": 246,
           "y": 1,
           "name": "battery-value",
+          "context": "UX_LOCKED:DEVICE-01:2026-09-13",
           "fill": "$ewf-device-ink",
           "textGrowth": "fixed-width-height",
           "width": 36,
@@ -2184,6 +2252,7 @@
           "x": 290,
           "y": 3,
           "name": "battery-icon",
+          "context": "UX_LOCKED:DEVICE-01:2026-09-13",
           "width": 18,
           "height": 18,
           "icon": "battery-medium",
@@ -2196,6 +2265,7 @@
           "x": 0,
           "y": 0,
           "name": "charging-mark",
+          "context": "UX_LOCKED:DEVICE-01:2026-09-13",
           "fill": "#00000000",
           "width": 0,
           "height": 0
@@ -2238,6 +2308,7 @@
           "x": 0,
           "y": 0,
           "name": "ring-outer",
+          "context": "UX_LOCKED:DEVICE-01:2026-09-13",
           "metadata": {
             "type": "tap-ring",
             "state": "idle",
@@ -2256,6 +2327,7 @@
           "x": 8,
           "y": 8,
           "name": "ring-middle",
+          "context": "UX_LOCKED:DEVICE-01:2026-09-13",
           "metadata": {
             "type": "tap-ring",
             "state": "idle",
@@ -2274,6 +2346,7 @@
           "x": 18,
           "y": 14,
           "name": "ring-inner",
+          "context": "UX_LOCKED:DEVICE-01:2026-09-13",
           "metadata": {
             "type": "tap-ring",
             "state": "idle",
@@ -2312,7 +2385,8 @@
           "x": 0,
           "y": 0,
           "width": 378,
-          "height": 80
+          "height": 80,
+          "context": "UX_LOCKED:DEVICE-01:2026-09-13"
         },
         {
           "id": "dkxlP",
@@ -2323,6 +2397,7 @@
           "y": 88,
           "width": 378,
           "height": 80,
+          "context": "UX_LOCKED:DEVICE-01:2026-09-13",
           "descendants": {
             "vYZTI": {
               "fill": "#e6bd69"
@@ -2341,6 +2416,7 @@
           "y": 176,
           "width": 378,
           "height": 80,
+          "context": "UX_LOCKED:DEVICE-01:2026-09-13",
           "descendants": {
             "vYZTI": {
               "fill": "#e6bd69"
@@ -2359,6 +2435,7 @@
           "y": 264,
           "width": 378,
           "height": 80,
+          "context": "UX_LOCKED:DEVICE-01:2026-09-13",
           "descendants": {
             "vYZTI": {
               "fill": "#e6bd69"
@@ -2377,6 +2454,7 @@
           "y": 352,
           "width": 378,
           "height": 80,
+          "context": "UX_LOCKED:DEVICE-01:2026-09-13",
           "descendants": {
             "vYZTI": {
               "fill": "#e6bd69"
@@ -2407,6 +2485,7 @@
           "x": 16,
           "y": 16,
           "name": "cmp_muyu_flow_state_EMPTY",
+          "context": "UX_LOCKED:DEVICE-01:2026-09-13",
           "reusable": true,
           "clip": true,
           "width": 390,
@@ -2692,6 +2771,7 @@
           "x": 422,
           "y": 16,
           "name": "cmp_muyu_flow_state_BASE",
+          "context": "UX_LOCKED:DEVICE-01:2026-09-13",
           "reusable": true,
           "clip": true,
           "width": 390,
@@ -2977,6 +3057,7 @@
           "x": 828,
           "y": 16,
           "name": "cmp_muyu_flow_state_MID",
+          "context": "UX_LOCKED:DEVICE-01:2026-09-13",
           "reusable": true,
           "clip": true,
           "width": 390,
@@ -3262,6 +3343,7 @@
           "x": 1234,
           "y": 16,
           "name": "cmp_muyu_flow_state_FULL",
+          "context": "UX_LOCKED:DEVICE-01:2026-09-13",
           "reusable": true,
           "clip": true,
           "width": 390,
@@ -3564,6 +3646,7 @@
           "y": 18,
           "width": 170,
           "height": 28,
+          "context": "UX_LOCKED:DEVICE-01:2026-09-13",
           "descendants": {
             "e7IpI": {
               "content": "今日敲击"
@@ -3583,6 +3666,7 @@
           "y": 18,
           "width": 170,
           "height": 28,
+          "context": "UX_LOCKED:DEVICE-01:2026-09-13",
           "descendants": {
             "e7IpI": {
               "content": "今日敲击"
@@ -3626,6 +3710,7 @@
           "x": 18,
           "y": 12,
           "name": "cmp_stat_card_accent",
+          "context": "UX_LOCKED:DEVICE-01:2026-09-13",
           "fill": "#d9a441",
           "width": 4,
           "height": 40
@@ -3636,6 +3721,7 @@
           "x": 38,
           "y": 7,
           "name": "cmp_stat_card_label",
+          "context": "UX_LOCKED:DEVICE-01:2026-09-13",
           "fill": "#a6a29a",
           "textGrowth": "fixed-width-height",
           "width": 230,
@@ -3651,6 +3737,7 @@
           "x": 38,
           "y": 24,
           "name": "cmp_stat_card_value",
+          "context": "UX_LOCKED:DEVICE-01:2026-09-13",
           "fill": "#fbfaf0",
           "textGrowth": "fixed-width-height",
           "width": 220,
@@ -3667,6 +3754,7 @@
           "x": 300,
           "y": 28,
           "name": "cmp_stat_card_unit",
+          "context": "UX_LOCKED:DEVICE-01:2026-09-13",
           "fill": "#cfc4b0",
           "textGrowth": "fixed-width-height",
           "width": 54,
@@ -3708,6 +3796,7 @@
           "x": 0,
           "y": 0,
           "name": "cmp_today_taps_label",
+          "context": "UX_LOCKED:DEVICE-01:2026-09-13",
           "fill": "#fbfaf0",
           "textGrowth": "fixed-width-height",
           "width": 63,
@@ -3724,6 +3813,7 @@
           "x": 70,
           "y": 0,
           "name": "cmp_today_taps_value",
+          "context": "UX_LOCKED:DEVICE-01:2026-09-13",
           "fill": "#fbfaf0",
           "textGrowth": "fixed-width-height",
           "width": 84,
@@ -3756,6 +3846,7 @@
           "x": 18,
           "y": 18,
           "name": "cmp_scripture_history_review_line_1",
+          "context": "UX_LOCKED:DEVICE-01:2026-09-13",
           "fill": "#a6a29a",
           "textGrowth": "fixed-width-height",
           "width": 320,
@@ -3773,6 +3864,7 @@
           "x": 18,
           "y": 56,
           "name": "cmp_scripture_history_review_line_2",
+          "context": "UX_LOCKED:DEVICE-01:2026-09-13",
           "fill": "#a6a29a",
           "textGrowth": "fixed-width-height",
           "width": 320,
@@ -3790,6 +3882,7 @@
           "x": 18,
           "y": 94,
           "name": "cmp_scripture_history_review_line_3",
+          "context": "UX_LOCKED:DEVICE-01:2026-09-13",
           "fill": "#a6a29a",
           "textGrowth": "fixed-width-height",
           "width": 320,
@@ -3807,6 +3900,7 @@
           "x": 344,
           "y": 22,
           "name": "cmp_scripture_history_review_scroll_track",
+          "context": "UX_LOCKED:DEVICE-01:2026-09-13",
           "fill": "#252525",
           "width": 2,
           "height": 236
@@ -3817,6 +3911,7 @@
           "x": 344,
           "y": 78,
           "name": "cmp_scripture_history_review_scroll_thumb",
+          "context": "UX_LOCKED:DEVICE-01:2026-09-13",
           "fill": "#a6a29a",
           "width": 2,
           "height": 96
@@ -3843,6 +3938,7 @@
           "x": 18,
           "y": 18,
           "name": "cmp_scripture_history_tail_line_1",
+          "context": "UX_LOCKED:DEVICE-01:2026-09-13",
           "fill": "#a6a29a",
           "textGrowth": "fixed-width-height",
           "width": 320,
@@ -3860,6 +3956,7 @@
           "x": 18,
           "y": 56,
           "name": "cmp_scripture_history_tail_line_2",
+          "context": "UX_LOCKED:DEVICE-01:2026-09-13",
           "fill": "#a6a29a",
           "textGrowth": "fixed-width-height",
           "width": 320,
@@ -3877,6 +3974,7 @@
           "x": 210,
           "y": 40,
           "name": "cmp_scripture_history_tail_glyph_current",
+          "context": "UX_LOCKED:DEVICE-01:2026-09-13",
           "fill": "#d9a441",
           "textGrowth": "fixed-width-height",
           "width": 44,
@@ -3895,6 +3993,7 @@
           "x": 344,
           "y": 22,
           "name": "cmp_scripture_history_tail_scroll_track",
+          "context": "UX_LOCKED:DEVICE-01:2026-09-13",
           "fill": "#252525",
           "width": 2,
           "height": 236
@@ -3905,6 +4004,7 @@
           "x": 344,
           "y": 142,
           "name": "cmp_scripture_history_tail_scroll_thumb",
+          "context": "UX_LOCKED:DEVICE-01:2026-09-13",
           "fill": "#a6a29a",
           "width": 2,
           "height": 56
@@ -3944,6 +4044,7 @@
           "x": 18,
           "y": 23,
           "name": "cmp_device_identity_icon",
+          "context": "UX_LOCKED:DEVICE-01:2026-09-13",
           "width": 34,
           "height": 34,
           "icon": "cpu",
@@ -3956,6 +4057,7 @@
           "x": 66,
           "y": 12,
           "name": "cmp_device_identity_label",
+          "context": "UX_LOCKED:DEVICE-01:2026-09-13",
           "fill": "#fbfaf0",
           "textGrowth": "fixed-width-height",
           "width": 170,
@@ -3972,6 +4074,7 @@
           "x": 242,
           "y": 12,
           "name": "cmp_device_identity_value",
+          "context": "UX_LOCKED:DEVICE-01:2026-09-13",
           "fill": "#a6a29a",
           "textGrowth": "fixed-width-height",
           "width": 120,
@@ -4006,6 +4109,7 @@
           "y": 0,
           "width": 314,
           "height": 24,
+          "context": "UX_LOCKED:DEVICE-01:2026-09-13",
           "descendants": {
             "Ubq4L": {
               "fill": "$ewf-device-signal"
@@ -4030,6 +4134,7 @@
           "y": 40,
           "width": 314,
           "height": 24,
+          "context": "UX_LOCKED:DEVICE-01:2026-09-13",
           "descendants": {
             "Ubq4L": {
               "icon": "signal-zero",
@@ -4046,6 +4151,7 @@
           "y": 80,
           "width": 314,
           "height": 24,
+          "context": "UX_LOCKED:DEVICE-01:2026-09-13",
           "descendants": {
             "aFOzr": {
               "icon": "wifi-off",
@@ -4062,6 +4168,7 @@
           "y": 120,
           "width": 314,
           "height": 24,
+          "context": "UX_LOCKED:DEVICE-01:2026-09-13",
           "descendants": {
             "Ubq4L": {
               "icon": "signal-zero",
@@ -4090,6 +4197,7 @@
           "y": 0,
           "width": 314,
           "height": 24,
+          "context": "UX_LOCKED:DEVICE-01:2026-09-13",
           "descendants": {
             "Fd2Fj": {
               "fill": "$device-sync-ok"
@@ -4109,6 +4217,7 @@
           "y": 40,
           "width": 314,
           "height": 24,
+          "context": "UX_LOCKED:DEVICE-01:2026-09-13",
           "descendants": {
             "Fd2Fj": {
               "fill": "$ewf-device-amber"
@@ -4127,6 +4236,7 @@
           "y": 80,
           "width": 314,
           "height": 24,
+          "context": "UX_LOCKED:DEVICE-01:2026-09-13",
           "descendants": {
             "Fd2Fj": {
               "fill": "$ewf-device-amber"
@@ -4145,6 +4255,7 @@
           "y": 120,
           "width": 314,
           "height": 24,
+          "context": "UX_LOCKED:DEVICE-01:2026-09-13",
           "descendants": {
             "Fd2Fj": {
               "fill": "$ewf-device-danger"
@@ -4163,6 +4274,7 @@
           "y": 0,
           "width": 314,
           "height": 24,
+          "context": "UX_LOCKED:DEVICE-01:2026-09-13",
           "descendants": {
             "D3Zbyo": {
               "content": "100%"
@@ -4182,6 +4294,7 @@
           "y": 40,
           "width": 314,
           "height": 24,
+          "context": "UX_LOCKED:DEVICE-01:2026-09-13",
           "descendants": {
             "D3Zbyo": {
               "content": "76%"
@@ -4201,6 +4314,7 @@
           "y": 80,
           "width": 314,
           "height": 24,
+          "context": "UX_LOCKED:DEVICE-01:2026-09-13",
           "descendants": {
             "D3Zbyo": {
               "content": "15%"
@@ -4220,6 +4334,7 @@
           "y": 120,
           "width": 314,
           "height": 24,
+          "context": "UX_LOCKED:DEVICE-01:2026-09-13",
           "descendants": {
             "D3Zbyo": {
               "content": "76%"
@@ -4253,7 +4368,8 @@
           "y": 0,
           "width": 348,
           "height": 216,
-          "opacity": 1
+          "opacity": 1,
+          "context": "UX_LOCKED:DEVICE-01:2026-09-13"
         },
         {
           "id": "F3EvVP",
@@ -4264,6 +4380,7 @@
           "y": 0,
           "width": 348,
           "height": 216,
+          "context": "UX_LOCKED:DEVICE-01:2026-09-13",
           "descendants": {
             "EZPdC": {
               "stroke": "#e6bd69"

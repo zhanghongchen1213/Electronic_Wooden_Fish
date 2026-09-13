@@ -138,9 +138,9 @@ inputDocuments:
 
 本项目的 UX 契约位于 `_bmad-output/planning-artifacts/ux-designs/ux-Electronic_Wooden_Fish-2026-09-08/`，由 `DESIGN.md`（视觉）与 `EXPERIENCE.md`（行为）及两份 `UI_CONTRACT` 共同维护。
 
-设备轨 `DEVICE-01` 已完成 Stage 4 全帧闭包（15/15，闭包校验与文案卫生通过），并经作者于 **2026-09-11 逐屏签收**：`lvgl-design/ewf-device-ui.pen` / `ewf-device-ui.html` 是 **E3 的视觉验收基线** —— E3 各 story 的实现须与该 pen/HTML 对拍（页面骨架、13 槽经文行、7 字带状态、三环 flash、状态栏状态、设置两页列表）。小程序轨 `MINI-06` 待作者签收，其基线为 `miniapp-design/ewf-miniapp-ui.pen` / `.html`。
+设备轨 `DEVICE-01` 与小程序轨 `MINI-06` 均已完成 UX 签收并锁定：`lvgl-design/ewf-device-ui.pen` 与 `miniapp-design/ewf-miniapp-ui.pen` 是两端视觉验收基线。设备实现对拍 13 槽经文行、7 字带、三环 flash 与状态栏；小程序实现对拍 17 槽阅读流、最新字下一个槽位、单一进度、设置控件与完成双按钮。同名 HTML 由作者从 Pen 导出。
 
-两份 UX 文档整体仍为 `draft`，待两轨均签收后定稿。不另发明新的 UX-DR 清单。
+四份 UX 规范已定稿为 `final`，不再维护候选稿或脚本型 UX-DR。
 
 ### FR Coverage Map
 
@@ -694,7 +694,7 @@ FR-F-010: Epic S4 - 空态与失败态
 - **目标（用户结果）**：微信登录直达唯一设备；阅读行逐字动画呈现 backend 已确认经文（不跳/不重/不预览未来）；离线积压回放接实时；心经完成显示礼花与「从头开始/退出」。
 - **FR 覆盖**：`FR-F-001`~`FR-F-005`
 - **绑定 AD**：AD-2（只呈现已确认）、AD-17（快照水位消费）、AD-18（uni-app 基线）、AD-19
-- **实现要点**：首 story = frontend 工程骨架（uni-app Vue3+TS+Vite+Pinia + 单一 `VITE_API_BASE_URL` + 统一 `api/request` + 登录路由），**S4 复用本骨架**；**mock 依据 = S0 的 frontend-facing API 契约**（P1），不依赖 S1 时序。阅读页先完成 10 种禅意 style 候选与作者选择，再以选中风格承接全帧闭包；正文采用 append-only 阅读流，增加 `scripture-progress` 总进度百分比与 `reading-archive` 已完成篇章保留；动画落后动态加速不丢字符；增加「构建期嵌入 canonical 经文并校验 `scripture_version`」story（引用 S0，P4）。
+- **实现要点**：首 story = frontend 工程骨架（uni-app Vue3+TS+Vite+Pinia + 单一 `VITE_API_BASE_URL` + 统一 `api/request` + 登录路由），**S4 复用本骨架**；**mock 依据 = S0 的 frontend-facing API 契约**（P1），不依赖 S1 时序。阅读页按冻结 MINI-06 Pen 承接 17 槽 append-only 阅读流、最新字焦点、单一 `scripture-progress` 与 `reading-archive`；动画落后动态加速不丢字符；增加构建期 canonical 经文版本校验 story（引用 S0，P4）。
 - **首个 Story**：frontend 骨架 + 登录直入 + 经文页静态呈现。
 
 #### Story S3.1 · frontend 骨架 + 微信登录直达唯一设备
@@ -717,7 +717,7 @@ FR-F-010: Epic S4 - 空态与失败态
 - Given 已确认差量，When 展示，Then 新字 append 到当前诵读正文并聚焦尾字，已有内容不覆盖、不清空，只呈现 backend 已确认字符，顺序不越权、不预览未来（AD-19）。
 - Given `confirmed_chars=0`，When 渲染，Then 显示“等待设备诵读”；首个确认字到达后成为正文第一字。
 - Given 当前诵读达到 `scripture_chars_total`，When 渲染，Then 显示 100% 和完成状态，全文保留并等待完成弹窗操作。
-- Given 选定的 10 种 style 候选，When 对拍视觉稿，Then 当前实现只能使用作者选中的 style；候选之间至少有三个非颜色维度差异。
+- Given 冻结的 MINI-06 Pen，When 对拍视觉稿，Then 当前实现只能使用该 Pen 的页面结构、17 槽阅读流、设置控件和状态文案，不从历史候选稿取值。
 - Given 最终模板，When 运行文案卫生检查，Then 不包含 Node ID、AI 思维链、作者说明、重复进度或孤立标点。
 
 #### Story S3.3 · 在线逐字动画（不跳/不合并/不重复）

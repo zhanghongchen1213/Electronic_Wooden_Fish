@@ -74,5 +74,5 @@ context:
 **Commands:**
 - `python3 -m json.tool docs/hardware/电子木鱼-硬件网络清单.json` -- JSON 解析成功。
 - `python3 - <<'PY' ...` -- 检查 GPIO 重复、I²C 地址冲突和必需字段。
-- `python3 lvgl-design/ui_text_hygiene.py` -- 文案卫生检查通过或明确记录其与硬件文档的适用范围。
+- 完成 Pencil 文案扫描，并由作者对导出的同名 HTML 执行文案卫生检查；硬件文档不承载 UI 过程文案。
 - `git diff --check` -- 无空白错误。

@@ -2,9 +2,9 @@
 name: Electronic_Wooden_Fish
 description: "一敲一字的电子木鱼双端体验：设备诵经与小程序阅读。"
 type: design
-status: draft
+status: final
 created: 2026-09-08
-updated: 2026-09-11
+updated: 2026-09-13
 sources:
   - "{planning_artifacts}/briefs/brief-Electronic_Wooden_Fish-2026-09-08/brief.md"
   - "{planning_artifacts}/briefs/brief-Electronic_Wooden_Fish-2026-09-08/addendum.md"
@@ -14,9 +14,14 @@ sources:
 selected_style:
   device: DEVICE-01
   miniapp: MINI-06
+frozen_sources:
+  device_pen: lvgl-design/ewf-device-ui.pen
+  miniapp_pen: miniapp-design/ewf-miniapp-ui.pen
+  html_export: author-managed
+  export_scripts: removed
 style_candidates:
-  device: [DEVICE-01, DEVICE-02, DEVICE-03, DEVICE-04, DEVICE-05, DEVICE-06, DEVICE-07, DEVICE-08, DEVICE-09, DEVICE-10]
-  miniapp: [MINI-01, MINI-02, MINI-03, MINI-04, MINI-05, MINI-06, MINI-07, MINI-08, MINI-09, MINI-10]
+  device: [DEVICE-01]
+  miniapp: [MINI-06]
 style_lock:
   aesthetic_direction: "Dark OLED Luxury × tactile craft realism；签名细节为三道椭圆环的短促金光与流尾字焦点"
   device:
@@ -96,7 +101,8 @@ typography:
     label: { size: 13, weight: 400 }
   miniapp:
     lede: { family: "Noto Serif SC", size: 42, weight: 600, usage: "仅 LOGIN 品牌语" }
-    reading: { family: "Noto Serif SC", size: 30, weight: 600, usage: "阅读流最新字（全 app 唯一放大字）" }
+    reading: { family: "Noto Serif SC", size: 18, weight: 500, usage: "小程序阅读流固定槽正文" }
+    reading-focus: { family: "Noto Serif SC", size: 28, weight: 600, usage: "小程序阅读流最新字" }
     stat-hero: { family: "Noto Serif SC", size: 56, weight: 700, usage: "仅 RECORDS 今日敲击" }
     stat: { family: "Noto Serif SC", size: 28, weight: 700, usage: "其余统计数字" }
     title: { family: "Noto Serif SC", size: 18, weight: 600, usage: "页标题与阅读流正文" }
@@ -206,9 +212,12 @@ components:
     readingline:
       bg: "{colors.mini.surface.0}"
       currentChar: "{colors.mini.focus}"
-      currentType: "{typography.miniapp.reading}"
+      currentType: "{typography.miniapp.reading-focus}"
       done: "{colors.mini.text.muted}"
       mode: "append-only flowing scripture"
+      lineChars: 17
+      slotWidth: 20
+      bodyType: "{typography.miniapp.reading}"
       latestOnly: true
       underline: "always-under-latest"
     reading-archive:
@@ -231,8 +240,8 @@ components:
     style-signature:
       role: "篆刻印谱签名层，六页共用、位置按页重组"
       parts: [grid, seal, seal-label, folio, rule, tick]
-      grid: "48px 谱格（横线 x20→370，竖线 y150 起）"
-      seal: "{colors.mini.seal} keyline + {colors.mini.seal-wash} fill"
+      grid: "仅阅读页使用低对比 17 槽基线；其他页面使用留白与 1px 刻线"
+      seal: "58px {colors.mini.seal} keyline + {colors.mini.seal-wash} fill，印谱文字居中"
       folio: "{typography.miniapp.micro} 纯数字版记编号"
       rule: "{colors.mini.rule} 1px 刻线"
     state-banner:
@@ -261,6 +270,10 @@ components:
       track: "{colors.mini.surface.2}"
       fill: "{colors.brand.amber.600}"
       fields: [confirmed_chars, scripture_chars_total, percent]
+    settings-controls:
+      volume: "0–100 滑杆，默认 50"
+      brightness: "低/中/高分段控件，默认中"
+      timeout: "5秒/15秒/30秒分段控件，默认15秒"
 
 component_id_namespace:
   device:
@@ -272,60 +285,20 @@ component_id_namespace:
 
 # Electronic_Wooden_Fish — DESIGN.md
 
-> 本文件是视觉权威，EXPERIENCE.md 是行为权威；两者均高于 mock/wireframe，冲突时按各自职责解释。`DEVICE-01` 与 `MINI-06` 已锁定为当前视觉母版；其余候选仅保留作审阅记录，不进入 Stage 4 全帧稿。
+> 本文件是视觉权威，EXPERIENCE.md 是行为权威；DEVICE-01 与 MINI-06 已锁定为当前 Pen 真源；候选稿和导出脚本已清理。
 
 ## Brand & Style
 
 一句话：**一盏烛下的木鱼，一段留白的经文。**
 
 - **设备轨（锁定 DEVICE-01）**：四周圆弧屏承载黑底白色海报式电子木鱼；木鱼周围三道透明椭圆环是唯一敲击光效，金色只在有效敲击的短暂反馈中出现。
-- **小程序轨（锁定 MINI-06）**：浅纸面、基线网格和印谱印记承载一篇连续心经；正文、最新字和总进度构成唯一阅读层级，不添加外层展示背景。
+- **小程序轨（锁定 MINI-06）**：浅纸面、低对比 17 槽阅读基线和居中印谱印记承载一篇连续心经；正文、最新字和总进度构成唯一阅读层级，不添加外层展示背景。
 - 两轨在视觉上不需要一致（PRD 允许），但**令牌同源**：同一支琥珀、同一族字体，才能让「设备敲出、手机上看到」是同一件事。
 - 语言：极简体中文；不堆词。反馈用语义短句与状态，不打断诵经节奏。
 
-### Style Candidate Board
+### Locked Pen Assets
 
-Pen 文件保留 10 个候选 sibling frame 作为审阅档案。候选共享产品行为语义、必要组件和画布几何，但只有已锁定母版进入 Stage 4；候选名称、结构指纹和审阅标签不进入产品页面。
-
-### Locked Style
-
-- **设备 `DEVICE-01` / master `hbTEa`**：保留现有三分之四海报构图、黑色屏面（`#050505`）、白色木鱼轮廓（`#fbfaf0`）、Noto Serif SC 字形层级和透明椭圆环。环的 idle 为低对比描边，flash 为 `{colors.brand.amber.300}`，160ms 后恢复 idle。
-- **小程序 `MINI-06` / master `A358t`**：保留现有浅纸面（`#f4f0e5`）、低密度基线网格、印谱印记、Noto Serif SC 正文与 Noto Sans SC 状态/导航。最新字使用 `{colors.mini.focus}` 放大，2px 下划线始终贴在最新字下方。
-- `hbTEa` 与 `A358t` 只作为 Pen 内部复制锚点；派生页面使用各自唯一节点 ID，交付 HTML 不输出 Node ID 或 `data-pencil-id`。
-
-### Candidate Archive
-
-以下候选表只保留审阅与审计索引，不参与 Stage 4 的视觉实现。
-
-设备候选：
-
-| ID | 名称 | 视觉语言 | 签名细节 |
-| --- | --- | --- | --- |
-| `DEVICE-01` | 匠作写实·三分之四 | 黑底白色木鱼剪影、海报比例、巨大主物件 | 同心余韵环与高识别度斜槽 |
-| `DEVICE-02` | 漆器祭台·正面器物 | 漆牌、低台、正面器物层级 | 竖向木槌导轨 |
-| `DEVICE-03` | 木雕剖面·中轴图 | 竖排字带、中轴线、剖面图式 | 进度刻槽与中轴标尺 |
-| `DEVICE-04` | 手作案台·俯视 | 木案横纹、斜向动作轴、俯视陈设 | 木案 grain 与斜向木槌轴 |
-| `DEVICE-05` | 山门窗棂·圆窗取景 | 圆窗、十字窗棂、环形信息 | 窗环承载进度 |
-| `DEVICE-06` | 松烟木刻·版画 | 黑白反相、木刻留白、负形嘴槽 | 刻痕与版画边界 |
-| `DEVICE-07` | 石窟浮雕·侧光 | 石案浮雕、深浅层、侧光 | 铭刻面与侧光边缘 |
-| `DEVICE-08` | 香篆烟线·禅房器物 | 静态烟线、器物中心、留白 | 香篆线围绕木鱼 |
-| `DEVICE-09` | 铜框陈设·木鱼与铜铃 | 双层铜框、器物陈列、刻度 | 铜框与底部刻度进度 |
-| `DEVICE-10` | 月白留白·三维轮廓 | 月白圆盘、负空间、大比例剪影 | 圆盘背光与宽留白 |
-
-小程序候选：
-
-| ID | 名称 | 视觉语言 | 签名细节 |
-| --- | --- | --- | --- |
-| `MINI-01` | 宋版长卷 | 窄纵向宣纸阅读栏、宋体、页码细线 | 窄经页栏与页码细线 |
-| `MINI-02` | 茶席侘寂 | 居中窄栏、手工弧线、茶灰纸面 | 手工弧线与茶席侧轴 |
-| `MINI-03` | 莲池月影 | 月相进度徽记、月下琥珀当前字 | 月相圆环包围当前字 |
-| `MINI-04` | 山寺晨雾 | 山形线稿、雾面层次、纵向阅读轴 | 纵向阅读轴与山形线稿 |
-| `MINI-05` | 沉香册页 | 册页边框、章节页签、页角状态 | 册页边框与章节页签 |
-| `MINI-06` | 篆刻印谱 | 基线网格、印记编号、连续正文 | 基线网格与印谱编号 |
-| `MINI-07` | 窗纸映光 | 纸窗分栏、当前字静态光带 | 纸窗双栏与静态光带 |
-| `MINI-08` | 砂庭回纹 | 砂线进度、低密度枯山水纹理 | 低密度砂线与回纹 |
-| `MINI-09` | 暮鼓檀音 | 浅米/深檀双表面、鼓点式进度刻度 | 上下双表面与鼓点刻度 |
-| `MINI-10` | 古籍折页 | 非对称留白、右侧篇章索引、书签进度轨 | 非对称折页与右侧书签轨 |
+本项目只保留两份现役 Pen：设备 DEVICE-01 使用 lvgl-design/ewf-device-ui.pen，小程序 MINI-06 使用 miniapp-design/ewf-miniapp-ui.pen。两份文件均为冻结视觉真源；同名 HTML 由作者按需导出，仓库不再保存候选稿、组装脚本或导出工具。
 
 ## Colors
 
@@ -340,13 +313,13 @@ Pen 文件保留 10 个候选 sibling frame 作为审阅档案。候选共享产
 | 占位 `…muted` | 7字带空位（低对比，**不预览未来**） | 禁用、提示弱化 |
 | 状态 | 已同步低饱和绿 / 待同步琥珀 / 故障陶红 / 低电暖黄（均低打扰） | 同类语义，更浅色系下加深墨轮廓 |
 
-对比基线：设备正文与主底对比 ≥ 7:1（纸白对近黑）；小程序正文与纸面满足可读对比；强调色不承载长段正文。选中母版的色值在 Stage 4 固定，不再因候选板调色。
+对比基线：设备正文与主底对比 ≥ 7:1（纸白对近黑）；小程序正文与纸面满足可读对比；强调色不承载长段正文。颜色来自冻结 Pen 与本文件令牌，不从历史候选稿取值。
 
 ## Typography
 
 - 设备：DEVICE-01 使用 Noto Serif SC 表现木鱼页/经文页字形，Noto Sans SC 表现状态、统计与设置；**只嵌入《心经》所需字形子集**（AD-4），不引入通用中文字库。
 - 7字带字形居中；当前诵出字用 `typography.device.glyph` 并保持高亮直到下一有效字，已诵字用 `typography.device.char`，空位用 `typography.device.placeholder`。
-- 小程序：MINI-06 使用 Noto Serif SC 表现连续正文与最新字，Noto Sans SC 表现导航/状态/进度；正文行高 1.7，最新字放大且下划线不随时间消失。
+- 小程序：MINI-06 使用 Noto Serif SC 表现 17 槽连续正文与最新字，Noto Sans SC 表现导航、状态、进度和设置控件；正文槽统一 18px，最新字 28px 且下划线持续绑定流尾。
 - 数字用等宽语义（统计大数对齐），`[ASSUMPTION]` 设备数字字体沿用 Noto Sans SC 数字。
 
 ## Layout & Spacing
@@ -403,6 +376,6 @@ Pen 文件保留 10 个候选 sibling frame 作为审阅档案。候选共享产
 
 - ✅ 金色只落在「这一字/这一步/这一瞬」；✅ 三环反馈短促且可恢复；✅ 状态用轻点与短句；✅ 空位就是空位（低对比占位）。
 - ✅ 相同屏幕骨架优先复用组件状态；只有信息架构、布局或输入边界真实变化时才建立整屏变体。设置页同步状态只变化 `sync-btn`，亮度/自动熄屏/音量骨架不复制设计。
-- ✅ 每个候选 style 应以真实渲染差异呈现自己的构图、字阶、材质/物件与进度叙事；候选名称只用于风格板标注，不进入产品 UI 文案。结构指纹是近重复预警，不是视觉签收替代物。
+- ✅ 两份冻结 Pen 的构图、字阶、材质和交互表达必须与本文件一致；历史候选不参与实现，作者导出的 HTML 只用于后续对拍。
 - ❌ 不要无语义的彩色/装饰堆叠、常驻动效、把待同步伪装成已同步（AD-2）；❌ 设备不放小程序的阅读型长文；小程序不出现可点击木鱼（FR-F-002）。
 - ❌ 最终页面不得出现 AI 思维链、作者说明、Node ID、调试标签或重复进度；解释性内容只存在于 UX 文档和审计日志。

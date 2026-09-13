@@ -11,29 +11,25 @@
 | `docs/` | 设备/后端/契约/交接文档（见 `docs/README.md`） |
 | `docs/embedded/` | 设备侧实现与排障（自 legbot 迁移，见其 README 来源/排除表） |
 | `docs/handoffs/` | 交接文档（当前：UI 设计移交） |
-| `lvgl-design/` | 设备 OLED(LVGL) UI 设计工作区（pen→HTML→SquareLine→C） |
-| `miniapp-design/` | 小程序 UI 设计工作区（pen→HTML→uni-app 复刻） |
+| `lvgl-design/` | 设备 OLED(LVGL) UX 真源（冻结 Pen；同名 HTML 由作者导出） |
+| `miniapp-design/` | 小程序 UX 真源（冻结 Pen；同名 HTML 由作者导出） |
 | `_bmad-output/planning-artifacts/` | BMAD 规划产物（brief/prd/architecture/epics/ux-designs） |
 
 ## 2. BMAD 状态指针
 
-- 阶段：planning 完成（PRD/架构/epics final）＋ UX 契约 draft；设备 `DEVICE-01`（母版 `hbTEa`）**已逐屏签收（2026-09-11）并冻结为 E3 视觉验收基线**，小程序 `MINI-06`（母版 `A358t`）待签收，**未进入 sprint/build**。源码目录为空，绿地。
-- 设备 Pen 的 SquareLine 规划已按 legbot 的 resident shell / on-demand settings 模型收口：三主页横向常驻，设置 viewport 首屏最多 4 行；组件与变体映射见 `lvgl-design/squareline_studio/ewf_project_manifest.json`。
+- 阶段：planning 完成（PRD/架构/epics final）＋ UX 规范 final；设备 `DEVICE-01`（母版 `hbTEa`）与小程序 `MINI-06`（母版 `A358t`）均已锁定为 UX 视觉基线，**尚未进入 sprint/build**。源码目录为空，绿地。
+- 两份 Pen 是当前视觉真源；同名 HTML 由作者导出。方向稿、候选板、导出脚本、SquareLine 规划文件和旧校验工具已清理。
 - 权威与下一步的**唯一入口**：`docs/handoffs/2026-09-08-bmad-status-ui-design-handoff.md`。
 - 菜单码：`SP` sprint → `BD` build；`CU` bmad-ux（UX 已在跑，后续 Update）。改动产出前先 `git status` 了解未提交集合。
 
 ## 3. 设备侧强制规则（防再踩；来源 legbot，EWF 化）
 
 ### 3.1 LVGL 字体字形闭合（EWF UI 缺字免疫）
-- 改任何 `ewf-device-ui.html` / `.spj` / `.ecomp` / `project_manifest.json` / 状态投影（`bindings/ui_manifest_projection.*`）/ `lv_label_set_text()` / 字号字重 / 图标字体，**必须同步 `lvgl-design/squareline_studio/font_glyph_contract.json`**。
+- 改设备 Pen 的中文文案、字号字重或图标字体，**必须同步 UX 规范中的字体口径**；SquareLine 工程和字体合同在固件实施阶段重新建立。
 - 字形闭合须覆盖五路：SquareLine 原始标签、导出 C 标签、状态投影标签、运行时动态标签、代码字体切换。同一逻辑标签多字体必须用合同 `font_codes` 显式列出全部字体。
 - **禁止**手工编辑字体 `.c` 位图、禁止复制其他字号字体、禁止只改固件侧；字体须由 `.fcfg`+生成脚本重建，保证 SquareLine 资产与 `Embedded/components/ui/generated/fonts` **字节一致**。
 - 出现 `□`/乱码：**先查码点 + 当前实际字体**，禁止删字 / 改 ASCII / 换近义词掩盖。
-- 收尾校验（路径以本仓为准；`tools/` 现为 legbot 定向，未按 ewf 页集重定向前仅供流程参考，不可当 EWF 终验）：
-  - `python3 lvgl-design/squareline_studio/tools/validate_font_coverage.py`
-  - `python3 lvgl-design/squareline_studio/tools/validate_squareline_project.py --html lvgl-design/ewf-device-ui.html --project-dir lvgl-design/squareline_studio`
-  - 字体重建：`python3 lvgl-design/squareline_studio/tools/generate_squareline_project.py --html lvgl-design/ewf-device-ui.html --project-dir lvgl-design/squareline_studio --fonts-only --sync-generated-fonts Embedded/components/ui/generated/fonts`
-  - 终验门槛：`missing_glyphs:0` + `squareline_firmware_font_sources_identical:true` + ESP-IDF 全量构建通过。
+- 终验门槛：实现阶段重新建立字体合同后，完成缺字检查、字体一致性检查和 ESP-IDF 全量构建。
 - 详见 `docs/embedded/troubleshooting/LVGL-运行时字体缺字根因与解决.md`（EWF 化排障文档；不得另建冲突口径）。
 
 ### 3.2 ui_task 独占 + generated/bindings 两层分离（legbot 分散规则，EWF 集中固化）
@@ -70,7 +66,7 @@
 - 最终设备 UI、Pen 画面、静态 HTML、uni-app 页面、前端可见文案和交付截图中，**严禁**出现 AI 思维链、内部推理、设计过程、调试说明、Node ID、`data-pencil-id`、`TODO`、`draft`、`placeholder` 或作者提示。
 - `qljP7`、`WfAs7`、`Z6Qge`、`e8Sgp`、`gGgAm`、`NtM6r` 等内部节点标识不得进入用户可见文本或生产 HTML 属性；交付 HTML 必须清除 `data-pencil-id`。
 - UI 只允许产品文案、状态文案和 canonical《心经》内容；解释设计意图的文字只能留在文档或工作日志。
-- 所有 UX 设计收口前必须运行 `python3 lvgl-design/ui_text_hygiene.py`；发现禁用词、重复进度、孤立标点、开发者说明或节点标识时视为失败。
+- 所有 UX 设计收口前必须通过 Pencil 文案节点扫描和逐屏视觉检查；发现禁用词、重复进度、孤立标点、开发者说明或节点标识时视为失败。HTML 导出后由作者自行运行对应卫生检查。
 
 ## 4. 问题排查索引（症状 → 文档）
 

@@ -8,7 +8,7 @@
 
 | 文件 | 内容（一句话） |
 | --- | --- |
-| `troubleshooting/LVGL-运行时字体缺字根因与解决.md` | 中文 `□` 缺字五路字形闭合链路 + `font_glyph_contract.json` + 校验命令（EWF UI 必读） |
+| `troubleshooting/LVGL-运行时字体缺字根因与解决.md` | 中文 `□` 缺字五路字形闭合链路；设备 UX 真源为 `lvgl-design/ewf-device-ui.pen`，字体合同在固件实施阶段建立 |
 | `troubleshooting/LVGL-滚动低帧率与快照直传.md` | CO5300 QSPI 带宽→60fps 快照直传架构（滚动/三页横滑） |
 | `troubleshooting/ESP32-S3-自动轻睡眠随机重启与USB日志失联.md` | esp_pm/light-sleep 随机重启 + USB-Serial-JTAG 日志失联 + `NO_AUTO_LS_ON_CONNECTION` |
 | `troubleshooting/NS4150B-点击音启动时序.md` | NS4150B PA_EN 启动安定 150ms / enable→delay→PCM→drain→off |
@@ -48,4 +48,4 @@
 ## 工具与两层分离（简述；细则见根 AGENTS.md）
 
 - SquareLine 导出 C 落 `Embedded/components/ui/generated/`（只布局/字体/事件空桩）；业务在 `bindings/`；LVGL 仅 `ui_task` 独占调用（规则见 `AGENTS.md` §设备侧强制规则）。
-- 工具链：`lvgl-design/squareline_studio/tools/{generate_squareline_project,postprocess_squareline_export,validate_squareline_project,validate_font_coverage}.py`（照搬 legbot，现为 legbot 定向，待 EWF html/字体契约生成后重定向——见 `lvgl-design/README.md` 与 UX 运行目录 `.memlog.md`）。
+- 设备 UX 真源：`lvgl-design/ewf-device-ui.pen`。SquareLine 工程、字体合同和校验工具在固件实施阶段重新建立；本轮已清理旧的 legbot 定向工具链。

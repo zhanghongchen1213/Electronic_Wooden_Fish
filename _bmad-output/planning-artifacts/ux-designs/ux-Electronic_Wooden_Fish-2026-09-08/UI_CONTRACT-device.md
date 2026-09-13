@@ -3,23 +3,28 @@ name: Electronic_Wooden_Fish
 description: "设备 OLED 轨页面、状态与组件闭包。"
 type: ui-contract
 surface: device
-status: draft
+status: final
 created: 2026-09-08
-updated: 2026-09-11
+updated: 2026-09-13
 selected_style: DEVICE-01
 source_master: hbTEa
+frozen_sources:
+  device_pen: lvgl-design/ewf-device-ui.pen
+  miniapp_pen: miniapp-design/ewf-miniapp-ui.pen
+  html_export: author-managed
+  export_scripts: removed
 sources:
   - "{planning_artifacts}/ux-designs/ux-Electronic_Wooden_Fish-2026-09-08/DESIGN.md"
   - "{planning_artifacts}/ux-designs/ux-Electronic_Wooden_Fish-2026-09-08/EXPERIENCE.md"
   - "{planning_artifacts}/prds/prd-Electronic_Wooden_Fish-2026-09-07/prd.md"
   - "{planning_artifacts}/architecture/architecture-Electronic_Wooden_Fish-2026-09-08/ARCHITECTURE-SPINE.md"
-style_candidates: 10
+style_candidates: 1
 authority: "UX spines (DESIGN.md / EXPERIENCE.md) > 本契约 > pen/HTML > SquareLine generated C"
 ---
 
 # UI_CONTRACT · 设备轨（OLED 410×502 / LVGL 8.4）
 
-> 本契约把 UX 契约落到**可校验闭包**：凡页面、状态或组件未列入下表，或未以 `[UI]…` 帧画入 HTML，均视为设计未完成。SquareLine 导出边界：**`generated/` 只放布局/字体/事件空桩；业务渲染/路由/typed intent 在 `bindings/`；LVGL 仅 `ui_task` 独占**。
+> 本契约把 UX 契约落到可实现闭包。lvgl-design/ewf-device-ui.pen 是冻结视觉真源，同名 HTML 由作者导出；实现仍遵循 generated 只放布局、字体、事件空桩，业务在 bindings，LVGL 仅 ui_task 独占。
 
 ## 1. 几何与画布
 
@@ -43,7 +48,7 @@ authority: "UX spines (DESIGN.md / EXPERIENCE.md) > 本契约 > pen/HTML > Squar
 - PageId：`MUYU | JINGWEN | TONGJI | SHEZHI | SHELL`
 - StateId：见 §4 状态闭包；CompId 只能使用 §5 的 canonical 名称；VAR 为值占位（如 `<vol>`、`<today>`）。
 - 状态栏不单独生成顶层屏幕；同步/充电/低电/故障以页面内 `statusbar` 的 `VAR` 标注。
-- 候选风格使用 `[STYLE:<style-id>]` 命名空间；Stage 4 只允许 `[STYLE:DEVICE-01]`，每个 canonical frame 固定 410×502；结构 axes 只作审阅索引，不改变页面状态或组件语义。
+- 每个 canonical frame 固定 410×502；当前只使用冻结的 DEVICE-01 Pen，历史候选不参与实现。
 
 ## 3. 页面闭包表（pen/HTML 必须各有帧；绑定 epics E3 story）
 
@@ -61,7 +66,7 @@ authority: "UX spines (DESIGN.md / EXPERIENCE.md) > 本契约 > pen/HTML > Squar
 
 设备状态栏使用点与短字表达；正文帧覆盖以下状态（每帧为独立 HTML 块）。`tap-rings`、`scripture-history` 的 idle/flash、流尾/回看属于组件状态变体，不增加页面 ID：
 
-Pen 中只保留真实改变页面结构或输入边界的 screen：`screen_shell` 内的 `MUYU.BASE/JINGWEN.BASE/TONGJI.BASE`、`MUYU.CHARGING_PAUSE`、`MUYU.DONE_OVERLAY` 和按需 `SHEZHI.BASE`。`MUYU.EMPTY/MID/FULL` 由字带+进度组件状态板承载，`MUYU.UNTRUSTED_TIME` 与 `TONGJI.UNTRUSTED_TIME` 由今日统计组件状态板承载，`SHEZHI.SYNC_BUSY/OK/PENDING/FAIL` 由 `sync-btn` 组件状态板承载。HTML 组装时为闭包校验展开这些状态帧，并标记 `data-ewf-screen-variant="false"`；设置页亮度、自动熄屏与音量结构必须逐节点一致，首屏最多显示 4 行。
+Pen 中只保留真实改变页面结构或输入边界的 screen：`screen_shell` 内的 `MUYU.BASE/JINGWEN.BASE/TONGJI.BASE`、`MUYU.CHARGING_PAUSE`、`MUYU.DONE_OVERLAY` 和按需 `SHEZHI.BASE`。`MUYU.EMPTY/MID/FULL` 由字带+进度组件状态板承载，`MUYU.UNTRUSTED_TIME` 与 `TONGJI.UNTRUSTED_TIME` 由今日统计组件状态板承载，`SHEZHI.SYNC_BUSY/OK/PENDING/FAIL` 由 `sync-btn` 组件状态板承载。同名 HTML 由作者导出并展开这些状态帧；设置页亮度、自动熄屏与音量结构必须逐节点一致，首屏最多显示 4 行。
 
 ```
 [MUYU][BASE]     典型亮屏：7字带已诵若干、心经进度字数+百分比、今日敲击、累计敲击、状态栏
@@ -146,9 +151,9 @@ Pen 中只保留真实改变页面结构或输入边界的 screen：`screen_shel
 | device-identity | 设备身份行 | `木鱼版本` 与 `木鱼ID` 共用同一行几何，值来自设备状态 |
 | modal-done | 完成遮罩 | `components.device.modal-done`；末字确认后锁定输入，提供“从头开始/退出” |
 
-## 6. SquareLine 导出边界与 Screen 建议（Stage 5 落实）
+## 6. SquareLine 实施边界
 
-- 推荐 Screen：`screen_shell`（410×502 视口 + 1230×502 横向 pager）、`screen_settings`（按需下滑，378×344 纵向列表）；完成遮罩作为 MUYU 屏内 `modal-done` 组件，不另建 OVERLAY Screen。SquareLine 1.6.1 导出 8.3.11，固件重新编译到 8.4.0；配置细节见 `lvgl-design/squareline_studio/ewf_project_manifest.json`。
+- SquareLine 配置在固件实施阶段重新建立，本轮不保留生成工程或导出脚本。
 - 导出落 `Embedded/components/ui/generated/`；父 CMake 读 `filelist.txt`；`compat/lvgl/lvgl.h` 转发到 ESP-IDF lvgl；业务在 `bindings/`。
 - 字体：**只嵌入本篇《心经》的可消费汉字与本页 UI 字符子集**（Noto Serif SC 字形 + Noto Sans SC 状态/数字）；`generated/fonts` 与 SquareLine 资产字节一致；禁手改 .c 位图。
 - `generated/` 只导出布局、字体和事件空桩；三环描边色（flash）、最新字切换、经文滚动锚点、状态栏信号/电量/同步的颜色与图标补全，全部由 `bindings/` 在 `ui_task` 内驱动。金色闪光只需在 bindings 侧绑定 `{colors.brand.amber.300}` 并在 160ms 后回 idle，母版**不导出**金色描边与任何重复的信号槽节点。

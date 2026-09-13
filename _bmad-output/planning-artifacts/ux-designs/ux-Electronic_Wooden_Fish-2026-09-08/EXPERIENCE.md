@@ -2,15 +2,20 @@
 name: Electronic_Wooden_Fish
 description: "一敲一字的电子木鱼双端交互与状态行为。"
 type: experience
-status: draft
+status: final
 created: 2026-09-08
-updated: 2026-09-11
+updated: 2026-09-13
 selected_style:
   device: DEVICE-01
   miniapp: MINI-06
 source_masters:
   device: hbTEa
   miniapp: A358t
+frozen_sources:
+  device_pen: lvgl-design/ewf-device-ui.pen
+  miniapp_pen: miniapp-design/ewf-miniapp-ui.pen
+  html_export: author-managed
+  export_scripts: removed
 sources:
   - "{planning_artifacts}/briefs/brief-Electronic_Wooden_Fish-2026-09-08/brief.md"
   - "{planning_artifacts}/briefs/brief-Electronic_Wooden_Fish-2026-09-08/addendum.md"
@@ -27,7 +32,7 @@ sources:
 
 - **双表面**：
   - 设备：CO5300 410×502 AMOLED，UI 系统 LVGL 8.4（`ui_task` 独占）；输入包括 CST9217 触摸、PWR、PVDF（`physical_pvdf`）和木鱼点击（`device_touch`）。
-  - 小程序：uni-app（微信），阅读纸面；不提供电子木鱼，也不是输入源，只呈现 backend 已确认进度（FR-F-002）。
+  - 小程序：uni-app（微信），阅读纸面；不提供电子木鱼，也不是输入源，只呈现 backend 已确认进度（FR-F-002）。 视觉真源为 miniapp-design/ewf-miniapp-ui.pen，同名 HTML 由作者导出。
 - **共享语义**：同步状态词表（本地已记录 / 同步中 / 已同步 / 待同步 / 同步失败）+ 命令「待设备应用」（独立维度）；未校时「待校时」（AD-6）。
 
 ## Information Architecture
@@ -81,8 +86,8 @@ sources:
 | `woodfish` | 木鱼页唯一可计数触区；点击进入 `device_touch`，其它页面普通触摸不计数。 |
 | `woodfish-anatomy` | `woodfish` 内的非交互视觉子组件；只承载器物识别，不接收输入、不独立计数。 |
 | `tap-rings` | 木鱼页三道椭圆环；两种有效输入都触发 160ms 金色闪光后恢复，连续输入只合并光效、不合并字符。 |
-| `scripture-history` | 经文页同一篇 append-only 经文流；每行恒定 13 个字符槽，标点占槽；tail 与 review 是同一组件的几何变体，默认锚定流尾，垂直滑动回看已确认前文，新字到达自动回到流尾。 |
-| `settings-list` / `row` / `slider` | 设置页使用 378×344 纵向 viewport、每行 378×80、间隔 8；首屏最多 4 行，版本与 ID 通过第二页滚动查看；滑杆与行均不阻塞敲击队列。 |
+| scripture-history | 小程序经文流每行恒定 17 个字符槽，标点占槽但不计敲击；最新字落在已有前缀后的下一个槽位，垂直滑动只回看已确认前文，新字到达自动回到流尾。设备经文页的 13 槽规则由设备契约单独治理。 |
+| settings-list / row / slider | 小程序设置镜像使用音量 0–100 滑杆、亮度低/中/高分段控件、熄屏 5/15/30 秒分段控件；提交后按命令修订号显示待设备应用或已生效。 |
 | `sync-btn` / `sync-action` | 同步动作显示 busy/ok/pending/fail；失败可重试，不虚构成功。 |
 | `modal-done` | 仅在完成确认后出现；遮罩期间输入冻结；从头开始新轮次，退出保留历史。 |
 | `readingline` / `char-focus` | 小程序把每个 backend 已确认字 append 到当前诵读正文；已有前缀永不覆盖或清空，自然换行并可回看，最新尾字放大高亮且下划线始终在其下方。 |
@@ -105,7 +110,7 @@ sources:
 2. **木鱼页**：新可消费汉字从右侧进入 7 字带，旧字左移；最新槽使用 `{typography.device.glyph}` + `{colors.brand.amber.400}`，保持到下一有效字；三道透明椭圆环在 0–40ms 切换 `{colors.brand.amber.300}`，40–160ms 回到 idle 描边。该切换是**描边色运行时补丁**：母版只导出 idle 白色描边，金色由 `bindings` 在 `ui_task` 内下发，不建立金色环节点变体（避免与固件常量形成双真源）。
 3. **经文页**：`physical_pvdf` 追加到同一篇 `scripture-history` 流尾；每行固定 13 个字符槽，标点占槽但不计数；最新字落在前文之后的下一个槽位并使用大字高亮，前面所有已确认字永久保留。页面没有电子木鱼，因此不绘制三环。
 4. **滚动**：经文页默认跟随流尾；向上滑动回看已确认前文，向下滑回流尾。回看期间若有新有效敲击，追加后立即将视口锚回流尾。
-5. **小程序**：只消费 backend 已确认序列；每字 append 一次，最新字用 `{typography.miniapp.reading}` 与 `{colors.mini.focus}`，下划线同步移动到最新字下方并持续存在；前缀、顺序和标点不被覆盖。
+5. **小程序**：只消费 backend 已确认序列；每字 append 一次，正文固定 17 槽且统一 18px；最新字使用 28px 焦点色，下划线同步移动到该字下方并持续存在；前缀、顺序和标点不被覆盖。
 6. **高速/降动效**：1 秒 20 次时字符队列完整保留，三环动画不建立独立等待队列；减少动效偏好下跳过插值，直接呈现一次 flash 状态后恢复。
 
 ## State Patterns
@@ -116,14 +121,14 @@ sources:
 
 > 闭包校验基线：以上状态清单逐帧落到 pen/HTML（Stage4），任一缺帧=未完成；每帧用 `data-pencil-name="[UI][PAGE][STATE…]…"` 标注。
 
-状态建模优先级：**组件变体 > 整屏变体**。Pen 中相同页面骨架只保留一个 canonical screen，并用组件状态板承载局部变化；交付 HTML 可为闭包校验展开为独立状态帧，但必须标记 `data-ewf-screen-variant="false"`，且除目标组件外结构一致。只有布局、信息架构或输入边界真实变化时才建立整屏变体。
+状态建模优先级：**组件变体 > 整屏变体**。Pen 中相同页面骨架只保留一个 canonical screen，并用组件状态板承载局部变化；同名 HTML 由作者导出，除目标组件外结构保持一致。只有布局、信息架构或输入边界真实变化时才建立整屏变体。
 
 **纯色/图标类瞬时反馈不进入状态建模**：三环金光（描边色）、信号与电量的颜色/图标切换、同步点色都属于运行时补丁，只登记规格（色值与时长）而不复制节点。设备侧状态对照板集中在母版区：`ZauNI`（7 字带与进度）、`Hlo77`（今日敲击 trusted/untrusted）、`fWCbZ`（同步五态）、`qLhoo`（状态栏 12 态）、`JZhSx`（三环 IDLE/FLASH）。
 
 ## Interaction Primitives
 
 - 设备：左右滑三主页 · 下滑进设置 · PWR 短按(唤醒/循环) · 熄屏首触只唤醒 · 木鱼页点击=`device_touch`；经文页实体 `physical_pvdf` 仍可推进，普通屏幕触摸不计数；充电/遮罩/故障中任何输入忽略。
-- 经文页：垂直滚动只浏览已确认/本地已记录的正文；每行保持 13 个字符槽；新字到达时自动锚回流尾，不切换到另一历史页面。
+- 经文页：垂直滚动只浏览已确认/本地已记录的正文；设备页保持 13 槽，小程序页保持 17 槽；新字到达时追加到已有前缀后的下一个槽位并自动锚回流尾。
 - 小程序：点击/滑动阅读行（仅查看）；下拉刷新设备/记录；按钮触发立即同步/重试/设置下发；WebSocket 断开自动切查询/回放。
 - 时间：设备端「今日」在未校时前只显「待校时」；日界以 backend 配置时区为准（AD-6）。
 

@@ -1,39 +1,26 @@
-# miniapp-design —— 微信小程序 UI 设计工作区
+# miniapp-design —— 微信小程序 UX 真源
 
-承载电子木鱼**微信小程序端 UI** 的「pen → HTML → uni-app 复刻」流水线。
+本目录只承载冻结的 Pencil 设计源：
 
-```text
-① UX 契约   _bmad-output/planning-artifacts/ux-designs/ux-Electronic_Wooden_Fish-*/DESIGN.md + EXPERIENCE.md
-② 轨道契约   同目录 UI_CONTRACT-miniapp.md（页面/状态/组件闭包、scss 令牌映射）
-③ 设计稿     ewf-miniapp-direction.pen/.html（Stage 3：10 种候选）→ ewf-miniapp-ui.pen/.html（选中后 Stage 4 全帧闭包）
-④ 复刻       cloud/frontend/src/pages/{reading,records,device,settings}.vue（scss 令牌取自 DESIGN；Pinia + mock）
-```
+- ewf-miniapp-ui.pen：MINI-06 小程序 UX 唯一视觉真源。
+- assets/paper-fiber-128.png：Pen 使用的本地纸张纹理。
 
-约束：小程序**无点击木鱼、不产生敲击**（FR-F-002），只呈现 backend 已确认进度（AD-2）；令牌只准取 DESIGN.md palette。
+页面闭包固定为 LOGIN、READING、RECORDS、DEVICE、SETTINGS、OVERLAY，共 14 个状态语义。画布基线为 390×844，顶部安全区 62px，内容左右边距 20px，底部导航高 56px。
 
-## EWF Stage 3 风格候选
+## 当前交互口径
 
-- Pencil 源：`ewf-miniapp-direction.pen`（组件 master + `[UI][STYLES][MINIAPP]` + 10 个 sibling frame）
-- 离线 HTML：`ewf-miniapp-direction.html`
-- 生成命令：`python3 lvgl-design/export_ewf_style_board_html.py --input miniapp-design/ewf-miniapp-style-board-source.html --output miniapp-design/ewf-miniapp-direction.html --surface miniapp --manifest miniapp-design/miniapp-style-options.json`
-- 候选校验：`python3 lvgl-design/validate_ewf_ui_closure.py --surface miniapp --stage candidates --html miniapp-design/ewf-miniapp-direction.html --manifest miniapp-design/miniapp-style-options.json`
-- 文案卫生：`python3 lvgl-design/ui_text_hygiene.py --surface miniapp --html miniapp-design/ewf-miniapp-direction.html --mode candidates`
+- 小程序只呈现 backend 已确认进度，不提供电子木鱼，也不产生敲击。
+- 阅读流每行保持 17 个字符槽，标点计槽；新字追加到已有前缀后的下一个槽位。
+- 正文槽使用 Noto Serif SC 18px，最新字使用 28px 焦点色并持续带 2px 下划线。
+- 进度只保留一组，显示已确认字数、总字数和百分比。
+- 设置页提供音量 0–100 滑杆、亮度低/中/高分段、熄屏 5/15/30 秒分段；状态区分待设备应用和已生效。
+- 完成弹窗保留全文，并提供从头开始、退出两个完整按钮。
 
-每个候选固定 390×844，使用连续 append-only 正文和唯一 `scripture-progress`；作者已选定 `MINI-06`，其余候选仅作审阅档案。HTML 不依赖网络资源，且禁止出现 `woodfish`、`device_touch`、Node ID 或作者说明。
+## 导出约定
 
-候选中的经文片段与 42/260 进度仅为视觉样例；运行时只消费 backend 已确认事件，分母由 S0.3 `scripture_chars_total` 提供，不写入 canonical 经文源。
+同名 HTML 由作者从 ewf-miniapp-ui.pen 导出，落在本目录时使用 ewf-miniapp-ui.html。仓库不再保存方向稿、候选板、导出副本、组装脚本或旧校验工具。
 
-候选校验会忽略颜色后比较布局/排版/组件结构指纹，用于发现近重复候选；它只是自动预警，最终风格签收仍以逐屏渲染审阅为准。
+## 下游复刻
 
-可复现测试：`PYTHONPATH=lvgl-design python3 -m unittest discover -s lvgl-design/tests -p 'test_*.py'`
+uni-app 页面按冻结 Pen 与作者导出的同名 HTML 对拍；数据接 Pinia、mock 和同步契约，不从历史候选稿取值。
 
-## EWF Stage 4 全帧（MINI-06）
-
-- Pencil：`ewf-miniapp-ui.pen`；`A358t` 是阅读页母版。Pen 只保留 LOGIN/READING/RECORDS/DEVICE/SETTINGS 与真实 `OVERLAY.DONE` screen，局部状态进入组件状态板。
-- HTML 源导出：`ewf-miniapp-ui-export.html`；交付 HTML：`ewf-miniapp-ui.html`。组装命令：`python3 lvgl-design/assemble_ewf_full_html.py --input miniapp-design/ewf-miniapp-ui-export.html --output miniapp-design/ewf-miniapp-ui.html --surface miniapp --style MINI-06`。
-- 阅读页按 backend 已确认顺序 append；只有最新字符放大高亮，2px 下划线始终与该字符绑定；每帧只有一个 `scripture-progress`。
-- **无盒化**：全 app 只保留两处填充面（底部导航、完成弹窗卡）；记录页/设备页/设置页一律用 1px 刻线 + 留白分层，不出现 dashboard 式均质卡阵。
-- **印谱签名层**（`style-signature`）：48px 谱格、印章、版记 folio、刻线与刻度尺在六页共用但位置按页重组；`READING` 的进度含等高等亮刻度尺（纯质感，不编码数据）。
-- **空态不得伪造进度**：`READING.EMPTY` 的计数/百分比/填充条宽一并归零、焦点下划线同步隐藏（FR-F-002 / AD-2）；`READING.DONE` 填充条满格。这两处由组装器派生，改文案须同步改 `assemble_ewf_full_html.py`。
-- REPLAY/OFFLINE/EMPTY/DONE、权限失败、记录空态、设备重试与待设备应用均为组件变体；HTML 展开为 14 帧并标记 `data-ewf-screen-variant="false"`。
-- 校验：`python3 lvgl-design/validate_ewf_ui_closure.py --surface miniapp --stage full --style MINI-06 --html miniapp-design/ewf-miniapp-ui.html`。

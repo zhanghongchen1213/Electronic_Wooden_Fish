@@ -2,6 +2,8 @@
 
 # LVGL 滚动低帧率与快照直传
 
+> 当前状态（2026-09-13）：设备 UX 真源为 `lvgl-design/ewf-device-ui.pen`，同名 HTML 由作者导出。本文保留渲染架构经验；设计期 HTML、SquareLine 工具和旧校验脚本已清理，实施阶段重新建立。
+
 > 本文迁移自 legbot_watch（只读蓝本），是设备侧「CO5300 AMOLED 大面积滚动性能」的单一事实来源与防回归合同。真机数字均为 legbot 目标板（同 410×502 CO5300 / 80 MHz QSPI）实测；**EWF 落地未在自有板卡复测前，任何数字都只是蓝本证据，须以本仓目标板实测为准**（口径见 §2、§7）。
 >
 > 体系/命名适配：legbot 的 `watch-lvgl` 体系 ↔ 本仓 `ewf-device-ui` 体系（`lvgl-design/ewf-device-ui.pen/.html`、`squareline_studio/ewf-device.spj`）；固件路径 `components/...` → `Embedded/components/...`。涉及 BLE、GPS、4G、云、外骨骼、支付等 watch 专属字句已删除或改写为「本仓不适用」，只保留跨产品成立的渲染架构结论。

@@ -11,7 +11,7 @@
 | 产品行为 | `_bmad-output/planning-artifacts/prds/prd-Electronic_Wooden_Fish-2026-09-07/{prd.md,addendum.md}` | FR（FR-E/B/F）、UJ、SM、跨层同步字段、MVP 边界 |
 | 架构不变量 | `_bmad-output/planning-artifacts/architecture/architecture-Electronic_Wooden_Fish-2026-09-08/ARCHITECTURE-SPINE.md` | AD-1~19、板级 GPIO 合同、结构 seed、技术栈、同步契约前置项 |
 | 史诗/故事 | `_bmad-output/planning-artifacts/epics.md` | 53 个 story（E1–E4 / S0–S4），实施与验收依据 |
-| UX/视觉 | `_bmad-output/planning-artifacts/ux-designs/ux-Electronic_Wooden_Fish-2026-09-08/` | DESIGN.md / EXPERIENCE.md / UI_CONTRACT-{device,miniapp}.md（当前 draft） |
+| UX/视觉 | `_bmad-output/planning-artifacts/ux-designs/ux-Electronic_Wooden_Fish-2026-09-08/` | DESIGN.md / EXPERIENCE.md / UI_CONTRACT-{device,miniapp}.md（final；两份 Pen 为冻结真源） |
 | 设备实现/排障 | `docs/embedded/` | 固件实现规格与从 legbot 迁移的踩坑知识（见其 README） |
 | 硬件原理图基线 | `docs/hardware/` | GPIO/I²C/电源/FPC/网络清单与嘉立创 EDA 分层落图记录；`[必须样机验证]` 不得写成样机已通过 |
 | 交接 | `docs/handoffs/` | 面向后续 agent 的当前状态与任务（见 2026-09-08…handoff.md） |
