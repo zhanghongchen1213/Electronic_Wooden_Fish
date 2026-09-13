@@ -16,7 +16,6 @@ sources:
   - legacy root architecture.md（已按用户决定删除，内容并入本 spine，见 reviews/reconcile-arch-parity.md）
   - /Users/hongchenke/Documents/Github/legbot_watch/_bmad-output/planning-artifacts/architecture/architecture-legbot_watch-2026-07-09/ARCHITECTURE-SPINE.md
   - /Users/hongchenke/Documents/Github/miaowu（backend/pom.xml、frontend/package.json、env-scripts）
-  - _bmad-output/implementation-artifacts/spec-electronic-wooden-fish-hardware-schematic-baseline.md
   - docs/hardware/电子木鱼-硬件原理图设计基线.md
   - docs/hardware/电子木鱼-硬件网络清单.json
 companions:
@@ -269,7 +268,7 @@ GPIO45 保持未接或按模组要求处理（其影响 VDD_SPI 启动采样）�
 
 **I²C 总线与器件**：BQ25895（TI 固定 7-bit `0x6A`）、CW2015（约 `0x62`）、CST9217（7-bit `0x5A`）、ES8311（地址由 CE/CDATA 配置，首版参考 `0x18`）、QMI8658A（首版 SA0=高，`0x6B`）共用一组总线与上拉；最终地址以目标物料 + 实板上电扫描为准，五个地址不得冲突。QMI8658A 仅接 INT1，INT2 不接、不占 GPIO45。
 
-**电源分轨**：USB-C 单入口经 BQ25895 做 NVDC 充电与系统 power-path；TPS3424 锁存并控制 TPS22965 形成 `SYS_MAIN`，Air780EGP/M100 VIN 经该负载开关供电；TLV62569DBVR 为 `SYS_MAIN→3V3` 首版候选，NS4150B 使用滤波后的 `3V3_AUDIO`。AMS1117 类低压差稳压器不得承担 Air780EGP 主供电；充电期间保持音频供电稳定并验证低频噪声。
+**电源分轨**：USB-C 单入口经 BQ25895 做 NVDC 充电与系统 power-path；BQ `SYS` pin 对应板级 `VSYS`，TPS3424 锁存并控制 TPS22965 形成 `VMAIN`，Air780EGP/M100 VIN 经该负载开关供电；TLV62569DBVR 为 `VMAIN→V3V3` 首版候选，NS4150B 使用滤波后的 `V3V3_A`。AMS1117 类低压差稳压器不得承担 Air780EGP 主供电；充电期间保持音频供电稳定并验证低频噪声。
 
 **USB 与 4G 载板边界**：USB-C D+/D− 直连 ESP32 USB-Serial-JTAG；BQ25895 D+/D− 不接 USB-C 数据线，固定输入限流并关闭 BC1.2 自动检测。EWF IO8 留作 NC/测试点，M100 GNSS_VCC 为 NC/测试点；M100 NET_STATUS 不接 ESP32。
 

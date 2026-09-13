@@ -1,9 +1,10 @@
 {
-  "schema_version": "1.0.0",
+  "schema_version": "1.1.0",
   "manifest_type": "ewf_hardware_schematic_baseline",
   "project": "Electronic_Wooden_Fish",
   "status": "baseline_not_prototype_verified",
-  "source_of_truth": "_bmad-output/implementation-artifacts/spec-electronic-wooden-fish-hardware-schematic-baseline.md",
+  "source_of_truth": "docs/hardware/电子木鱼-硬件原理图设计基线.md",
+  "power_naming_contract": "docs/hardware/电源网络命名规范.md",
   "sources": [
     "_bmad-output/planning-artifacts/architecture/architecture-Electronic_Wooden_Fish-2026-09-08/ARCHITECTURE-SPINE.md",
     "docs/hardware/电子木鱼-硬件原理图设计基线.md",
@@ -50,9 +51,9 @@
         "reason": "BQ D- 与 ESP32 USB D- 不得并联"
       },
       {
-        "from_net": "BQ_SYS",
-        "to_net": "M100_VIN",
-        "reason": "最终方案允许：BQ_SYS 经系统负载开关形成 SYS_MAIN；禁止绕过负载开关直连"
+        "from_net": "VSYS",
+        "to_net": "VMAIN",
+        "reason": "最终方案允许：VSYS 经系统负载开关形成 VMAIN；禁止绕过负载开关直连"
       }
     ]
   },
@@ -315,7 +316,7 @@
       "direction": "output",
       "verification_status": "confirmed",
       "constraints": [
-        "3V3_AUDIO 稳定后再拉高",
+        "V3V3_A 稳定后再拉高",
         "静音/充电/故障时拉低"
       ]
     },
@@ -474,7 +475,7 @@
         "btst_cap": "47nF",
         "vref_cap": "10nF",
         "ilim_resistor": "180ohm_candidate_for_2A_input_limit",
-        "stat_int_pullup": "10kohm_to_3V3",
+        "stat_int_pullup": "10kohm_to_V3V3",
         "ts": "5.23kohm_over_30.1kohm_with_10kohm_NTC",
         "usb_data_detection": "disabled_dplus_dminus_not_connected_to_usb_c"
       },
@@ -566,16 +567,16 @@
       "status": "recommended_initial",
       "verification": "speaker_impedance_power_pop_noise_temperature"
     },
-    "3V3_AUDIO_FILTER": {
+    "V3V3_A_FILTER": {
       "role": "NS4150B低噪声供电",
-      "topology": "3V3_after_ferrite_or_load_switch",
+      "topology": "V3V3_after_ferrite_or_load_switch",
       "status": "recommended_initial",
       "verification": "charging_audio_noise_load_step"
     }
   },
   "power_rails": [
     {
-      "name": "VBUS_5V",
+      "name": "VBUS",
       "class": "input",
       "source": "J1.USB_C_VBUS",
       "nominal_voltage": "5V",
@@ -587,7 +588,7 @@
       "verification": "input_ovp_and_line_drop_must_be_measured"
     },
     {
-      "name": "BAT_PROTECTED",
+      "name": "VBAT",
       "class": "battery",
       "source": "J2.BATT+",
       "nominal_voltage": "single_cell_3.0_to_4.2V",
@@ -600,7 +601,7 @@
       "verification": "cell_capacity_protection_ntc_and_safety_must_be_measured"
     },
     {
-      "name": "BQ_SYS",
+      "name": "VSYS",
       "class": "charger_system_reserved",
       "source": "U1.BQ25895.SYS",
       "nominal_voltage": "NVDC_system_voltage",
@@ -613,11 +614,11 @@
       "verification": "confirm_no_pcb_route_to_m100_vin"
     },
     {
-      "name": "SYS_MAIN",
+      "name": "VMAIN",
       "class": "switched_battery_high_current",
       "source": "U3.TPS22965.OUT",
       "control": "VBUS_VALID_or_TPS3424_latched_enable",
-      "nominal_voltage": "BQ_SYS_system_voltage",
+      "nominal_voltage": "VSYS_system_voltage",
       "current_target": "continuous_gt_1A_peak_gt_2A",
       "consumers": [
         "J4.M100EGC2.VIN",
@@ -628,7 +629,7 @@
       "verification": "air780egp_tx_peak_voltage_drop_and_restart_margin"
     },
     {
-      "name": "3V3",
+      "name": "V3V3",
       "class": "logic",
       "source": "U4_3V3_REG.OUT",
       "nominal_voltage": "3.3V",
@@ -643,9 +644,9 @@
       "verification": "regulator_part_ripple_efficiency_and_thermal_test"
     },
     {
-      "name": "3V3_AUDIO",
+      "name": "V3V3_A",
       "class": "filtered_audio_logic",
-      "source": "3V3",
+      "source": "V3V3",
       "nominal_voltage": "3.3V",
       "current_target": "NS4150B_load_tbd",
       "consumers": [
@@ -653,6 +654,18 @@
       ],
       "status": "recommended_initial",
       "verification": "audio_noise_and_load_step_must_be_measured"
+    },
+    {
+      "name": "VLCD",
+      "class": "panel_power_candidate",
+      "source": "VMAIN_or_panel_regulator",
+      "nominal_voltage": "panel_voltage_tbd",
+      "current_target": "panel_load_tbd",
+      "consumers": [
+        "J3.FPC.pin8"
+      ],
+      "status": "recommended_initial",
+      "verification": "panel_voltage_sequence_and_first_frame_must_be_measured"
     },
     {
       "name": "GND",
@@ -684,7 +697,7 @@
         {
           "pin": "A4/B4/A9/B9",
           "name": "VBUS",
-          "net": "VBUS_5V"
+          "net": "VBUS"
         },
         {
           "pin": "A6",
@@ -745,7 +758,7 @@
         {
           "pin": 1,
           "name": "BATT+",
-          "net": "BAT_PROTECTED"
+          "net": "VBAT"
         },
         {
           "pin": 2,
@@ -788,7 +801,7 @@
         {
           "pin": 1,
           "name": "TP-VDD_3V",
-          "net": "3V3"
+          "net": "V3V3"
         },
         {
           "pin": 2,
@@ -818,12 +831,12 @@
         {
           "pin": 7,
           "name": "VDD_3V",
-          "net": "3V3"
+          "net": "V3V3"
         },
         {
           "pin": 8,
           "name": "VBAT",
-          "net": "LCD_VBAT"
+          "net": "VLCD"
         },
         {
           "pin": 9,
@@ -833,7 +846,7 @@
         {
           "pin": 10,
           "name": "VDD_3V",
-          "net": "3V3"
+          "net": "V3V3"
         },
         {
           "pin": 11,
@@ -919,7 +932,7 @@
         {
           "pin": "VIN",
           "name": "VIN",
-          "net": "M100_VIN"
+          "net": "VMAIN"
         },
         {
           "pin": "GND",
@@ -1014,9 +1027,9 @@
         "carrier_signal": "VIN",
         "legacy_source_gpio": null,
         "ewf_gpio": null,
-        "ewf_net": "M100_VIN",
-        "test_point": "TP_SYS_MAIN",
-        "note": "SYS_MAIN only; never BQ_SYS"
+        "ewf_net": "VMAIN",
+        "test_point": "TP_VMAIN",
+        "note": "VMAIN only; never VSYS"
       },
       {
         "carrier_signal": "TXD",
@@ -1072,7 +1085,7 @@
   },
   "nets": [
     {
-      "name": "VBUS_5V",
+      "name": "VBUS",
       "class": "power",
       "endpoints": [
         "J1.VBUS",
@@ -1081,7 +1094,7 @@
       "status": "confirmed"
     },
     {
-      "name": "BAT_PROTECTED",
+      "name": "VBAT",
       "class": "power",
       "endpoints": [
         "J2.BATT+",
@@ -1091,28 +1104,28 @@
       "status": "confirmed"
     },
     {
-      "name": "BQ_SYS",
+      "name": "VSYS",
       "class": "power_reserved",
       "endpoints": [
         "U1.BQ25895.SYS",
         "U3.TPS22965.IN",
-        "TP_BQ_SYS"
+        "TP_VSYS"
       ],
       "status": "confirmed"
     },
     {
-      "name": "SYS_MAIN",
+      "name": "VMAIN",
       "class": "power",
       "endpoints": [
         "U3.TPS22965.OUT",
         "J4.VIN",
         "U4_3V3_REG.IN",
-        "TP_SYS_MAIN"
+        "TP_VMAIN"
       ],
       "status": "confirmed"
     },
     {
-      "name": "3V3",
+      "name": "V3V3",
       "class": "power",
       "endpoints": [
         "U4_3V3_REG.OUT",
@@ -1280,11 +1293,11 @@
       "status": "confirmed"
     },
     {
-      "name": "LCD_VBAT",
+      "name": "VLCD",
       "class": "panel_power_candidate",
       "endpoints": [
         "J3.FPC.pin8",
-        "SYS_MAIN_or_panel_regulator"
+        "VMAIN_or_panel_regulator"
       ],
       "status": "recommended_initial"
     },
@@ -1359,15 +1372,6 @@
         "J5.SPK-"
       ],
       "status": "recommended_initial"
-    },
-    {
-      "name": "M100_VIN",
-      "class": "4g_power",
-      "endpoints": [
-        "SYS_MAIN",
-        "J4.VIN"
-      ],
-      "status": "confirmed"
     },
     {
       "name": "M100_TXD",
@@ -1482,7 +1486,7 @@
       "status": "recommended_initial"
     },
     {
-      "name": "3V3_AUDIO",
+      "name": "V3V3_A",
       "class": "audio_power",
       "endpoints": [
         "U_AUDIO_3V3.OUT",
@@ -1512,7 +1516,7 @@
       "reference": "U3",
       "part": "TPS22965DSGR",
       "lcsc": "C122837",
-      "role": "SYS_MAIN_high_current_load_switch",
+      "role": "VMAIN_high_current_load_switch",
       "status": "recommended_initial",
       "package": "UDFN-8-EP(2x2)"
     },
@@ -1520,7 +1524,7 @@
       "reference": "U4_3V3_REG",
       "part": "TLV62569DBVR",
       "lcsc": "C141836",
-      "role": "SYS_MAIN_to_3V3_regulator",
+      "role": "VMAIN_to_3V3_regulator",
       "status": "recommended_initial",
       "package": "SOT-23-5",
       "selection_note": "不得使用 AMS1117/TPS631000；2.5V 以下掉压需验证"
@@ -1538,7 +1542,7 @@
       "lcsc": null,
       "role": "4G_modem_carrier",
       "status": "confirmed",
-      "vin_net": "SYS_MAIN"
+      "vin_net": "VMAIN"
     },
     {
       "reference": "U11",
@@ -1602,7 +1606,7 @@
       "lcsc": null,
       "role": "RGB_status_led",
       "status": "must_prototype_validate",
-      "selection_note": "优先 3V3 兼容器件；5V 器件需电平转换"
+      "selection_note": "优先 V3V3 兼容器件；5V 器件需电平转换"
     },
     {
       "reference": "R_PVDF_SER",
@@ -1683,12 +1687,12 @@
     }
   ],
   "test_points": [
-    "TP_VBUS_5V",
-    "TP_BAT_PROTECTED",
-    "TP_SYS_MAIN",
-    "TP_BQ_SYS",
-    "TP_3V3",
-    "TP_3V3_AUDIO",
+    "TP_VBUS",
+    "TP_VBAT",
+    "TP_VSYS",
+    "TP_VMAIN",
+    "TP_V3V3",
+    "TP_V3V3_A",
     "TP_I2C_SDA",
     "TP_I2C_SCL",
     "TP_PVDF_RAW",
@@ -1706,7 +1710,7 @@
     "TP_USB_DM_BQ",
     "TP_USB_D+",
     "TP_USB_D-",
-    "TP_LCD_VBAT",
+    "TP_VLCD",
     "TP_LCD_TE",
     "TP_LCD_EN",
     "TP_LCD_SCLK",
@@ -1728,21 +1732,21 @@
         "U4_3V3_REG"
       ],
       "nets": [
-        "VBUS_5V",
-        "BAT_PROTECTED",
-        "BQ_SYS",
-        "SYS_MAIN",
-        "3V3",
+        "VBUS",
+        "VBAT",
+        "VSYS",
+        "VMAIN",
+        "V3V3",
         "USB_D+",
         "USB_D-"
       ],
       "test_points": [
-        "TP_VBUS_5V",
-        "TP_BAT_PROTECTED",
-        "TP_SYS_MAIN",
-        "TP_BQ_SYS",
-        "TP_3V3",
-        "TP_3V3_AUDIO"
+        "TP_VBUS",
+        "TP_VBAT",
+        "TP_VMAIN",
+        "TP_VSYS",
+        "TP_V3V3",
+        "TP_V3V3_A"
       ],
       "eda_status": "record_only_not_created"
     },
@@ -1773,8 +1777,8 @@
         "U9"
       ],
       "nets": [
-        "3V3",
-        "LCD_VBAT",
+        "V3V3",
+        "VLCD",
         "I2C_SDA",
         "I2C_SCL",
         "TP_RST",
@@ -1791,7 +1795,7 @@
         "GND"
       ],
       "test_points": [
-        "TP_LCD_VBAT",
+        "TP_VLCD",
         "TP_LCD_TE",
         "TP_LCD_EN",
         "TP_LCD_SCLK",
@@ -1824,7 +1828,7 @@
         "RGB_DATA"
       ],
       "test_points": [
-        "TP_3V3_AUDIO"
+        "TP_V3V3_A"
       ],
       "eda_status": "record_only_not_created"
     },
@@ -1841,7 +1845,7 @@
         "PVDF_RAW",
         "PVDF_ADC",
         "PVDF_CMP_WAKE",
-        "3V3",
+        "V3V3",
         "GND"
       ],
       "test_points": [
@@ -1859,7 +1863,7 @@
         "J4"
       ],
       "nets": [
-        "M100_VIN",
+        "VMAIN",
         "M100_TXD",
         "M100_RXD",
         "M100_DTR",
@@ -1867,7 +1871,7 @@
         "M100_GNSS_VCC_NC",
         "M100_SIM",
         "M100_ANT",
-        "SYS_MAIN",
+        "VMAIN",
         "GND"
       ],
       "test_points": [
@@ -1887,7 +1891,7 @@
       "nets": [
         "I2C_SDA",
         "I2C_SCL",
-        "3V3",
+        "V3V3",
         "GND",
         "IMU_INT1"
       ],
@@ -1907,7 +1911,7 @@
     },
     {
       "id": "HW-OI-002",
-      "topic": "3V3 稳压器料号/效率/纹波",
+      "topic": "V3V3 稳压器料号/效率/纹波",
       "verification": "电子负载与示波器",
       "status": "must_prototype_validate"
     },
@@ -1961,7 +1965,7 @@
     },
     {
       "id": "HW-OI-011",
-      "topic": "扬声器腔体/ES8311 增益/3V3_AUDIO 负载",
+      "topic": "扬声器腔体/ES8311 增益/V3V3_A 负载",
       "verification": "目标外壳声学标定",
       "status": "must_prototype_validate"
     },
@@ -2058,12 +2062,12 @@
       "USB_D+"
     ],
     "required_power_rails": [
-      "VBUS_5V",
-      "BAT_PROTECTED",
-      "BQ_SYS",
-      "SYS_MAIN",
-      "3V3",
-      "3V3_AUDIO",
+      "VBUS",
+      "VBAT",
+      "VSYS",
+      "VMAIN",
+      "V3V3",
+      "V3V3_A",
       "GND"
     ],
     "required_connectors": [
@@ -2079,7 +2083,7 @@
       "USB_D-",
       "I2C_SDA",
       "I2C_SCL",
-      "M100_VIN",
+      "VMAIN",
       "M100_TXD",
       "M100_RXD",
       "M100_DTR",
