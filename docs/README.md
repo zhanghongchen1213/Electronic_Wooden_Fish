@@ -22,7 +22,7 @@
 - `embedded/` — 设备侧（Embedded/固件）实现与排障文档；多篇从 `legbot_watch/docs` 迁移/适配（详见其 README 的来源与排除表）。
 - `contracts/` — 跨层同步契约 `sync-contract.md`（**待 S0 冻结**，见 `epics.md` Story S0.1；本目录当前仅占位说明）。
 - `backend/`、`frontend/` — 后端/小程序**开发经验文档**（自 miaowu 迁移，见各 README）；PRD addendum §4 期望的模块实现规格 `requirements.md` 仍待对应 spec 阶段创建。
-- `hardware/` — 硬件原理图设计基线、机器网络清单、离线 HTML/SVG 复刻图和嘉立创 EDA 分层落图记录；两份用户提供的 PDF 仅作只读参考，不覆盖原文件。
+- `hardware/` — 硬件原理图设计基线、机器网络清单和原厂/厂商外围电路资料索引；两份用户提供的 PDF 仅作只读参考，不覆盖原文件。
 
 ## 事实流规约
 

@@ -116,7 +116,7 @@ flowchart TD
 
 #### AD-10 — 共享资源单一仲裁（I²C / AT UART / UI）
 
-- **Binds:** 共享 I²C 总线上的 BQ25895/CW2015/CST9217/ES8311/QMI8658C、Air780EGP UART、LVGL 刷新
+- **Binds:** 共享 I²C 总线上的 BQ25895/CW2015/CST9217/ES8311/QMI8658A、Air780EGP UART、LVGL 刷新
 - **Prevents:** 多服务并发抢占总线、UI 刷新与触摸/音频时序冲突
 - **Rule:** 共享 I²C 经单一总线仲裁访问；Air780EGP 的 AT 经单一 UART 入口与单一事务所有权（复用 `main_control` 已验证的 AT/HTTPS/退避经验，不复制其引脚常量）；UI 只经单一 LVGL 任务边界更新（沿用 legbot `ui_task` 独占模式，LVGL 8.x）。
 
@@ -253,25 +253,25 @@ flowchart LR
 | RESET | EN | EN | 独立按键/测试点 |
 | PVDF | ADC | IO9 | ADC1_CH8；前端限流/钳位、控输入范围 |
 | PVDF 唤醒 | 比较器输出 | IO11 | 低功耗 GPIO 唤醒；醒后 ADC 确认有效敲击 |
-| 共享 I²C | SDA / SCL | IO1 / IO2 | BQ25895/CW2015/CST9217/ES8311/QMI8658C 共用；地址必须无冲突 |
+| 共享 I²C | SDA / SCL | IO1 / IO2 | BQ25895/CW2015/CST9217/ES8311/QMI8658A 共用；地址必须无冲突 |
 | CST9217 | TP_RST / TP_INT | IO38 / IO39 | 触摸复位与中断 |
-| QMI8658C | INT1 | IO41 | 未来 WoM 扩展；INT2 不接、不占 GPIO45 |
+| QMI8658A | INT1 | IO41 | 未来 WoM 扩展；INT2 不接、不占 GPIO45 |
 | CO5300 | RST/CS/SCL/D0/D1/D2/D3/EN | IO4/40/5/6/7/12/42/47 | 沿用 legbot 屏幕资源基线 |
 | ES8311 | I2S_DO/WS/BCLK/MCLK | IO13/14/18/21 | 沿用 legbot 音频资源基线 |
 | NS4150B | PA_EN | IO48 | 静音/暂停/故障回到禁用 |
 | Air780EGP | UART TX/RX | IO43/44 | 从 main_control 抽离板级引脚常量 |
-| Air780EGP | DTR/RST/NET_STATUS 兼容位 | IO10/15/16 | 休眠/复位/网络观测；M100 无 NET_STATUS 时 IO16 仅留 NC/测试点 |
-| BQ25895 | OTG_EN | IO8 | PMID OTG 使能；**不连接 M100 GNSS_VCC** |
+| Air780EGP | DTR/RST | IO10/15 | 休眠/复位；NET_STATUS 不接 ESP32 |
+| 保留 | IO8 | NC/测试点 | 不接 M100 GNSS_VCC，不配置 GPIO |
 | RGB | DATA | IO3 | 状态灯，不作调试灯 |
 | USB | D− / D+ | IO19/20 | 原生 USB-Serial-JTAG |
 
-GPIO45 保持未接或按模组要求处理（其影响 VDD_SPI 启动采样）；GPIO33–37 通常与 Octal Flash/PSRAM 相关、不作通用 GPIO。启动绑带约束：下载要求 GPIO0=0、GPIO46=0；PWR/QMI8658C 输出不得在复位采样窗口把 IO0/45/46 推到错误电平（详见工程验证门禁）。
+GPIO45 保持未接或按模组要求处理（其影响 VDD_SPI 启动采样）；GPIO33–37 通常与 Octal Flash/PSRAM 相关、不作通用 GPIO。启动绑带约束：下载要求 GPIO0=0、GPIO46=0；PWR/QMI8658A 输出不得在复位采样窗口把 IO0/45/46 推到错误电平（详见工程验证门禁）。
 
-**I²C 总线与器件**：BQ25895（TI 固定 7-bit `0x6A`）、CW2015（约 `0x62`）、CST9217（7-bit `0x5A`）、ES8311（地址由 CE/CDATA 配置，首版参考 `0x18`）、QMI8658C（首版 SA0=高，`0x6B`）共用一组总线与上拉；最终地址以目标物料 + 实板上电扫描为准，五个地址不得冲突。QMI8658C 仅接 INT1，INT2 不接、不占 GPIO45。
+**I²C 总线与器件**：BQ25895（TI 固定 7-bit `0x6A`）、CW2015（约 `0x62`）、CST9217（7-bit `0x5A`）、ES8311（地址由 CE/CDATA 配置，首版参考 `0x18`）、QMI8658A（首版 SA0=高，`0x6B`）共用一组总线与上拉；最终地址以目标物料 + 实板上电扫描为准，五个地址不得冲突。QMI8658A 仅接 INT1，INT2 不接、不占 GPIO45。
 
-**电源分轨**：USB-C 单入口经 BQ25895 做 NVDC 充电与 PMID OTG；TPS3424 锁存并控制 TPS22965 形成 `VBAT_SW`，Air780EGP/M100 VIN 只接该电池轨（持续 >1A / 瞬时 >2A 能力），不得把 BQ `SYS` 当 4G 主供电；TLV62569DBVR 为 `VBAT_SW→3V3` 首版候选，TPS22919 由 `PMID` 生成受控 `AUDIO_5V`。AMS1117 类低压差稳压器不得承担 Air780EGP 主供电；充电期间暂停输入/音频；USB VBUS 不得反向给模组/电池非预期供电。
+**电源分轨**：USB-C 单入口经 BQ25895 做 NVDC 充电与系统 power-path；TPS3424 锁存并控制 TPS22965 形成 `SYS_MAIN`，Air780EGP/M100 VIN 经该负载开关供电；TLV62569DBVR 为 `SYS_MAIN→3V3` 首版候选，NS4150B 使用滤波后的 `3V3_AUDIO`。AMS1117 类低压差稳压器不得承担 Air780EGP 主供电；充电期间保持音频供电稳定并验证低频噪声。
 
-**USB 与 4G 载板边界**：`FSW7227YMS10G/TR`（MSOP-10 首选）在 USB-C、BQ D+/D− 与 ESP32 USB-Serial-JTAG D+/D− 之间做单路选择；强制选路焊盘只能一路有效，不得并联。EWF `IO8=BQ_OTG_EN`，M100 `GNSS_VCC` 为 `NC/测试点`；`IO16=M100_NET_STATUS_COMPAT`，载板无对应针脚时同样只留 `NC/测试点`。完整逐网清单与 FPC 24-pin 映射见 `docs/hardware/电子木鱼-硬件网络清单.json` 与 `docs/hardware/电子木鱼-硬件原理图设计基线.md`。
+**USB 与 4G 载板边界**：USB-C D+/D− 直连 ESP32 USB-Serial-JTAG；BQ25895 D+/D− 不接 USB-C 数据线，固定输入限流并关闭 BC1.2 自动检测。EWF IO8 留作 NC/测试点，M100 GNSS_VCC 为 NC/测试点；M100 NET_STATUS 不接 ESP32。
 
 **同步活动窗口时序（一次上报）**
 
@@ -293,9 +293,9 @@ sequenceDiagram
 
 ### 嵌入式复用与不沿用（seed）
 
-- **复用（legbot_watch）**：CO5300/CST9217/CW2015/QMI8658C/ES8311/NS4150B 的 BSP 与 `managed_components`、共享 I²C 管理、LVGL 多主页/顶部状态栏/下滑设置/屏幕首帧时序；BQ25895/TPS 电源外围按本硬件基线另行落图，不复制旧参考图。
+- **复用（legbot_watch）**：CO5300/CST9217/CW2015/QMI8658A/ES8311/NS4150B 的 BSP 与 `managed_components`、共享 I²C 管理、LVGL 多主页/顶部状态栏/下滑设置/屏幕首帧时序；BQ25895/TPS 电源外围按本硬件基线另行落图，不复制旧参考图。
 - **复用（main_control）**：Air780EGP UART/AT、DTR 休眠唤醒、网络注册/PDP、HTTPS JSON、超时恢复、GPS 开关与状态模型。
-- **不沿用**：legbot 引脚常量、ML307R/BLE/外骨骼业务、QMI8658C INT2→GPIO45 合同、四主页数量；main_control 原板引脚常量、景区 payload、ESP-IDF v5.1.5 约束。
+- **不沿用**：legbot 引脚常量、ML307R/BLE/外骨骼业务、QMI8658A INT2→GPIO45 合同、四主页数量；main_control 原板引脚常量、景区 payload、ESP-IDF v5.1.5 约束。
 - PVDF 输入只产生事件计数，**不保存、不上报原始波形**；单一外壳，只为最终外壳做一次传感器与声学标定，不做多外壳运行时适配。
 
 ## Capability → Architecture Map
@@ -328,7 +328,7 @@ sequenceDiagram
 | 分区表 / NVS schema / 低功耗参数 / CO5300 首帧与亮度档 / CST9217 实际地址 / PVDF 前端与比较器料号 | 属「必须由原理图或样机实测冻结」的工程项（09-08 附录 §10）；冻结前不得写入承诺性参数 |
 | 硬件细分 seed（具体 I²C 上拉阻值、AMOLED FPC 供电时序、扬声器腔体、电池容量、稳压/充电料号） | 只可在原理图/数据手册/样机验证后回填，本 spine 不作产品承诺 |
 | 音频高速合并阈值 / 动画队列长度 / 活动窗口时长 | 表现类参数按样机演示签收后定标 |
-| OTA、BLE/Wi‑Fi 产品通道、GPS 业务、QMI8658C 业务、选经/导入 | 明确非 MVP 非目标 |
+| OTA、BLE/Wi‑Fi 产品通道、GPS 业务、QMI8658A 业务、选经/导入 | 明确非 MVP 非目标 |
 | 多设备、换机迁移、公开账号、社交、排行榜、提醒、付费、多端前端 | 非个人原型目标，未来若变化需重开架构 |
 
 ## 工程验证门禁（seed——从被删除旧根文档保真迁移）

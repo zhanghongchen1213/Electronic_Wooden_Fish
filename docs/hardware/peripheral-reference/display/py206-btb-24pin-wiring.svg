@@ -1,0 +1,73 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1700 1250">
+<defs>
+  <pattern id="grid" width="32" height="32" patternUnits="userSpaceOnUse"><path d="M32 0H0V32" fill="none" stroke="#dbe4ea"/></pattern>
+  <style>
+    text{font-family:Arial,'PingFang SC','Microsoft YaHei',sans-serif;fill:#0f172a}
+    .title{font-size:28px;font-weight:700}.sub{font-size:15px;fill:#475569}.pin{font-size:14px}.net{font-size:13px;font-weight:700;fill:#075985}.val{font-size:12px}.note{font-size:13px;fill:#92400e}.ic{fill:#fff;stroke:#111827;stroke-width:2}.wire{stroke:#334155;stroke-width:2;fill:none}.rail{stroke:#b91c1c;stroke-width:2;fill:none}.gnd{stroke:#475569;stroke-width:2;fill:none}.tp{fill:#fef3c7;stroke:#b45309;stroke-width:2}.passive{fill:#fff;stroke:#111827;stroke-width:2}.nc{fill:#64748b;font-weight:700}
+  </style>
+</defs>
+<rect width="100%" height="100%" fill="#f8fafc"/><rect width="100%" height="100%" fill="url(#grid)"/>
+<text x="45" y="48" class="title">PY206-W38-V2 24-pin BTB 接口接线图</text>
+<text x="45" y="76" class="sub">屏幕排线公座：OK-14GM024-04 ｜ 主板母座：OK-14F024-04 ｜ 0.4 mm / 2×12 / 0.8H</text>
+
+<!-- Host side -->
+<rect x="60" y="130" width="330" height="720" class="ic"/>
+<text x="225" y="170" class="title" text-anchor="middle">主控侧网络</text>
+<text x="225" y="198" class="sub" text-anchor="middle">ESP32-S3-WROOM-1-N16R8</text>
+<text x="90" y="245" class="net">电源</text><text x="90" y="272" class="pin">3V3：触摸/显示逻辑</text><text x="90" y="298" class="pin">LCD_VBAT ← SYS_MAIN（首版）</text><text x="90" y="324" class="pin">GND：所有地脚</text>
+<text x="90" y="380" class="net">触摸 I²C</text><text x="90" y="407" class="pin">IO1 = I2C_SDA</text><text x="90" y="433" class="pin">IO2 = I2C_SCL</text><text x="90" y="459" class="pin">IO38 = TP_RST</text><text x="90" y="485" class="pin">IO39 = TP_INT</text>
+<text x="90" y="541" class="net">显示 QSPI</text><text x="90" y="568" class="pin">IO4 = LCD_RST</text><text x="90" y="594" class="pin">IO5 = LCD_SCLK</text><text x="90" y="620" class="pin">IO6/7/12/42 = LCD_D0–D3</text><text x="90" y="646" class="pin">IO40 = LCD_CS</text><text x="90" y="672" class="pin">IO47 = LCD_EN</text>
+<text x="90" y="728" class="net">测试点</text><text x="90" y="755" class="pin">TP_TP_VDD / TP_TP_RST</text><text x="90" y="781" class="pin">TP_TP_INT / TP_I2C_SDA</text><text x="90" y="807" class="pin">TP_I2C_SCL / TP_LCD_VBAT</text>
+
+<!-- Connector -->
+<rect x="650" y="130" width="400" height="760" class="ic"/>
+<text x="850" y="175" class="title" text-anchor="middle">J3 OK-14F024-04</text>
+<text x="850" y="202" class="sub" text-anchor="middle">主板端 24-pin BTB 母座</text>
+<text x="850" y="225" class="sub" text-anchor="middle">屏幕端配对 OK-14GM024-04 公座</text>
+
+<!-- left pins 1-12 -->
+<g class="pin">
+<path d="M650 270H430" class="rail"/><text x="640" y="265" text-anchor="end">1 TP-VDD_3V</text><text x="505" y="255" class="net" text-anchor="middle">3V3</text>
+<path d="M650 315H430" class="wire"/><text x="640" y="310" text-anchor="end">2 TP-SCL_3V</text><text x="505" y="300" class="net" text-anchor="middle">I2C_SCL / IO2</text>
+<path d="M650 360H430" class="wire"/><text x="640" y="355" text-anchor="end">3 TP-SDA_3V</text><text x="505" y="345" class="net" text-anchor="middle">I2C_SDA / IO1</text>
+<path d="M650 405H430" class="wire"/><text x="640" y="400" text-anchor="end">4 TP-INT_3V</text><text x="505" y="390" class="net" text-anchor="middle">TP_INT / IO39</text>
+<path d="M650 450H430" class="wire"/><text x="640" y="445" text-anchor="end">5 TP-RST_3V</text><text x="505" y="435" class="net" text-anchor="middle">TP_RST / IO38</text>
+<path d="M650 495H430" class="gnd"/><text x="640" y="490" text-anchor="end">6 TP-GND</text><text x="505" y="480" class="net" text-anchor="middle">GND</text>
+<path d="M650 540H430" class="rail"/><text x="640" y="535" text-anchor="end">7 VDD_3V</text><text x="505" y="525" class="net" text-anchor="middle">3V3</text>
+<path d="M650 585H430" class="rail"/><text x="640" y="580" text-anchor="end">8 VBAT</text><text x="505" y="570" class="net" text-anchor="middle">LCD_VBAT ← SYS_MAIN</text>
+<path d="M650 630H430" class="wire"/><text x="640" y="625" text-anchor="end">9 MTP/NC</text><text x="505" y="615" class="nc" text-anchor="middle">NC</text>
+<path d="M650 675H430" class="rail"/><text x="640" y="670" text-anchor="end">10 VDD_3V</text><text x="505" y="660" class="net" text-anchor="middle">3V3</text>
+<path d="M650 720H430" class="gnd"/><text x="640" y="715" text-anchor="end">11 GND</text><text x="505" y="705" class="net" text-anchor="middle">GND</text>
+<path d="M650 765H430" class="wire"/><text x="640" y="760" text-anchor="end">12 L_RES</text><text x="505" y="750" class="net" text-anchor="middle">LCD_RST / IO4</text>
+</g>
+
+<!-- right pins 24-13 -->
+<g class="pin">
+<path d="M1050 270H1270" class="wire"/><text x="1060" y="265">24 L_TE</text><text x="1160" y="255" class="nc" text-anchor="middle">LCD_TE / NC</text>
+<path d="M1050 315H1270" class="wire"/><text x="1060" y="310">23 OLE_EN</text><text x="1160" y="300" class="net" text-anchor="middle">LCD_EN / IO47</text>
+<path d="M1050 360H1270" class="wire"/><text x="1060" y="355">22 L_IO1</text><text x="1160" y="345" class="net" text-anchor="middle">LCD_D1 / IO7</text>
+<path d="M1050 405H1270" class="wire"/><text x="1060" y="400">21 CS</text><text x="1160" y="390" class="net" text-anchor="middle">LCD_CS / IO40</text>
+<path d="M1050 450H1270" class="wire"/><text x="1060" y="445">20 L_IO2</text><text x="1160" y="435" class="net" text-anchor="middle">LCD_D2 / IO12</text>
+<path d="M1050 495H1270" class="wire"/><text x="1060" y="490">19 NC</text><text x="1160" y="480" class="nc" text-anchor="middle">NC</text>
+<path d="M1050 540H1270" class="wire"/><text x="1060" y="535">18 L_IO3</text><text x="1160" y="525" class="net" text-anchor="middle">LCD_D3 / IO42</text>
+<path d="M1050 585H1270" class="gnd"/><text x="1060" y="580">17 GND</text><text x="1160" y="570" class="net" text-anchor="middle">GND</text>
+<path d="M1050 630H1270" class="wire"/><text x="1060" y="625">16 L_SCLK</text><text x="1160" y="615" class="net" text-anchor="middle">LCD_SCLK / IO5</text>
+<path d="M1050 675H1270" class="gnd"/><text x="1060" y="670">15 GND</text><text x="1160" y="660" class="net" text-anchor="middle">GND</text>
+<path d="M1050 720H1270" class="wire"/><text x="1060" y="715">14 L_IO0</text><text x="1160" y="705" class="net" text-anchor="middle">LCD_D0 / IO6</text>
+<path d="M1050 765H1270" class="gnd"/><text x="1060" y="760">13 GND</text><text x="1160" y="750" class="net" text-anchor="middle">GND</text>
+</g>
+
+<!-- mainboard passives / test points -->
+<path d="M430 270H360V920H500" class="rail"/><text x="390" y="900" class="net" text-anchor="middle">3V3</text>
+<path d="M500 920V950" class="wire"/><path d="M476 950H524M476 970H524" class="wire"/><path d="M500 970V1000" class="gnd"/><path d="M478 1000H522M486 1008H514M494 1016H506" class="gnd"/><text x="550" y="955" class="val">C_LCD1 1µF</text><text x="550" y="975" class="val">C_LCD2 100nF 并联</text>
+<path d="M430 315H330V930" class="wire"/><path d="M430 360H300V930" class="wire"/><text x="250" y="920" class="net">I2C_SCL / I2C_SDA</text>
+<path d="M260 780V820H300M260 820H330" class="rail"/><text x="260" y="765" class="net" text-anchor="middle">3V3</text>
+<path d="M330 820V850" class="wire"/><path d="M308 850H352M308 870H352" class="wire"/><path d="M330 870V930" class="wire"/>
+<path d="M300 820V850" class="wire"/><path d="M278 850H322M278 870H322" class="wire"/><path d="M300 870V930" class="wire"/>
+<text x="355" y="852" class="val">R_TP_SCL 4.7kΩ</text><text x="325" y="895" class="val">R_TP_SDA 4.7kΩ</text><text x="360" y="1080" class="note">I²C 上拉全板只保留一组；若其他模块已安装，上述两电阻不要重复装配。</text>
+<circle cx="1320" cy="270" r="11" class="tp"/><text x="1340" y="275" class="net">TP_LCD_TE</text><circle cx="1320" cy="315" r="11" class="tp"/><text x="1340" y="320" class="net">TP_LCD_EN</text><circle cx="1320" cy="585" r="11" class="tp"/><text x="1340" y="590" class="net">TP_LCD_GND</text><circle cx="1320" cy="630" r="11" class="tp"/><text x="1340" y="635" class="net">TP_LCD_SCLK</text>
+
+<text x="45" y="1140" class="note">⚠ 屏幕排线端是 OK-14GM024-04 公座；主板 J3 使用 OK-14F024-04 母座，不能用 0.5 mm FPC ZIF 座替代。</text>
+<text x="45" y="1165" class="note">⚠ 24-pin 公母座配合高度、pin 1 方向、焊盘封装必须以屏幕实物和连接器机械图复核；图中网络映射按 PY206 PDF 第 3 页。</text>
+<text x="45" y="1190" class="note">机械焊盘 25/26/27/28 只按封装机械焊盘处理，不连接任何信号；以嘉立创封装库的焊盘定义复核。</text>
+</svg>

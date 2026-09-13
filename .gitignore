@@ -32,3 +32,4 @@ _bmad
 .agents
 .DS_Store
 tmp/*   
+docs/hardware/bq25895.pdf
