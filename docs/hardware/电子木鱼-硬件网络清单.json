@@ -236,15 +236,6 @@
       "constraints": ["ES8311 word select"]
     },
     {
-      "signal": "I2S_DIN",
-      "net": "I2S_DIN",
-      "gpio": "IO17",
-      "gpio_number": 17,
-      "direction": "input",
-      "verification_status": "confirmed",
-      "constraints": ["ES8311 → ESP32"]
-    },
-    {
       "signal": "I2S_BCLK",
       "net": "I2S_BCLK",
       "gpio": "IO18",
@@ -312,9 +303,9 @@
       "net": "M100_NET_STATUS_COMPAT",
       "gpio": "IO16",
       "gpio_number": 16,
-      "direction": "input",
-      "verification_status": "confirmed",
-      "constraints": ["载板无对应脚时只放 TP/NC", "非业务必需"]
+      "direction": "input_high_z_optional",
+      "verification_status": "recommended_initial",
+      "constraints": ["主方案不接 ESP32，IO16 留 NC", "若接入则禁用上下拉并只读", "非业务必需"]
     },
     {
       "signal": "BQ_OTG_EN",
@@ -775,7 +766,6 @@
     {"name": "LCD_TE", "class": "optional_signal", "endpoints": ["J3.FPC.pin24", "TP_LCD_TE_or_NC"], "status": "recommended_initial"},
     {"name": "I2S_DOUT", "class": "i2s", "endpoints": ["U7.IO13", "U11.ES8311.DAC_DATA"], "status": "confirmed"},
     {"name": "I2S_WS", "class": "i2s", "endpoints": ["U7.IO14", "U11.ES8311.WS"], "status": "confirmed"},
-    {"name": "I2S_DIN", "class": "i2s", "endpoints": ["U7.IO17", "U11.ES8311.ADC_DATA"], "status": "confirmed"},
     {"name": "I2S_BCLK", "class": "i2s", "endpoints": ["U7.IO18", "U11.ES8311.BCLK"], "status": "confirmed"},
     {"name": "I2S_MCLK", "class": "i2s", "endpoints": ["U7.IO21", "U11.ES8311.MCLK"], "status": "confirmed"},
     {"name": "PA_EN", "class": "audio_enable", "endpoints": ["U7.IO48", "U12.NS4150B.EN"], "status": "confirmed"},
@@ -886,7 +876,7 @@
       "id": "P04_AUDIO_RGB",
       "title": "ES8311 / NS4150B / 扬声器 / RGB",
       "components": ["U11", "U12", "J5", "LED1"],
-      "nets": ["I2C_SDA", "I2C_SCL", "I2S_DOUT", "I2S_WS", "I2S_DIN", "I2S_BCLK", "I2S_MCLK", "AUDIO_5V", "PA_EN", "SPK_P", "SPK_N", "RGB_DATA"],
+      "nets": ["I2C_SDA", "I2C_SCL", "I2S_DOUT", "I2S_WS", "I2S_BCLK", "I2S_MCLK", "AUDIO_5V", "PA_EN", "SPK_P", "SPK_N", "RGB_DATA"],
       "test_points": ["TP_AUDIO_5V"],
       "eda_status": "record_only_not_created"
     },
@@ -902,7 +892,7 @@
       "id": "P06_MODEM",
       "title": "M100EG-C2 / Air780EGP / SIM / 天线",
       "components": ["U8", "J4"],
-      "nets": ["M100_VIN", "M100_TXD", "M100_RXD", "M100_DTR", "M100_RST", "M100_NET_STATUS_COMPAT", "M100_GNSS_VCC_NC", "M100_SIM", "M100_ANT", "VBAT_SW", "GND"],
+      "nets": ["M100_VIN", "M100_TXD", "M100_RXD", "M100_DTR", "M100_RST", "M100_GNSS_VCC_NC", "M100_SIM", "M100_ANT", "VBAT_SW", "GND"],
       "test_points": ["TP_M100_RST", "TP_NET_STATUS", "TP_GNSS_VCC_NC"],
       "eda_status": "record_only_not_created"
     },
@@ -931,10 +921,10 @@
   "validation": {
     "allowed_gpio_numbers": [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 38, 39, 40, 41, 42, 43, 44, 46, 47, 48],
     "reserved_gpio_numbers": [22, 23, 24, 25, 26, 27, 28, 29, 30, 31, 32, 33, 34, 35, 36, 37, 45],
-    "required_gpio_signals": ["BOOT0", "PWR_STATE", "PVDF_ADC", "PVDF_CMP_WAKE", "I2C_SDA", "I2C_SCL", "TP_RST", "TP_INT", "IMU_INT1", "LCD_RST", "LCD_CS", "LCD_SCLK", "LCD_D0", "LCD_D1", "LCD_D2", "LCD_D3", "LCD_EN", "I2S_DOUT", "I2S_WS", "I2S_DIN", "I2S_BCLK", "I2S_MCLK", "PA_EN", "M100_TXD", "M100_RXD", "M100_DTR", "M100_RST", "M100_NET_STATUS_COMPAT", "BQ_OTG_EN", "RGB_DATA", "USB_D-", "USB_D+"],
+    "required_gpio_signals": ["BOOT0", "PWR_STATE", "PVDF_ADC", "PVDF_CMP_WAKE", "I2C_SDA", "I2C_SCL", "TP_RST", "TP_INT", "IMU_INT1", "LCD_RST", "LCD_CS", "LCD_SCLK", "LCD_D0", "LCD_D1", "LCD_D2", "LCD_D3", "LCD_EN", "I2S_DOUT", "I2S_WS", "I2S_BCLK", "I2S_MCLK", "PA_EN", "M100_TXD", "M100_RXD", "M100_DTR", "M100_RST", "BQ_OTG_EN", "RGB_DATA", "USB_D-", "USB_D+"],
     "required_power_rails": ["VBUS_5V", "BAT_PROTECTED", "BQ_SYS", "PMID_OTG_5V", "VBAT_SW", "3V3", "AUDIO_5V", "GND"],
     "required_connectors": ["J1", "J2", "J3", "J4", "J5", "J6"],
-    "required_nets": ["USB_D+", "USB_D-", "I2C_SDA", "I2C_SCL", "M100_VIN", "M100_TXD", "M100_RXD", "M100_DTR", "M100_RST", "M100_NET_STATUS_COMPAT", "M100_GNSS_VCC_NC", "BQ_OTG_EN", "PVDF_ADC", "PVDF_CMP_WAKE", "LCD_RST", "LCD_CS", "LCD_SCLK", "LCD_D0", "LCD_D1", "LCD_D2", "LCD_D3", "LCD_EN", "PA_EN", "RGB_DATA"],
+    "required_nets": ["USB_D+", "USB_D-", "I2C_SDA", "I2C_SCL", "M100_VIN", "M100_TXD", "M100_RXD", "M100_DTR", "M100_RST", "M100_GNSS_VCC_NC", "BQ_OTG_EN", "PVDF_ADC", "PVDF_CMP_WAKE", "LCD_RST", "LCD_CS", "LCD_SCLK", "LCD_D0", "LCD_D1", "LCD_D2", "LCD_D3", "LCD_EN", "PA_EN", "RGB_DATA"],
     "required_schematic_pages": ["P01_POWER_USB", "P02_MCU_USB", "P03_DISPLAY_TOUCH", "P04_AUDIO_RGB", "P05_PVDF", "P06_MODEM", "P07_SHARED_SENSORS"],
     "expected_eda_status": "record_only_not_created",
     "sample_validation_required": true

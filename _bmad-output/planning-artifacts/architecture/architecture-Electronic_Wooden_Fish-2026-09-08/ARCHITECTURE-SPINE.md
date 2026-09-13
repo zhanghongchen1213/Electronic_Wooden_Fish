@@ -257,7 +257,7 @@ flowchart LR
 | CST9217 | TP_RST / TP_INT | IO38 / IO39 | 触摸复位与中断 |
 | QMI8658C | INT1 | IO41 | 未来 WoM 扩展；INT2 不接、不占 GPIO45 |
 | CO5300 | RST/CS/SCL/D0/D1/D2/D3/EN | IO4/40/5/6/7/12/42/47 | 沿用 legbot 屏幕资源基线 |
-| ES8311 | I2S_DO/WS/DI/BCLK/MCLK | IO13/14/17/18/21 | 沿用 legbot 音频资源基线 |
+| ES8311 | I2S_DO/WS/BCLK/MCLK | IO13/14/18/21 | 沿用 legbot 音频资源基线 |
 | NS4150B | PA_EN | IO48 | 静音/暂停/故障回到禁用 |
 | Air780EGP | UART TX/RX | IO43/44 | 从 main_control 抽离板级引脚常量 |
 | Air780EGP | DTR/RST/NET_STATUS 兼容位 | IO10/15/16 | 休眠/复位/网络观测；M100 无 NET_STATUS 时 IO16 仅留 NC/测试点 |
