@@ -1,5 +1,5 @@
 {
-  "schema_version": "1.1.0",
+  "schema_version": "1.1.1",
   "manifest_type": "ewf_hardware_schematic_baseline",
   "project": "Electronic_Wooden_Fish",
   "status": "baseline_not_prototype_verified",
@@ -39,6 +39,12 @@
       "Wi-Fi",
       "GPS"
     ],
+    "audio_power_assignment": {
+      "ES8311_AVDD_DVDD_PVDD": "V3V3",
+      "NS4150B_VCC": "V3V3_A",
+      "topology": "VMAIN_to_TLV62569_to_V3V3_to_ferrite_or_load_switch_to_V3V3_A",
+      "note": "ES8311 不得与 NS4150B 共 V3V3_A；NS4150B 不得直挂 VMAIN；ES8311 不得接 VMAIN（绝对最大 3.6V）"
+    },
     "forbidden_routes": [
       {
         "from_net": "USB_DP_BQ",
@@ -54,6 +60,26 @@
         "from_net": "VSYS",
         "to_net": "VMAIN",
         "reason": "最终方案允许：VSYS 经系统负载开关形成 VMAIN；禁止绕过负载开关直连"
+      },
+      {
+        "from_net": "VMAIN",
+        "to_net": "U12.NS4150B.VCC",
+        "reason": "NS4150B VCC 只接 V3V3_A；禁止直挂 VMAIN"
+      },
+      {
+        "from_net": "V3V3",
+        "to_net": "U12.NS4150B.VCC",
+        "reason": "NS4150B VCC 必须经磁珠或负载开关形成 V3V3_A，不得与逻辑负载共未滤波 V3V3"
+      },
+      {
+        "from_net": "V3V3_A",
+        "to_net": "U11.ES8311.AVDD",
+        "reason": "ES8311 AVDD/DVDD/PVDD 只接 V3V3；禁止与功放共 V3V3_A"
+      },
+      {
+        "from_net": "VMAIN",
+        "to_net": "U11.ES8311.AVDD",
+        "reason": "ES8311 绝对最大 3.6V，禁止接 VMAIN"
       }
     ]
   },
@@ -444,7 +470,9 @@
         "address_int": 24,
         "address_source": "CE_CDATA_configuration_reference",
         "verification_status": "recommended_initial",
-        "role": "audio_codec"
+        "role": "audio_codec",
+        "power_net": "V3V3",
+        "power_pins": ["AVDD", "DVDD", "PVDD"]
       },
       {
         "reference": "U14",
@@ -487,9 +515,23 @@
       "lcsc": null,
       "package": "SOT-5X3_DRL_8pin",
       "values": {
-        "long_press": "about_2s_candidate",
-        "spt": "50ms_candidate",
-        "lpt": "4.7nF_candidate",
+        "short_press": "50.64ms_candidate_C_SPT_120pF",
+        "long_press": "1.98s_candidate_C_LPT_4.7nF",
+        "spt": "120pF_C1643",
+        "lpt": "4.7nF_C53987",
+        "vdd": "VSYS",
+        "reset": "PWR_STATE_to_TPS22965_ON",
+        "pwr_state_sense": "PWR_STATE_direct_to_IO46",
+        "pwr_button_domain": "VSYS_PB_and_PWR_STATE_shared_read",
+        "button_mpn": "TSW063G43-250K",
+        "button_lcsc": "C722964",
+        "button_quantity": 2,
+       "button_inventory_available_snapshot": 16,
+       "button_inventory_snapshot_date": "2026-09-13",
+        "button_lcsc_live_stock": 70,
+        "button_lcsc_query_date": "2026-09-14",
+        "kill": "VDD",
+        "int": "open_drain_to_TP_PWR_INT_with_10kohm_to_V3V3",
         "reset_int_testpoints": true
       },
       "status": "recommended_initial",
@@ -541,6 +583,8 @@
       "mpn": "ES8311",
       "lcsc": "C962342",
       "package": "QFN-20-EP(3x3)",
+      "power_net": "V3V3",
+      "power_pins": ["AVDD", "DVDD", "PVDD"],
       "values": {
         "i2c_pullups": "4.7kohm",
         "pvdd_dvdd_decoupling": "100nF_each",
@@ -550,12 +594,15 @@
         "optional_i2s_caps": "22pF_DNP"
       },
       "status": "recommended_initial",
-      "verification": "address_ce_cdata_i2s_mode_gain_and_noise"
+      "verification": "address_ce_cdata_i2s_mode_gain_and_noise",
+      "forbidden_power_nets": ["V3V3_A", "VMAIN"]
     },
     "NS4150B": {
       "mpn": "NS4150B",
       "lcsc": "C189961",
       "package": "MSOP-8",
+      "power_net": "V3V3_A",
+      "power_pins": ["VCC"],
       "values": {
         "vcc_caps": "1uF_plus_2x22uF",
         "bypass": "1uF",
@@ -565,13 +612,16 @@
         "output_emi_option": "1nF_each_and_0ohm_series_DNP"
       },
       "status": "recommended_initial",
-      "verification": "speaker_impedance_power_pop_noise_temperature"
+      "verification": "speaker_impedance_power_pop_noise_temperature",
+      "forbidden_power_nets": ["VMAIN", "V3V3"]
     },
     "V3V3_A_FILTER": {
       "role": "NS4150B低噪声供电",
       "topology": "V3V3_after_ferrite_or_load_switch",
+      "exclusive_consumer": "U12.NS4150B.VCC",
       "status": "recommended_initial",
-      "verification": "charging_audio_noise_load_step"
+      "verification": "charging_audio_noise_load_step",
+      "note": "不从VMAIN直分；不供ES8311"
     }
   },
   "power_rails": [
@@ -594,8 +644,7 @@
       "nominal_voltage": "single_cell_3.0_to_4.2V",
       "current_target": "cell_and_protection_rating_tbd",
       "consumers": [
-        "U1.BQ25895.BAT",
-        "U2.TPS3424.VIN"
+        "U1.BQ25895.BAT"
       ],
       "status": "confirmed",
       "verification": "cell_capacity_protection_ntc_and_safety_must_be_measured"
@@ -607,6 +656,7 @@
       "nominal_voltage": "NVDC_system_voltage",
       "current_target": "tbd",
       "consumers": [
+        "U2.TPS3424.VDD",
         "U3.TPS22965.IN",
         "system_power_path"
       ],
@@ -617,13 +667,12 @@
       "name": "VMAIN",
       "class": "switched_battery_high_current",
       "source": "U3.TPS22965.OUT",
-      "control": "VBUS_VALID_or_TPS3424_latched_enable",
+      "control": "U2.TPS3424.RESET_to_PWR_STATE",
       "nominal_voltage": "VSYS_system_voltage",
       "current_target": "continuous_gt_1A_peak_gt_2A",
       "consumers": [
         "J4.M100EGC2.VIN",
-        "U4_3V3_REG.IN",
-        "U_AUDIO_3V3.IN"
+        "U4_3V3_REG.IN"
       ],
       "status": "confirmed",
       "verification": "air780egp_tx_peak_voltage_drop_and_restart_margin"
@@ -638,7 +687,10 @@
         "ESP32",
         "I2C_DEVICES",
         "DISPLAY_LOGIC",
-        "PVDF_COMPARATOR"
+        "PVDF_COMPARATOR",
+        "U11.ES8311.AVDD",
+        "U11.ES8311.DVDD",
+        "U11.ES8311.PVDD"
       ],
       "status": "confirmed",
       "verification": "regulator_part_ripple_efficiency_and_thermal_test"
@@ -652,8 +704,9 @@
       "consumers": [
         "U12.NS4150B.VCC"
       ],
-      "status": "recommended_initial",
-      "verification": "audio_noise_and_load_step_must_be_measured"
+      "status": "confirmed",
+      "verification": "audio_noise_and_load_step_must_be_measured",
+      "note": "exclusive_NS4150B_VCC_not_ES8311_not_from_VMAIN"
     },
     {
       "name": "VLCD",
@@ -1098,8 +1151,7 @@
       "class": "power",
       "endpoints": [
         "J2.BATT+",
-        "U1.BQ25895.BAT",
-        "U2.TPS3424.VIN"
+        "U1.BQ25895.BAT"
       ],
       "status": "confirmed"
     },
@@ -1108,10 +1160,59 @@
       "class": "power_reserved",
       "endpoints": [
         "U1.BQ25895.SYS",
+        "U2.TPS3424.VDD",
         "U3.TPS22965.IN",
         "TP_VSYS"
       ],
       "status": "confirmed"
+    },
+    {
+      "name": "PWR_STATE",
+      "class": "power_control",
+      "endpoints": [
+        "U2.TPS3424.RESET",
+        "U3.TPS22965.ON",
+        "ESP32.IO46",
+        "TP_PWR_STATE"
+      ],
+      "status": "recommended_initial",
+      "verification": "reset_latch_and_power_state_waveform",
+      "note": "SYS_EN 是该物理网控制 TPS22965 的功能称呼"
+    },
+    {
+      "name": "PWR_BUTTON",
+      "class": "button_vsys_domain",
+      "endpoints": [
+        "U2.TPS3424.PB",
+        "SW_PWR_NO",
+        "GND"
+      ],
+      "status": "recommended_initial",
+      "verification": "PB_debounce_and_long_press_waveform"
+    },
+    {
+      "name": "BOOT0",
+      "class": "strap_input",
+      "endpoints": [
+        "R_BOOT",
+        "SW_BOOT_NO",
+        "ESP32.IO0",
+        "TP_BOOT0"
+      ],
+      "status": "recommended_initial",
+      "verification": "SPI_boot_and_joint_download_boot"
+    },
+    {
+      "name": "RESET_N",
+      "class": "reset_input",
+      "endpoints": [
+        "R_EN",
+        "C_EN",
+        "ESP32.EN",
+        "TP_RESET_N"
+      ],
+      "status": "recommended_initial",
+      "verification": "EN_RC_and_reset_low_time"
     },
     {
       "name": "VMAIN",
@@ -1132,6 +1233,9 @@
         "U7.ESP32.VDD3P3",
         "J3.FPC.VDD",
         "U1/U10/U11/U13/U14.I2C_LOGIC",
+        "U11.ES8311.AVDD",
+        "U11.ES8311.DVDD",
+        "U11.ES8311.PVDD",
         "PVDF_COMPARATOR.VDD",
         "RGB.VDD_OPTIONAL"
       ],
@@ -1492,7 +1596,8 @@
         "U_AUDIO_3V3.OUT",
         "U12.NS4150B.VCC"
       ],
-      "status": "recommended_initial"
+      "status": "confirmed",
+      "note": "U_AUDIO_3V3 is the V3V3 ferrite or load-switch output; input is V3V3 not VMAIN"
     }
   ],
   "bom": [
@@ -1509,12 +1614,38 @@
       "part": "TPS3424A11C13ADRLR",
       "lcsc": null,
       "role": "pushbutton_power_latch",
-      "status": "recommended_initial",
-      "package": "SOT-5X3_DRL_8pin"
+     "status": "recommended_initial",
+     "package": "SOT-5X3_DRL_8pin"
+   },
+    {
+      "reference": "SW_BOOT_NO",
+      "part": "TSW063G43-250K",
+      "lcsc": "C722964",
+      "role": "BOOT0_manual_download_button",
+      "status": "confirmed_design_locked_inventory_available",
+      "package": "SMD_6.1x6.1x4.3mm_SPST",
+      "quantity": 1,
+     "inventory_available_snapshot": 16,
+     "inventory_snapshot_date": "2026-09-13",
+      "lcsc_live_stock_query": 70,
+      "lcsc_query_date": "2026-09-14"
     },
     {
-      "reference": "U3",
-      "part": "TPS22965DSGR",
+      "reference": "SW_PWR_NO",
+      "part": "TSW063G43-250K",
+      "lcsc": "C722964",
+      "role": "TPS3424_PB_power_button",
+      "status": "confirmed_design_locked_inventory_available",
+      "package": "SMD_6.1x6.1x4.3mm_SPST",
+      "quantity": 1,
+      "inventory_available_snapshot": 16,
+      "inventory_snapshot_date": "2026-09-13",
+      "lcsc_live_stock_query": 70,
+      "lcsc_query_date": "2026-09-14"
+    },
+   {
+     "reference": "U3",
+     "part": "TPS22965DSGR",
       "lcsc": "C122837",
       "role": "VMAIN_high_current_load_switch",
       "status": "recommended_initial",
@@ -1551,7 +1682,8 @@
       "role": "audio_codec",
       "status": "recommended_initial",
       "address": "0x18",
-      "package": "QFN-20-EP(3x3)"
+      "package": "QFN-20-EP(3x3)",
+      "power_net": "V3V3"
     },
     {
       "reference": "U12",
@@ -1559,7 +1691,8 @@
       "lcsc": "C189961",
       "role": "class_d_amplifier",
       "status": "confirmed",
-      "package": "MSOP-8"
+      "package": "MSOP-8",
+      "power_net": "V3V3_A"
     },
     {
       "reference": "U13",
@@ -1737,6 +1870,7 @@
         "VSYS",
         "VMAIN",
         "V3V3",
+        "V3V3_A",
         "USB_D+",
         "USB_D-"
       ],
@@ -1822,12 +1956,15 @@
         "I2S_WS",
         "I2S_BCLK",
         "I2S_MCLK",
+        "V3V3",
+        "V3V3_A",
         "PA_EN",
         "SPK_P",
         "SPK_N",
         "RGB_DATA"
       ],
       "test_points": [
+        "TP_V3V3",
         "TP_V3V3_A"
       ],
       "eda_status": "record_only_not_created"
