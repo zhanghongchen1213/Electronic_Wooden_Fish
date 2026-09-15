@@ -17,7 +17,8 @@
     "https://www.ti.com/lit/ds/symlink/bq25895.pdf",
     "https://www.ti.com/lit/ds/symlink/tlv7032.pdf",
     "https://www.ti.com/product/TLV7042",
-    "https://www.ti.com/product/TLV2369"
+    "https://www.ti.com/product/TLV2369",
+    "https://datasheet.lcsc.com/lcsc/2201242130_Cellwise-CW2015CHBD_C881838.pdf"
   ],
   "status_legend": {
     "confirmed": "接口或边界已由批准 spec 冻结，不代表样机通过",
@@ -447,12 +448,15 @@
       },
       {
         "reference": "U13",
-        "part": "CW2015",
+        "part": "CW2015CHBD",
         "address_7bit": "0x62",
         "address_int": 98,
-        "address_source": "reference_target_part",
+        "address_source": "Cellwise_CW2015CHBD_datasheet",
         "verification_status": "recommended_initial",
-        "role": "fuel_gauge"
+        "role": "fuel_gauge",
+        "power_net": "V3V3",
+        "alert": "NC_test_point",
+        "quick_start": "software_mode_register"
       },
       {
         "reference": "U10",
@@ -472,7 +476,11 @@
         "verification_status": "recommended_initial",
         "role": "audio_codec",
         "power_net": "V3V3",
-        "power_pins": ["AVDD", "DVDD", "PVDD"]
+        "power_pins": [
+          "AVDD",
+          "DVDD",
+          "PVDD"
+        ]
       },
       {
         "reference": "U14",
@@ -526,8 +534,8 @@
         "button_mpn": "TSW063G43-250K",
         "button_lcsc": "C722964",
         "button_quantity": 2,
-       "button_inventory_available_snapshot": 16,
-       "button_inventory_snapshot_date": "2026-09-13",
+        "button_inventory_available_snapshot": 16,
+        "button_inventory_snapshot_date": "2026-09-13",
         "button_lcsc_live_stock": 70,
         "button_lcsc_query_date": "2026-09-14",
         "kill": "VDD",
@@ -543,11 +551,11 @@
       "package": "UDFN-8-EP(2x2)",
       "values": {
         "cin": "22uF_plus_100nF",
-        "cout": "2.2_to_4.7uF_candidate",
-        "ct": "10nF_candidate",
+        "cout": "4.7uF_C2903668",
+        "ct": "10nF_C285099",
         "on_bias": "must_not_float"
       },
-      "status": "recommended_initial",
+      "status": "locked_design_baseline_netlist_verified",
       "verification": "rise_time_inrush_and_vbat_sw_drop"
     },
     "TLV62569": {
@@ -560,9 +568,9 @@
         "cout": "2x22uF",
         "feedback_top": "453kohm",
         "feedback_bottom": "100kohm",
-        "nominal_output": "3.3V_candidate"
+        "nominal_output": "3.3V_3.318V_from_453k_100k"
       },
-      "status": "recommended_initial",
+      "status": "locked_design_baseline_netlist_verified",
       "verification": "dropout_below_2.5V_efficiency_ripple_and_thermal_test"
     },
     "PVDF_FRONT_END": {
@@ -584,7 +592,11 @@
       "lcsc": "C962342",
       "package": "QFN-20-EP(3x3)",
       "power_net": "V3V3",
-      "power_pins": ["AVDD", "DVDD", "PVDD"],
+      "power_pins": [
+        "AVDD",
+        "DVDD",
+        "PVDD"
+      ],
       "values": {
         "i2c_pullups": "4.7kohm",
         "pvdd_dvdd_decoupling": "100nF_each",
@@ -595,14 +607,19 @@
       },
       "status": "recommended_initial",
       "verification": "address_ce_cdata_i2s_mode_gain_and_noise",
-      "forbidden_power_nets": ["V3V3_A", "VMAIN"]
+      "forbidden_power_nets": [
+        "V3V3_A",
+        "VMAIN"
+      ]
     },
     "NS4150B": {
       "mpn": "NS4150B",
       "lcsc": "C189961",
       "package": "MSOP-8",
       "power_net": "V3V3_A",
-      "power_pins": ["VCC"],
+      "power_pins": [
+        "VCC"
+      ],
       "values": {
         "vcc_caps": "1uF_plus_2x22uF",
         "bypass": "1uF",
@@ -613,13 +630,22 @@
       },
       "status": "recommended_initial",
       "verification": "speaker_impedance_power_pop_noise_temperature",
-      "forbidden_power_nets": ["VMAIN", "V3V3"]
+      "forbidden_power_nets": [
+        "VMAIN",
+        "V3V3"
+      ]
     },
     "V3V3_A_FILTER": {
       "role": "NS4150B低噪声供电",
       "topology": "V3V3_after_ferrite_or_load_switch",
+      "component": "BLM21PG121SN1D",
+      "lcsc": "C79382",
+      "package": "0805",
+      "specification": "120ohm_at_100MHz_3A_30mohm",
+      "input_net": "V3V3",
+      "output_net": "V3V3_A",
       "exclusive_consumer": "U12.NS4150B.VCC",
-      "status": "recommended_initial",
+      "status": "locked_design_baseline_netlist_verified",
       "verification": "charging_audio_noise_load_step",
       "note": "不从VMAIN直分；不供ES8311"
     }
@@ -842,7 +868,12 @@
       "pitch": "0.4mm",
       "rows": 2,
       "mating_height": "0.8H",
-      "mechanical_pads": [25, 26, 27, 28],
+      "mechanical_pads": [
+        25,
+        26,
+        27,
+        28
+      ],
       "mechanical_pad_rule": "按封装机械焊盘处理，不连接信号；以嘉立创封装焊盘定义复核",
       "orientation": "must_verify_on_real_mating_pair",
       "reference_links": [
@@ -1614,9 +1645,9 @@
       "part": "TPS3424A11C13ADRLR",
       "lcsc": null,
       "role": "pushbutton_power_latch",
-     "status": "recommended_initial",
-     "package": "SOT-5X3_DRL_8pin"
-   },
+      "status": "recommended_initial",
+      "package": "SOT-5X3_DRL_8pin"
+    },
     {
       "reference": "SW_BOOT_NO",
       "part": "TSW063G43-250K",
@@ -1625,8 +1656,8 @@
       "status": "confirmed_design_locked_inventory_available",
       "package": "SMD_6.1x6.1x4.3mm_SPST",
       "quantity": 1,
-     "inventory_available_snapshot": 16,
-     "inventory_snapshot_date": "2026-09-13",
+      "inventory_available_snapshot": 16,
+      "inventory_snapshot_date": "2026-09-13",
       "lcsc_live_stock_query": 70,
       "lcsc_query_date": "2026-09-14"
     },
@@ -1643,9 +1674,9 @@
       "lcsc_live_stock_query": 70,
       "lcsc_query_date": "2026-09-14"
     },
-   {
-     "reference": "U3",
-     "part": "TPS22965DSGR",
+    {
+      "reference": "U3",
+      "part": "TPS22965DSGR",
       "lcsc": "C122837",
       "role": "VMAIN_high_current_load_switch",
       "status": "recommended_initial",
@@ -1696,11 +1727,12 @@
     },
     {
       "reference": "U13",
-      "part": "CW2015",
-      "lcsc": null,
+      "part": "CW2015CHBD",
+      "lcsc": "C881838",
       "role": "fuel_gauge",
       "status": "recommended_initial",
-      "address": "0x62"
+      "address": "0x62",
+      "package": "TDFN8-EP(2x3)"
     },
     {
       "reference": "U14",
@@ -2249,5 +2281,32 @@
     ],
     "expected_eda_status": "record_only_not_created",
     "sample_validation_required": true
+  },
+  "battery_candidates": {
+    "status": "candidate_not_final",
+    "candidates": [
+      {
+        "model": "805080",
+        "capacity_mah": 4000
+      },
+      {
+        "model": "904260",
+        "capacity_mah": 3000
+      }
+    ],
+    "common": {
+      "topology": "single_protected_cell",
+      "ntc_r25_ohm": 10000,
+      "ntc_beta": "待确认",
+      "max_continuous_discharge_a": 3,
+      "overcharge_detect_v": 4.275,
+      "overdischarge_detect_v": 2.5,
+      "overcurrent_detect_a": 2,
+      "protection_mosfet_rds_on_max_mohm": 60,
+      "operating_temperature_c": "-40~+50",
+      "storage_temperature_c": "-40~+90",
+      "size_mm": "12x3.6"
+    },
+    "source": "用户提供电池包参数图片；包级保护参数，不替代电芯规格书"
   }
 }
