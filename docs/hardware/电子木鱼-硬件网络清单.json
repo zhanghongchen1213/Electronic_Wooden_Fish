@@ -455,8 +455,9 @@
         "verification_status": "recommended_initial",
         "role": "fuel_gauge",
         "power_net": "V3V3",
-        "alert": "NC_test_point",
-        "quick_start": "software_mode_register"
+        "alert": "CW2015_ALRT_TP",
+        "quick_start": "software_mode_register",
+        "alert_status": "user_confirmed_netlist_pending"
       },
       {
         "reference": "U10",
@@ -1732,7 +1733,9 @@
       "role": "fuel_gauge",
       "status": "recommended_initial",
       "address": "0x62",
-      "package": "TDFN8-EP(2x3)"
+      "package": "TDFN8-EP(2x3)",
+      "alert": "CW2015_ALRT_TP",
+      "alert_status": "user_confirmed_netlist_pending"
     },
     {
       "reference": "U14",
