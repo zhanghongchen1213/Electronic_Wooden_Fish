@@ -24,7 +24,7 @@ updated: 2026-09-09
 | 子系统 | 方案 | 状态与边界 |
 | --- | --- | --- |
 | 主控 | 标准 ESP32-S3-N16R8 模组 | 已决定；原生 USB-Serial-JTAG，不使用 CH340X |
-| 4G/GPS | `main_control` 已验证的完整 Air780EGP/M100EG-C2 模组组件 | 已决定；4G 进入 MVP，GPS 默认关闭；`GNSS_VCC` 留 NC/TP，IO8 释放为 BQ25895 `BQ_OTG_EN` |
+| 4G/GPS | `main_control` 已验证的完整 Air780EGP/M100EG-C2 模组组件 | 已决定；4G 进入 MVP，GPS 默认关闭；`GNSS_VCC` 留 NC/TP；`IO8` 现为 PWR 按键输入（读 TPS3424 的 `PWR_INT` 脉冲） |
 | 显示 | 410×502、CO5300、QSPI AMOLED | 已决定使用 `legbot_watch` 同款模组；FPC/电源/初始化仍受验证门禁约束 |
 | 触摸 | CST9217 | 已决定；地址、坐标方向和中断极性按目标模组实测 |
 | 实体敲击 | PVDF 压电薄膜 | 已决定为唯一 MVP 主传感器 |
@@ -40,7 +40,7 @@ updated: 2026-09-09
 | 功能 | 信号 | ESP32-S3 GPIO | 约束 |
 | --- | --- | ---: | --- |
 | BOOT | BOOT0 | IO0 | 启动绑带；保留下载路径 |
-| PWR | 运行态输入 | IO46 | 启动绑带；固件只读，长按开关机由板级电源完成 |
+| PWR | 运行态输入 | IO8 | 读 TPS3424 的 `PWR_INT` 脉冲（短按 50 ms／长按 100 ms）；固件只读且必须用边沿中断，不得按电平轮询；长按开关机由板级电源完成 |
 | RESET | EN | EN | 独立按键或测试点 |
 | PVDF | ADC | IO9 | ADC1_CH8；前端必须限流、钳位并控制输入范围 |
 | PVDF 唤醒 | 比较器数字输出 | IO11 | 低功耗 GPIO 唤醒；醒来后仍由 ADC 判断有效敲击 |
@@ -52,7 +52,7 @@ updated: 2026-09-09
 | NS4150B | PA_EN | IO48 | 静音、暂停或故障时回到禁用状态 |
 | Air780EGP | UART_TX / UART_RX | IO43 / IO44 | 从 `main_control` 协议驱动中抽离板级引脚常量 |
 | Air780EGP | DTR / RST / NET_STATUS 兼容位 | IO10 / IO15 / IO16 | 保留休眠、复位、网络观测；载板无 NET_STATUS 时 IO16 仅 TP/NC |
-| BQ25895 | OTG_EN | IO8 | 控制 PMID OTG；M100 GNSS_VCC 不接 ESP32 |
+| BQ25895 | OTG | 硬件接地（不占 GPIO） | OTG 引脚直接接地，不占 GPIO，原 `BQ_OTG_EN` 方案作废；M100 GNSS_VCC 不接 ESP32 |
 | RGB | DATA | IO3 | 用户状态灯，不作为调试专用灯 |
 | USB | D− / D+ | IO19 / IO20 | ESP32-S3 原生 USB-Serial-JTAG |
 

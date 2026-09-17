@@ -360,7 +360,7 @@ Could not exclusively lock port ... Resource temporarily unavailable
 
 #### 无法连接或反复超时
 
-请操作员确认：数据线可传输数据、供电稳定、选的是 USB Serial/JTAG 端口。自动复位连接持续失败时，请操作员按该板实测方式进入下载模式（EWF 门禁参考：下载要求 GPIO0=0、GPIO46=0，BOOT+RESET 可进下载；以样机实测为准，本文不预设按键时序）。随后重新执行唯一设备匹配门禁。
+请操作员确认：数据线可传输数据、供电稳定、选的是 USB Serial/JTAG 端口。自动复位连接持续失败时，请操作员按该板实测方式进入下载模式（EWF 门禁参考：下载要求 GPIO0=0、GPIO46=0；IO46 现悬空、不再由 PWR 驱动，PWR 感知改走 IO8 的 `PWR_INT` 脉冲；BOOT+RESET 可进下载；以样机实测为准，本文不预设按键时序）。随后重新执行唯一设备匹配门禁。
 
 ## 10. 开启可持续监控与原始日志记录
 

@@ -248,7 +248,7 @@ flowchart LR
 | 功能 | 信号 | ESP32-S3 GPIO | 约束 |
 | --- | --- | ---: | --- |
 | BOOT | BOOT0 | IO0 | 启动绑带；保留下载路径 |
-| PWR | 运行态输入 | IO46 | 启动绑带；固件只读，长按开关机由板级电源 |
+| PWR | 运行态输入 | IO8 | 读 TPS3424 的 `PWR_INT` 脉冲（短按 50 ms／长按 100 ms）；固件只读且**必须用边沿中断**，不得按电平轮询；长按开关机由板级电源 |
 | RESET | EN | EN | 独立按键/测试点 |
 | PVDF | ADC | IO9 | ADC1_CH8；前端限流/钳位、控输入范围 |
 | PVDF 唤醒 | 比较器输出 | IO11 | 低功耗 GPIO 唤醒；醒后 ADC 确认有效敲击 |
@@ -260,17 +260,18 @@ flowchart LR
 | NS4150B | PA_EN | IO48 | 静音/暂停/故障回到禁用 |
 | Air780EGP | UART TX/RX | IO43/44 | 从 main_control 抽离板级引脚常量 |
 | Air780EGP | DTR/RST | IO10/15 | 休眠/复位；NET_STATUS 不接 ESP32 |
-| 保留 | IO8 | NC/测试点 | 不接 M100 GNSS_VCC，不配置 GPIO |
 | RGB | DATA | IO3 | 状态灯，不作调试灯 |
 | USB | D− / D+ | IO19/20 | 原生 USB-Serial-JTAG |
 
-GPIO45 保持未接或按模组要求处理（其影响 VDD_SPI 启动采样）；GPIO33–37 通常与 Octal Flash/PSRAM 相关、不作通用 GPIO。启动绑带约束：下载要求 GPIO0=0、GPIO46=0；PWR/QMI8658A 输出不得在复位采样窗口把 IO0/45/46 推到错误电平（详见工程验证门禁）。
+GPIO45 保持未接或按模组要求处理（其影响 VDD_SPI 启动采样）；GPIO33–37 通常与 Octal Flash/PSRAM 相关、不作通用 GPIO。启动绑带约束：下载要求 GPIO0=0、GPIO46=0；**IO46 现悬空**，靠模组内部弱下拉在复位采样窗口给出 0，板上不得再驱动该脚；QMI8658A 输出不得在复位采样窗口把 IO0/45 推到错误电平（详见工程验证门禁）。
+
+**PWR 输入电平域**：TPS3424 的 VDD 接 `VSYS`，其推挽 RESET 的高电平即 `VSYS`（最高 4.2 V），超出 ESP32-S3 的 IO 输入上限。因此 PWR 感知**不经 `PWR_STATE`**，而走 `PWR_INT`——TPS3424 的 INT 是开漏输出、由 10 kΩ 上拉到 `V3V3`，电平恒在 0~3.3 V，天然合规。`PWR_STATE` 只用于驱动 TPS22965 的 ON 与 TLV62569 的 EN，不接任何 ESP32 引脚。
 
 **I²C 总线与器件**：BQ25895（TI 固定 7-bit `0x6A`）、CW2015（约 `0x62`）、CST9217（7-bit `0x5A`）、ES8311（地址由 CE/CDATA 配置，首版参考 `0x18`）、QMI8658A（首版 SA0=高，`0x6B`）共用一组总线与上拉；最终地址以目标物料 + 实板上电扫描为准，五个地址不得冲突。QMI8658A 仅接 INT1，INT2 不接、不占 GPIO45。
 
 **电源分轨**：USB-C 单入口经 BQ25895 做 NVDC 充电与系统 power-path；BQ `SYS` pin 对应板级 `VSYS`，TPS3424 锁存并控制 TPS22965 形成 `VMAIN`，Air780EGP/M100 VIN 经该负载开关供电；TLV62569DBVR 为 `VMAIN→V3V3` 首版候选，NS4150B 使用滤波后的 `V3V3_A`。AMS1117 类低压差稳压器不得承担 Air780EGP 主供电；充电期间保持音频供电稳定并验证低频噪声。
 
-**USB 与 4G 载板边界**：USB-C D+/D− 直连 ESP32 USB-Serial-JTAG；BQ25895 D+/D− 不接 USB-C 数据线，固定输入限流并关闭 BC1.2 自动检测。EWF IO8 留作 NC/测试点，M100 GNSS_VCC 为 NC/测试点；M100 NET_STATUS 不接 ESP32。
+**USB 与 4G 载板边界**：USB-C D+/D− 直连 ESP32 USB-Serial-JTAG；BQ25895 D+/D− 不接 USB-C 数据线，固定输入限流并关闭 BC1.2 自动检测。M100 GNSS_VCC 为 NC/测试点；M100 NET_STATUS 不接 ESP32。（`IO8` 已分配为 PWR 按键输入，见上方 GPIO 基线，**不再是保留脚**。）
 
 **同步活动窗口时序（一次上报）**
 

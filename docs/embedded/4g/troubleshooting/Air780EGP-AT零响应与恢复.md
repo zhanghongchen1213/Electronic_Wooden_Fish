@@ -73,7 +73,7 @@
 | Air780EGP UART TX / RX | IO43 / IO44 | spine §板级合同 | 模组独占 UART；单 AT 入口 + 单事务所有权 |
 | Air780EGP DTR（休眠/唤醒控制） | IO10 | spine §板级合同 | 与源工程 GPIO7 不同，按 EWF 原理图接线；**开漏驱动** |
 | Air780EGP RST / NET_STATUS 兼容位 | IO15 / IO16 | spine §板级合同 | RST、NET_STATUS 源实现保持输入高阻；NET_STATUS 缺脚时 TP/NC |
-| BQ25895 OTG_EN / M100 GNSS_VCC | IO8 / NC | 硬件基线 | IO8 控制 BQ OTG；M100 GNSS_VCC 留 NC/TP，不由 ESP32 驱动 |
+| M100 GNSS_VCC | NC | 硬件基线 | 留 NC/TP，不由 ESP32 驱动（BQ25895 的 OTG 脚已硬件接地，不存在 `BQ_OTG_EN` GPIO；`IO8` 现为 PWR 按键输入） |
 
 - 源工程 DTR 约定（`gps.h` + `gps_config.h`）：`GPS_DTR_AWAKE_LEVEL = 0`（低电平唤醒）、`GPS_DTR_SLEEP_LEVEL = 1`（高电平休眠），ESP32 侧用**开漏**驱动，预置安全电平后再挂 UART。
 - **电平极性必须复核整模组手册**：EWF 换板后 DTR 接线与电平有效极性以 Air780EGP 硬件手册/整机原理图为准，源工程值只作移植默认，不得在样机/原理图核验前冻结。若手册极性相反，仅需对调 `AWAKE`/`SLEEP` 两个宏，故障树与恢复流程不变。

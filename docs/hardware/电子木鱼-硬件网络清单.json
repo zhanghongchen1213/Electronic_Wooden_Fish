@@ -1,10 +1,12 @@
 {
-  "schema_version": "1.1.1",
+  "schema_version": "1.2.0",
+  "maintenance_policy": "已冻结，不随每次网表导出同步。原因：固件工程（Embedded/）尚未建立，当前没有代码消费本清单，逐次手工同步的成本高于收益，且既往手工同步已因位号漂移出过错。待 E1 建立固件工程时，按当次网表一次性重新生成，或届时决定废弃。冻结期间硬件事实以《电子木鱼-硬件原理图设计基线.md》与各《外围电路设计与接线》为准；本文件保留供固件实施阶段取用。",
   "manifest_type": "ewf_hardware_schematic_baseline",
   "project": "Electronic_Wooden_Fish",
   "status": "baseline_not_prototype_verified",
   "source_of_truth": "docs/hardware/电子木鱼-硬件原理图设计基线.md",
   "power_naming_contract": "docs/hardware/电源网络命名规范.md",
+  "designator_policy": "本文档不写器件位号。位号由嘉立创 EDA 在每次导出时生成并在设计期持续重排，固化进文档即会过期并引起歧义，因此 schema 1.2.0 起全部移除，改用功能名与引脚名定位。芯片/模组用器件名：BQ25895、TPS3424、TPS22965、TLV62569、ESP32、M100EG-C2、ES8311、NS4150B、CW2015、QMI8658A、TLV2369、TLV7042、V3V3_A_FILTER；连接器用接口功能名：USB_C、BATTERY、DISPLAY_BTB、4G_CARRIER、SPEAKER、PVDF_CONNECTOR；无源件与指示灯用用途名：VLCD_SEL_V3V3、VLCD_SEL_VMAIN、LCD_RESX_PULLUP、VLCD_DECOUPLING、VLCD_BULK、PVDF_SENSOR、RGB_STATUS_LED；多器件并列端点写作 I2C_DEVICES。<功能名>.<引脚名> 即唯一定位。",
   "sources": [
     "_bmad-output/planning-artifacts/architecture/architecture-Electronic_Wooden_Fish-2026-09-08/ARCHITECTURE-SPINE.md",
     "docs/hardware/电子木鱼-硬件原理图设计基线.md",
@@ -64,22 +66,22 @@
       },
       {
         "from_net": "VMAIN",
-        "to_net": "U12.NS4150B.VCC",
+        "to_net": "NS4150B.VCC",
         "reason": "NS4150B VCC 只接 V3V3_A；禁止直挂 VMAIN"
       },
       {
         "from_net": "V3V3",
-        "to_net": "U12.NS4150B.VCC",
+        "to_net": "NS4150B.VCC",
         "reason": "NS4150B VCC 必须经磁珠或负载开关形成 V3V3_A，不得与逻辑负载共未滤波 V3V3"
       },
       {
         "from_net": "V3V3_A",
-        "to_net": "U11.ES8311.AVDD",
+        "to_net": "ES8311.AVDD",
         "reason": "ES8311 AVDD/DVDD/PVDD 只接 V3V3；禁止与功放共 V3V3_A"
       },
       {
         "from_net": "VMAIN",
-        "to_net": "U11.ES8311.AVDD",
+        "to_net": "ES8311.AVDD",
         "reason": "ES8311 绝对最大 3.6V，禁止接 VMAIN"
       }
     ]
@@ -438,7 +440,6 @@
     "pullup": "shared_pullup_value_tbd",
     "devices": [
       {
-        "reference": "U1",
         "part": "BQ25895",
         "address_7bit": "0x6A",
         "address_int": 106,
@@ -447,7 +448,6 @@
         "role": "charger_system_power_path"
       },
       {
-        "reference": "U13",
         "part": "CW2015CHBD",
         "address_7bit": "0x62",
         "address_int": 98,
@@ -460,7 +460,6 @@
         "alert_status": "user_confirmed_netlist_pending"
       },
       {
-        "reference": "U10",
         "part": "CST9217",
         "address_7bit": "0x5A",
         "address_int": 90,
@@ -469,7 +468,6 @@
         "role": "touch_controller"
       },
       {
-        "reference": "U11",
         "part": "ES8311",
         "address_7bit": "0x18",
         "address_int": 24,
@@ -484,7 +482,6 @@
         ]
       },
       {
-        "reference": "U14",
         "part": "QMI8658A",
         "address_7bit": "0x6B",
         "address_int": 107,
@@ -645,7 +642,7 @@
       "specification": "120ohm_at_100MHz_3A_30mohm",
       "input_net": "V3V3",
       "output_net": "V3V3_A",
-      "exclusive_consumer": "U12.NS4150B.VCC",
+      "exclusive_consumer": "NS4150B.VCC",
       "status": "locked_design_baseline_netlist_verified",
       "verification": "charging_audio_noise_load_step",
       "note": "不从VMAIN直分；不供ES8311"
@@ -655,11 +652,11 @@
     {
       "name": "VBUS",
       "class": "input",
-      "source": "J1.USB_C_VBUS",
+      "source": "USB_C.VBUS",
       "nominal_voltage": "5V",
       "current_target": "2A_input",
       "consumers": [
-        "U1.BQ25895.VBUS"
+        "BQ25895.VBUS"
       ],
       "status": "confirmed",
       "verification": "input_ovp_and_line_drop_must_be_measured"
@@ -667,11 +664,11 @@
     {
       "name": "VBAT",
       "class": "battery",
-      "source": "J2.BATT+",
+      "source": "BATTERY.BATT+",
       "nominal_voltage": "single_cell_3.0_to_4.2V",
       "current_target": "cell_and_protection_rating_tbd",
       "consumers": [
-        "U1.BQ25895.BAT"
+        "BQ25895.BAT"
       ],
       "status": "confirmed",
       "verification": "cell_capacity_protection_ntc_and_safety_must_be_measured"
@@ -679,12 +676,12 @@
     {
       "name": "VSYS",
       "class": "charger_system_reserved",
-      "source": "U1.BQ25895.SYS",
+      "source": "BQ25895.SYS",
       "nominal_voltage": "NVDC_system_voltage",
       "current_target": "tbd",
       "consumers": [
-        "U2.TPS3424.VDD",
-        "U3.TPS22965.IN",
+        "TPS3424.VDD",
+        "TPS22965.IN",
         "system_power_path"
       ],
       "status": "confirmed",
@@ -693,13 +690,13 @@
     {
       "name": "VMAIN",
       "class": "switched_battery_high_current",
-      "source": "U3.TPS22965.OUT",
-      "control": "U2.TPS3424.RESET_to_PWR_STATE",
+      "source": "TPS22965.OUT",
+      "control": "TPS3424.RESET_to_PWR_STATE",
       "nominal_voltage": "VSYS_system_voltage",
       "current_target": "continuous_gt_1A_peak_gt_2A",
       "consumers": [
-        "J4.M100EGC2.VIN",
-        "U4_3V3_REG.IN"
+        "4G_CARRIER.VIN",
+        "TLV62569.IN"
       ],
       "status": "confirmed",
       "verification": "air780egp_tx_peak_voltage_drop_and_restart_margin"
@@ -707,7 +704,7 @@
     {
       "name": "V3V3",
       "class": "logic",
-      "source": "U4_3V3_REG.OUT",
+      "source": "TLV62569.OUT",
       "nominal_voltage": "3.3V",
       "current_target": "regulator_selection_tbd",
       "consumers": [
@@ -715,9 +712,9 @@
         "I2C_DEVICES",
         "DISPLAY_LOGIC",
         "PVDF_COMPARATOR",
-        "U11.ES8311.AVDD",
-        "U11.ES8311.DVDD",
-        "U11.ES8311.PVDD"
+        "ES8311.AVDD",
+        "ES8311.DVDD",
+        "ES8311.PVDD"
       ],
       "status": "confirmed",
       "verification": "regulator_part_ripple_efficiency_and_thermal_test"
@@ -729,7 +726,7 @@
       "nominal_voltage": "3.3V",
       "current_target": "NS4150B_load_tbd",
       "consumers": [
-        "U12.NS4150B.VCC"
+        "NS4150B.VCC"
       ],
       "status": "confirmed",
       "verification": "audio_noise_and_load_step_must_be_measured",
@@ -738,19 +735,20 @@
     {
       "name": "VLCD",
       "class": "panel_power_candidate",
-      "source": "VMAIN_or_panel_regulator",
-      "nominal_voltage": "panel_voltage_tbd",
+      "source": "V3V3_via_VLCD_SEL_V3V3_0ohm_default",
+      "nominal_voltage": "3.318V_nominal_equals_V3V3_when_0ohm_fitted",
       "current_target": "panel_load_tbd",
       "consumers": [
-        "J3.FPC.pin8"
+        "DISPLAY_BTB.FPC.pin8"
       ],
       "status": "recommended_initial",
-      "verification": "panel_voltage_sequence_and_first_frame_must_be_measured"
+      "verification": "panel_voltage_sequence_and_first_frame_must_be_measured",
+      "note": "pin8_supplies_OCP21351_VIN_rated_2.9_to_4.6V; VMAIN_via_VLCD_SEL_VMAIN_is_reserved_alternative_dnp_and_mutually_exclusive_with_VLCD_SEL_V3V3; see docs/hardware/外围电路设计/PY206-W38-V2屏幕供电设计与接线.md"
     },
     {
       "name": "GND",
       "class": "return",
-      "source": "J1/J2",
+      "source": "USB_C/BATTERY",
       "nominal_voltage": "0V",
       "current_target": "layout_dependent",
       "consumers": [
@@ -762,7 +760,6 @@
   ],
   "connectors": [
     {
-      "reference": "J1",
       "type": "USB-C_receptacle",
       "mpn": "TYPEC-304-ACP16",
       "lcsc": "C165948",
@@ -824,10 +821,10 @@
           "name": "SHIELD",
           "net": "USB_SHIELD"
         }
-      ]
+      ],
+      "用途": "USB_C"
     },
     {
-      "reference": "J2",
       "type": "protected_single_cell_battery",
       "mpn": "B3B-PH-K-S(LF)(SN)",
       "lcsc": "C131339",
@@ -850,10 +847,10 @@
           "name": "NTC_OPTIONAL",
           "net": "BAT_NTC"
         }
-      ]
+      ],
+      "用途": "BATTERY"
     },
     {
-      "reference": "J3",
       "type": "PY206-W38-V2_24pin_BTB",
       "mpn": "OK-14F024-04",
       "mating_mpn": "OK-14GM024-04",
@@ -1003,10 +1000,10 @@
           "name": "LTE_TE",
           "net": "LCD_TE"
         }
-      ]
+      ],
+      "用途": "DISPLAY_BTB"
     },
     {
-      "reference": "J4",
       "type": "M100EG-C2_Air780EGP_carrier",
       "mpn": "M100EG-C2_carrier_header",
       "lcsc": null,
@@ -1064,10 +1061,10 @@
           "name": "ANTENNA",
           "net": "M100_ANT"
         }
-      ]
+      ],
+      "用途": "4G_CARRIER"
     },
     {
-      "reference": "J5",
       "type": "mono_speaker",
       "critical": true,
       "status": "recommended_initial",
@@ -1082,10 +1079,10 @@
           "name": "SPK-",
           "net": "SPK_N"
         }
-      ]
+      ],
+      "用途": "SPEAKER"
     },
     {
-      "reference": "J6",
       "type": "PVDF_sensor",
       "critical": true,
       "status": "confirmed",
@@ -1100,7 +1097,8 @@
           "name": "PVDF-",
           "net": "GND"
         }
-      ]
+      ],
+      "用途": "PVDF_CONNECTOR"
     }
   ],
   "carrier_pin_cross_reference": {
@@ -1173,8 +1171,8 @@
       "name": "VBUS",
       "class": "power",
       "endpoints": [
-        "J1.VBUS",
-        "U1.BQ25895.VBUS"
+        "USB_C.VBUS",
+        "BQ25895.VBUS"
       ],
       "status": "confirmed"
     },
@@ -1182,8 +1180,8 @@
       "name": "VBAT",
       "class": "power",
       "endpoints": [
-        "J2.BATT+",
-        "U1.BQ25895.BAT"
+        "BATTERY.BATT+",
+        "BQ25895.BAT"
       ],
       "status": "confirmed"
     },
@@ -1191,9 +1189,9 @@
       "name": "VSYS",
       "class": "power_reserved",
       "endpoints": [
-        "U1.BQ25895.SYS",
-        "U2.TPS3424.VDD",
-        "U3.TPS22965.IN",
+        "BQ25895.SYS",
+        "TPS3424.VDD",
+        "TPS22965.IN",
         "TP_VSYS"
       ],
       "status": "confirmed"
@@ -1202,8 +1200,8 @@
       "name": "PWR_STATE",
       "class": "power_control",
       "endpoints": [
-        "U2.TPS3424.RESET",
-        "U3.TPS22965.ON",
+        "TPS3424.RESET",
+        "TPS22965.ON",
         "ESP32.IO46",
         "TP_PWR_STATE"
       ],
@@ -1215,7 +1213,7 @@
       "name": "PWR_BUTTON",
       "class": "button_vsys_domain",
       "endpoints": [
-        "U2.TPS3424.PB",
+        "TPS3424.PB",
         "SW_PWR_NO",
         "GND"
       ],
@@ -1250,9 +1248,9 @@
       "name": "VMAIN",
       "class": "power",
       "endpoints": [
-        "U3.TPS22965.OUT",
-        "J4.VIN",
-        "U4_3V3_REG.IN",
+        "TPS22965.OUT",
+        "4G_CARRIER.VIN",
+        "TLV62569.IN",
         "TP_VMAIN"
       ],
       "status": "confirmed"
@@ -1261,13 +1259,13 @@
       "name": "V3V3",
       "class": "power",
       "endpoints": [
-        "U4_3V3_REG.OUT",
-        "U7.ESP32.VDD3P3",
-        "J3.FPC.VDD",
-        "U1/U10/U11/U13/U14.I2C_LOGIC",
-        "U11.ES8311.AVDD",
-        "U11.ES8311.DVDD",
-        "U11.ES8311.PVDD",
+        "TLV62569.OUT",
+        "ESP32.VDD3P3",
+        "DISPLAY_BTB.FPC.VDD",
+        "I2C_DEVICES.I2C_LOGIC",
+        "ES8311.AVDD",
+        "ES8311.DVDD",
+        "ES8311.PVDD",
         "PVDF_COMPARATOR.VDD",
         "RGB.VDD_OPTIONAL"
       ],
@@ -1277,10 +1275,10 @@
       "name": "GND",
       "class": "return",
       "endpoints": [
-        "J1.GND",
-        "J2.BATT-",
-        "J3.FPC.GND",
-        "J4.GND",
+        "USB_C.GND",
+        "BATTERY.BATT-",
+        "DISPLAY_BTB.FPC.GND",
+        "4G_CARRIER.GND",
         "all_ground_pins"
       ],
       "status": "confirmed"
@@ -1289,9 +1287,9 @@
       "name": "I2C_SDA",
       "class": "i2c",
       "endpoints": [
-        "U7.IO1",
-        "U1/U10/U11/U13/U14.SDA",
-        "J3.FPC.pin3",
+        "ESP32.IO1",
+        "I2C_DEVICES.SDA",
+        "DISPLAY_BTB.FPC.pin3",
         "TP_I2C_SDA"
       ],
       "status": "confirmed"
@@ -1300,9 +1298,9 @@
       "name": "I2C_SCL",
       "class": "i2c",
       "endpoints": [
-        "U7.IO2",
-        "U1/U10/U11/U13/U14.SCL",
-        "J3.FPC.pin2",
+        "ESP32.IO2",
+        "I2C_DEVICES.SCL",
+        "DISPLAY_BTB.FPC.pin2",
         "TP_I2C_SCL"
       ],
       "status": "confirmed"
@@ -1311,7 +1309,7 @@
       "name": "PVDF_RAW",
       "class": "analog_unprotected",
       "endpoints": [
-        "J6.PVDF+",
+        "PVDF_CONNECTOR.PVDF+",
         "R_PVDF_LIMIT.IN",
         "TP_PVDF_RAW"
       ],
@@ -1323,7 +1321,7 @@
       "endpoints": [
         "R_PVDF_LIMIT.OUT",
         "PVDF_CLAMP",
-        "U7.IO9",
+        "ESP32.IO9",
         "TP_PVDF_ADC"
       ],
       "status": "confirmed"
@@ -1333,7 +1331,7 @@
       "class": "wake_signal",
       "endpoints": [
         "PVDF_COMPARATOR.OUT",
-        "U7.IO11",
+        "ESP32.IO11",
         "TP_PVDF_CMP"
       ],
       "status": "confirmed"
@@ -1342,8 +1340,8 @@
       "name": "TP_RST",
       "class": "touch_signal",
       "endpoints": [
-        "U7.IO38",
-        "J3.FPC.pin5"
+        "ESP32.IO38",
+        "DISPLAY_BTB.FPC.pin5"
       ],
       "status": "confirmed"
     },
@@ -1351,8 +1349,8 @@
       "name": "TP_INT",
       "class": "touch_signal",
       "endpoints": [
-        "U7.IO39",
-        "J3.FPC.pin4"
+        "ESP32.IO39",
+        "DISPLAY_BTB.FPC.pin4"
       ],
       "status": "confirmed"
     },
@@ -1360,8 +1358,8 @@
       "name": "LCD_RST",
       "class": "qspi",
       "endpoints": [
-        "U7.IO4",
-        "J3.FPC.pin12"
+        "ESP32.IO4",
+        "DISPLAY_BTB.FPC.pin12"
       ],
       "status": "confirmed"
     },
@@ -1369,8 +1367,8 @@
       "name": "LCD_CS",
       "class": "qspi",
       "endpoints": [
-        "U7.IO40",
-        "J3.FPC.pin21"
+        "ESP32.IO40",
+        "DISPLAY_BTB.FPC.pin21"
       ],
       "status": "confirmed"
     },
@@ -1378,8 +1376,8 @@
       "name": "LCD_SCLK",
       "class": "qspi",
       "endpoints": [
-        "U7.IO5",
-        "J3.FPC.pin16"
+        "ESP32.IO5",
+        "DISPLAY_BTB.FPC.pin16"
       ],
       "status": "confirmed"
     },
@@ -1387,8 +1385,8 @@
       "name": "LCD_D0",
       "class": "qspi",
       "endpoints": [
-        "U7.IO6",
-        "J3.FPC.pin14"
+        "ESP32.IO6",
+        "DISPLAY_BTB.FPC.pin14"
       ],
       "status": "confirmed"
     },
@@ -1396,8 +1394,8 @@
       "name": "LCD_D1",
       "class": "qspi",
       "endpoints": [
-        "U7.IO7",
-        "J3.FPC.pin22"
+        "ESP32.IO7",
+        "DISPLAY_BTB.FPC.pin22"
       ],
       "status": "confirmed"
     },
@@ -1405,8 +1403,8 @@
       "name": "LCD_D2",
       "class": "qspi",
       "endpoints": [
-        "U7.IO12",
-        "J3.FPC.pin20"
+        "ESP32.IO12",
+        "DISPLAY_BTB.FPC.pin20"
       ],
       "status": "confirmed"
     },
@@ -1414,8 +1412,8 @@
       "name": "LCD_D3",
       "class": "qspi",
       "endpoints": [
-        "U7.IO42",
-        "J3.FPC.pin18"
+        "ESP32.IO42",
+        "DISPLAY_BTB.FPC.pin18"
       ],
       "status": "confirmed"
     },
@@ -1423,8 +1421,8 @@
       "name": "LCD_EN",
       "class": "power_enable",
       "endpoints": [
-        "U7.IO47",
-        "J3.FPC.pin23"
+        "ESP32.IO47",
+        "DISPLAY_BTB.FPC.pin23"
       ],
       "status": "confirmed"
     },
@@ -1432,8 +1430,12 @@
       "name": "VLCD",
       "class": "panel_power_candidate",
       "endpoints": [
-        "J3.FPC.pin8",
-        "VMAIN_or_panel_regulator"
+        "DISPLAY_BTB.FPC.pin8",
+        "VLCD_DECOUPLING.2",
+        "VLCD_BULK.2",
+        "VLCD_SEL_V3V3.to_V3V3_0ohm_default",
+        "VLCD_SEL_VMAIN.to_VMAIN_0ohm_dnp_mutually_exclusive_with_VLCD_SEL_V3V3",
+        "TP_VLCD"
       ],
       "status": "recommended_initial"
     },
@@ -1441,7 +1443,7 @@
       "name": "LCD_TE",
       "class": "optional_signal",
       "endpoints": [
-        "J3.FPC.pin24",
+        "DISPLAY_BTB.FPC.pin24",
         "TP_LCD_TE_or_NC"
       ],
       "status": "recommended_initial"
@@ -1450,8 +1452,8 @@
       "name": "I2S_DOUT",
       "class": "i2s",
       "endpoints": [
-        "U7.IO13",
-        "U11.ES8311.DAC_DATA"
+        "ESP32.IO13",
+        "ES8311.DAC_DATA"
       ],
       "status": "confirmed"
     },
@@ -1459,8 +1461,8 @@
       "name": "I2S_WS",
       "class": "i2s",
       "endpoints": [
-        "U7.IO14",
-        "U11.ES8311.WS"
+        "ESP32.IO14",
+        "ES8311.WS"
       ],
       "status": "confirmed"
     },
@@ -1468,8 +1470,8 @@
       "name": "I2S_BCLK",
       "class": "i2s",
       "endpoints": [
-        "U7.IO18",
-        "U11.ES8311.BCLK"
+        "ESP32.IO18",
+        "ES8311.BCLK"
       ],
       "status": "confirmed"
     },
@@ -1477,8 +1479,8 @@
       "name": "I2S_MCLK",
       "class": "i2s",
       "endpoints": [
-        "U7.IO21",
-        "U11.ES8311.MCLK"
+        "ESP32.IO21",
+        "ES8311.MCLK"
       ],
       "status": "confirmed"
     },
@@ -1486,8 +1488,8 @@
       "name": "PA_EN",
       "class": "audio_enable",
       "endpoints": [
-        "U7.IO48",
-        "U12.NS4150B.EN"
+        "ESP32.IO48",
+        "NS4150B.EN"
       ],
       "status": "confirmed"
     },
@@ -1495,8 +1497,8 @@
       "name": "SPK_P",
       "class": "audio",
       "endpoints": [
-        "U12.NS4150B.OUTP",
-        "J5.SPK+"
+        "NS4150B.OUTP",
+        "SPEAKER.SPK+"
       ],
       "status": "recommended_initial"
     },
@@ -1504,8 +1506,8 @@
       "name": "SPK_N",
       "class": "audio",
       "endpoints": [
-        "U12.NS4150B.OUTN",
-        "J5.SPK-"
+        "NS4150B.OUTN",
+        "SPEAKER.SPK-"
       ],
       "status": "recommended_initial"
     },
@@ -1513,8 +1515,8 @@
       "name": "M100_TXD",
       "class": "uart",
       "endpoints": [
-        "U7.IO43",
-        "J4.RXD"
+        "ESP32.IO43",
+        "4G_CARRIER.RXD"
       ],
       "status": "confirmed"
     },
@@ -1522,8 +1524,8 @@
       "name": "M100_RXD",
       "class": "uart",
       "endpoints": [
-        "J4.TXD",
-        "U7.IO44"
+        "4G_CARRIER.TXD",
+        "ESP32.IO44"
       ],
       "status": "confirmed"
     },
@@ -1531,8 +1533,8 @@
       "name": "M100_DTR",
       "class": "4g_control",
       "endpoints": [
-        "U7.IO10",
-        "J4.DTR"
+        "ESP32.IO10",
+        "4G_CARRIER.DTR"
       ],
       "status": "confirmed"
     },
@@ -1540,8 +1542,8 @@
       "name": "M100_RST",
       "class": "4g_control",
       "endpoints": [
-        "U7.IO15",
-        "J4.RST",
+        "ESP32.IO15",
+        "4G_CARRIER.RST",
         "TP_M100_RST"
       ],
       "status": "confirmed"
@@ -1550,8 +1552,8 @@
       "name": "M100_NET_STATUS_COMPAT",
       "class": "4g_status_optional",
       "endpoints": [
-        "U7.IO16",
-        "J4.NET_STATUS_if_present",
+        "ESP32.IO16",
+        "4G_CARRIER.NET_STATUS_if_present",
         "TP_NET_STATUS"
       ],
       "status": "confirmed"
@@ -1560,7 +1562,7 @@
       "name": "M100_GNSS_VCC_NC",
       "class": "no_connect",
       "endpoints": [
-        "J4.GNSS_VCC",
+        "4G_CARRIER.GNSS_VCC",
         "TP_GNSS_VCC_NC"
       ],
       "status": "confirmed"
@@ -1569,7 +1571,7 @@
       "name": "RGB_DATA",
       "class": "user_status_led",
       "endpoints": [
-        "U7.IO3",
+        "ESP32.IO3",
         "RGB.DATA"
       ],
       "status": "confirmed"
@@ -1582,8 +1584,8 @@
         "USB_DP_ESP"
       ],
       "endpoints": [
-        "U7.IO20",
-        "U7.IO20"
+        "ESP32.IO20",
+        "ESP32.IO20"
       ],
       "status": "confirmed"
     },
@@ -1596,8 +1598,8 @@
         "USB_DM_ESP"
       ],
       "endpoints": [
-        "U7.IO19",
-        "U7.IO19"
+        "ESP32.IO19",
+        "ESP32.IO19"
       ],
       "status": "confirmed"
     },
@@ -1605,7 +1607,7 @@
       "name": "USB_CC1",
       "class": "usb_configuration",
       "endpoints": [
-        "J1.CC1",
+        "USB_C.CC1",
         "R_CC1_5K1",
         "GND"
       ],
@@ -1615,7 +1617,7 @@
       "name": "USB_CC2",
       "class": "usb_configuration",
       "endpoints": [
-        "J1.CC2",
+        "USB_C.CC2",
         "R_CC2_5K1",
         "GND"
       ],
@@ -1625,16 +1627,15 @@
       "name": "V3V3_A",
       "class": "audio_power",
       "endpoints": [
-        "U_AUDIO_3V3.OUT",
-        "U12.NS4150B.VCC"
+        "V3V3_A_FILTER.OUT",
+        "NS4150B.VCC"
       ],
       "status": "confirmed",
-      "note": "U_AUDIO_3V3 is the V3V3 ferrite or load-switch output; input is V3V3 not VMAIN"
+      "note": "V3V3_A_FILTER is the V3V3 ferrite or load-switch output; input is V3V3 not VMAIN"
     }
   ],
   "bom": [
     {
-      "reference": "U1",
       "part": "BQ25895RTWR",
       "lcsc": "C80200",
       "role": "NVDC_charger_system_power_path",
@@ -1642,7 +1643,6 @@
       "address": "0x6A"
     },
     {
-      "reference": "U2",
       "part": "TPS3424A11C13ADRLR",
       "lcsc": null,
       "role": "pushbutton_power_latch",
@@ -1676,7 +1676,6 @@
       "lcsc_query_date": "2026-09-14"
     },
     {
-      "reference": "U3",
       "part": "TPS22965DSGR",
       "lcsc": "C122837",
       "role": "VMAIN_high_current_load_switch",
@@ -1684,7 +1683,6 @@
       "package": "UDFN-8-EP(2x2)"
     },
     {
-      "reference": "U4_3V3_REG",
       "part": "TLV62569DBVR",
       "lcsc": "C141836",
       "role": "VMAIN_to_3V3_regulator",
@@ -1693,14 +1691,12 @@
       "selection_note": "不得使用 AMS1117/TPS631000；2.5V 以下掉压需验证"
     },
     {
-      "reference": "U7",
       "part": "ESP32-S3-WROOM-1-N16R8",
       "lcsc": "C2913202",
       "role": "main_mcu",
       "status": "confirmed"
     },
     {
-      "reference": "U8",
       "part": "M100EG-C2_Air780EGP_carrier",
       "lcsc": null,
       "role": "4G_modem_carrier",
@@ -1708,7 +1704,6 @@
       "vin_net": "VMAIN"
     },
     {
-      "reference": "U11",
       "part": "ES8311",
       "lcsc": "C962342",
       "role": "audio_codec",
@@ -1718,7 +1713,6 @@
       "power_net": "V3V3"
     },
     {
-      "reference": "U12",
       "part": "NS4150B",
       "lcsc": "C189961",
       "role": "class_d_amplifier",
@@ -1727,7 +1721,6 @@
       "power_net": "V3V3_A"
     },
     {
-      "reference": "U13",
       "part": "CW2015CHBD",
       "lcsc": "C881838",
       "role": "fuel_gauge",
@@ -1738,7 +1731,6 @@
       "alert_status": "user_confirmed_netlist_pending"
     },
     {
-      "reference": "U14",
       "part": "QMI8658A",
       "lcsc": null,
       "role": "future_wom_imu",
@@ -1747,14 +1739,12 @@
       "int2": "NC"
     },
     {
-      "reference": "U15",
       "part": "TLV2369IDGKR",
       "lcsc": "C2057867",
       "role": "PVDF_buffer",
       "status": "recommended_initial"
     },
     {
-      "reference": "U16",
       "part": "TLV7042DGKR",
       "lcsc": "C2760466",
       "role": "PVDF_comparator",
@@ -1762,14 +1752,12 @@
       "selection_note": "料号、阈值、滞回与输出极性待样机"
     },
     {
-      "reference": "S1",
       "part": "PVDF_LDT0-028K_or_target_sensor",
       "lcsc": null,
       "role": "physical_tap_sensor",
       "status": "recommended_initial"
     },
     {
-      "reference": "LED1",
       "part": null,
       "lcsc": null,
       "role": "RGB_status_led",
@@ -1825,21 +1813,18 @@
       "status": "recommended_initial"
     },
     {
-      "reference": "J1",
       "part": "TYPEC-304-ACP16",
       "lcsc": "C165948",
       "role": "USB-C_16P_receptacle",
       "status": "recommended_initial"
     },
     {
-      "reference": "J2",
       "part": "B3B-PH-K-S(LF)(SN)",
       "lcsc": "C131339",
       "role": "battery_3P_PH_2mm_BATT_NTC",
       "status": "confirmed"
     },
     {
-      "reference": "J3",
       "part": "OK-14F024-04",
       "mating_part": "OK-14GM024-04",
       "lcsc": "C9900019201",
@@ -1847,7 +1832,64 @@
       "status": "recommended_initial"
     },
     {
-      "reference": "J4",
+      "part": "0603WAJ0000T5E",
+      "lcsc": "C15402",
+      "role": "VLCD_source_selector_0ohm_to_V3V3_fitted_by_default",
+      "value": "0ohm_5pct_100mW_0603",
+      "package": "0603",
+      "quantity": 1,
+      "status": "recommended_initial",
+      "inventory_available_snapshot": 84,
+      "inventory_snapshot_date": "2026-09-13",
+      "constraint": "mutually_exclusive_with_VLCD_SEL_VMAIN"
+    },
+    {
+      "part": "0603WAF0000T5E",
+      "lcsc": "C21189",
+      "role": "VLCD_alternative_source_from_VMAIN_dnp_by_default",
+      "value": "0ohm_1pct_100mW_0603",
+      "package": "0603",
+      "quantity": 1,
+      "status": "reserved_dnp",
+      "inventory_available_snapshot": 50,
+      "inventory_snapshot_date": "2026-09-13",
+      "constraint": "mutually_exclusive_with_VLCD_SEL_V3V3",
+      "part_selection_note": "deliberately_different_MPN_from_VLCD_SEL_V3V3_so_the_BOM_splits_into_two_rows_and_the_SMT_file_cannot_merge_them; do_not_substitute_with_VLCD_SEL_V3V3_part"
+    },
+    {
+      "part": "CL21A106KAYNNNE",
+      "lcsc": "C15850",
+      "role": "VLCD_bulk_decoupling",
+      "value": "10uF_10pct_25V_X5R_0805",
+      "package": "0805",
+      "quantity": 1,
+      "status": "recommended_initial",
+      "inventory_available_snapshot": 21,
+      "inventory_snapshot_date": "2026-09-13",
+      "alternatives": [
+        {
+          "part": "HGC0603R5106M160NTHJ",
+          "lcsc": "C7472959",
+          "package": "0603",
+          "voltage": "16V",
+          "inventory_available_snapshot": 45
+        }
+      ],
+      "verification": "effective_capacitance_under_dc_bias_must_be_measured"
+    },
+    {
+      "part": "0603WAF1003T5E",
+      "lcsc": "C25803",
+      "role": "CO5300_RESX_pullup_required_no_internal_pullup",
+      "value": "100kohm_1pct_100mW_0603",
+      "package": "0603",
+      "quantity": 1,
+      "status": "recommended_initial",
+      "inventory_available_snapshot": 83,
+      "inventory_snapshot_date": "2026-09-13",
+      "source": "CO5300_datasheet_RESX_no_internal_pull_high_resistor"
+    },
+    {
       "part": "M100EG-C2_carrier_header",
       "lcsc": null,
       "role": "4G_carrier_header",
@@ -1892,12 +1934,12 @@
       "id": "P01_POWER_USB",
       "title": "USB-C / BQ25895 / 电源锁存与分轨",
       "components": [
-        "J1",
-        "J2",
-        "U1",
-        "U2",
-        "U3",
-        "U4_3V3_REG"
+        "USB_C",
+        "BATTERY",
+        "BQ25895",
+        "TPS3424",
+        "TPS22965",
+        "TLV62569"
       ],
       "nets": [
         "VBUS",
@@ -1923,7 +1965,7 @@
       "id": "P02_MCU_USB",
       "title": "ESP32-S3 主控 / 启动复位 / USB-Serial-JTAG",
       "components": [
-        "U7"
+        "ESP32"
       ],
       "nets": [
         "BOOT0",
@@ -1942,8 +1984,8 @@
       "id": "P03_DISPLAY_TOUCH",
       "title": "PY206-W38-V2 24-pin BTB（屏幕/触摸已集成）",
       "components": [
-        "J3",
-        "U9"
+        "DISPLAY_BTB",
+        "NS4150B"
       ],
       "nets": [
         "V3V3",
@@ -1979,10 +2021,10 @@
       "id": "P04_AUDIO_RGB",
       "title": "ES8311 / NS4150B / 扬声器 / RGB",
       "components": [
-        "U11",
-        "U12",
-        "J5",
-        "LED1"
+        "ES8311",
+        "NS4150B",
+        "SPEAKER",
+        "RGB_STATUS_LED"
       ],
       "nets": [
         "I2C_SDA",
@@ -2008,10 +2050,10 @@
       "id": "P05_PVDF",
       "title": "PVDF 限流 / 钳位 / 比较器 / ADC",
       "components": [
-        "J6",
-        "S1",
+        "PVDF_CONNECTOR",
+        "PVDF_SENSOR",
         "R_PVDF_LIMIT",
-        "U15"
+        "TLV2369"
       ],
       "nets": [
         "PVDF_RAW",
@@ -2031,8 +2073,8 @@
       "id": "P06_MODEM",
       "title": "M100EG-C2 / Air780EGP / SIM / 天线",
       "components": [
-        "U8",
-        "J4"
+        "M100EG-C2",
+        "4G_CARRIER"
       ],
       "nets": [
         "VMAIN",
@@ -2057,8 +2099,8 @@
       "id": "P07_SHARED_SENSORS",
       "title": "CW2015 / QMI8658A / I²C 测试点",
       "components": [
-        "U13",
-        "U14"
+        "CW2015",
+        "QMI8658A"
       ],
       "nets": [
         "I2C_SDA",
@@ -2107,8 +2149,8 @@
     },
     {
       "id": "HW-OI-006",
-      "topic": "PY206 FPC 方向/VBAT/VDD/OLED_EN/TE",
-      "verification": "实物插合、首帧时序与波形",
+      "topic": "PY206 FPC 方向/VLCD/pin8 内部拓扑/VDD/OLED_EN 方向/TE",
+      "verification": "模组厂书面答复（pin8 是否并到 CO5300 VCI/VDDI、pin23 方向、SAS/SRL 固定电平）+ 实物插合 + 首帧时序与波形 + 面板耗流三档实测",
       "status": "must_prototype_validate"
     },
     {
@@ -2243,12 +2285,12 @@
       "GND"
     ],
     "required_connectors": [
-      "J1",
-      "J2",
-      "J3",
-      "J4",
-      "J5",
-      "J6"
+      "USB_C",
+      "BATTERY",
+      "DISPLAY_BTB",
+      "4G_CARRIER",
+      "SPEAKER",
+      "PVDF_CONNECTOR"
     ],
     "required_nets": [
       "USB_D+",

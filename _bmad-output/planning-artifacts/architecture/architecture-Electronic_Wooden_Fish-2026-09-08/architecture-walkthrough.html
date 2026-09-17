@@ -270,7 +270,7 @@ sequenceDiagram
         <thead><tr><th>功能</th><th>信号</th><th>GPIO</th><th>约束</th></tr></thead>
         <tbody>
           <tr><td>BOOT</td><td>BOOT0</td><td class="mono">IO0</td><td>启动绑带；下载路径</td></tr>
-          <tr><td>PWR</td><td>运行输入</td><td class="mono">IO46</td><td>启动绑带；长按开关机归板级电源</td></tr>
+          <tr><td>PWR</td><td>运行输入</td><td class="mono">IO8</td><td>读 TPS3424 的 PWR_INT 脉冲（短按 50 ms／长按 100 ms）；边沿中断；长按开关机归板级电源</td></tr>
           <tr><td>RESET</td><td>EN</td><td class="mono">EN</td><td>独立按键/测试点</td></tr>
           <tr><td>PVDF</td><td>ADC</td><td class="mono">IO9</td><td>ADC1_CH8；前端限流/钳位</td></tr>
           <tr><td>PVDF 唤醒</td><td>比较器</td><td class="mono">IO11</td><td>低功耗唤醒；醒后 ADC 确认</td></tr>
@@ -281,7 +281,7 @@ sequenceDiagram
           <tr><td>ES8311</td><td>I2S</td><td class="mono">IO13/14/17/18/21</td><td>legbot 音频资源基线</td></tr>
           <tr><td>NS4150B</td><td>PA_EN</td><td class="mono">IO48</td><td>静音/故障回到禁用</td></tr>
           <tr><td>Air780EGP</td><td>UART</td><td class="mono">IO43/44</td><td>引脚常量自 main_control 抽离</td></tr>
-          <tr><td>Air780EGP</td><td>DTR/RST/NET/GNSS</td><td class="mono">IO10/15/16/8</td><td>休眠/复位/网络/GPS 开关</td></tr>
+          <tr><td>Air780EGP</td><td>DTR/RST/NET</td><td class="mono">IO10/15/16</td><td>休眠/复位/网络观测；GNSS_VCC 留 NC/TP，不占 GPIO</td></tr>
           <tr><td>RGB</td><td>DATA</td><td class="mono">IO3</td><td>状态灯，非调试灯</td></tr>
           <tr><td>USB</td><td>D−/D+</td><td class="mono">IO19/20</td><td>原生 USB-Serial-JTAG</td></tr>
         </tbody>
