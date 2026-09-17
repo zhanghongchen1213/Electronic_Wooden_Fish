@@ -56,7 +56,7 @@ BQ25895（WQFN-24 + PowerPAD，25 个端点）的全部引脚，以及网表内�
 | 11 | TS | `BAT_NTC` | 上臂 5.23kΩ±1% 接 `REGN`，下臂 30.1kΩ±1% 接 `GND`，电池包内置 NTC 与下臂并联；同时引出到电池连接器温敏端 | 符合 |
 | 12 | QON | — | 不连接。引脚内部有上拉，未使用时允许留空；ship mode 与系统复位功能不使用 | 符合 |
 | 13, 14 | BAT | `VBAT` | 接电池正端与 10µF 到 `GND` | 符合 |
-| 15, 16 | SYS | `VSYS` | 接 22µF×3 与 100nF×2 到 `GND`；接 TPS3424 供电脚与 TPS22965 输入脚；接功率电感输出端 | 符合 |
+| 15, 16 | SYS | `VSYS` | 接 22µF×3 与 100nF×2 到 `GND`；接 LTC2954 供电脚与 TPS22965 输入脚；接功率电感输出端 | 符合 |
 | 17, 18 | PGND | `GND` | 功率地 | 符合 |
 | 19, 20 | SW | `SW_BQ` | 双脚同网；接自举电容一端与功率电感输入端 | 符合 |
 | 21 | BTST | `BTST_BQ` | 经 47nF 到 `SW_BQ`。**不接地** | 符合 |
@@ -78,7 +78,7 @@ flowchart LR
   V --- CVBUS3["VBUS 附加去耦 10µF/25V/X5R/0805"] --- GND1
   V --- P1["pin 1 VBUS"]
 
-  P1 --- RBFET["芯片内部 RBFET"] --- PMID["PMID"]
+  PMID["PMID"]
   PMID --- CPMID["PMID 去耦 10µF/25V/X5R/0805"] --- GND1
   PMID --- P23["pin 23 PMID"]
 
@@ -93,7 +93,7 @@ flowchart LR
   SYS --- CSYS3["SYS 去耦 22µF/25V/X5R/0805"] --- GND1
   SYS --- CSYS4["SYS 高频去耦 100nF/0603"] --- GND1
   SYS --- CSYS5["SYS 高频去耦 100nF/0603"] --- GND1
-  SYS --- TPS3424["TPS3424 供电脚"]
+  SYS --- LTC2954["LTC2954 供电脚"]
   SYS --- TPS22965["TPS22965 输入脚"]
   SYS --- TPVSYS["测试点 TP_VSYS"]
 
@@ -123,9 +123,9 @@ flowchart LR
   V33 --- RSCL["I²C SCL 上拉电阻 10kΩ"] --- SCL["I2C_SCL → pin 5 SCL"]
   V33 --- RSDA["I²C SDA 上拉电阻 10kΩ"] --- SDA["I2C_SDA → pin 6 SDA"]
 
-  NC1["pin 2 D+ 不连接"] -.-> X1["—"]
-  NC2["pin 3 D− 不连接"] -.-> X1
-  NC3["pin 12 QON 不连接"] -.-> X1
+  NC1["pin 2 D+ 不连接"]
+  NC2["pin 3 D− 不连接"]
+  NC3["pin 12 QON 不连接"]
 ```
 
 实线只表示电气连接，不表示电流方向；电容均为并联到 `GND` 的支路。`VBUS`、`VBAT`、`VSYS`、`PMID`、`SW_BQ` 五个节点不得在板级互相短接，电源路径由芯片内部 MOSFET 完成。

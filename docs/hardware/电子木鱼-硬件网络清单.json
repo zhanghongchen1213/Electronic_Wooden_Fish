@@ -1,12 +1,12 @@
 {
   "schema_version": "1.2.0",
-  "maintenance_policy": "已冻结，不随每次网表导出同步。原因：固件工程（Embedded/）尚未建立，当前没有代码消费本清单，逐次手工同步的成本高于收益，且既往手工同步已因位号漂移出过错。待 E1 建立固件工程时，按当次网表一次性重新生成，或届时决定废弃。冻结期间硬件事实以《电子木鱼-硬件原理图设计基线.md》与各《外围电路设计与接线》为准；本文件保留供固件实施阶段取用。",
+  "maintenance_policy": "已冻结，不随每次网表导出同步。原因：固件工程（Embedded/）尚未建立，当前没有代码消费本清单，逐次手工同步的成本高于收益，且既往手工同步已因位号漂移出过错。待 E1 建立固件工程时，按当次网表一次性重新生成，或届时决定废弃。冻结期间硬件事实以《电子木鱼-硬件原理图设计基线.md》与各《外围电路设计与接线》为准；本文件保留供固件实施阶段取用。本次（2026-09-17）按键控制器由 TPS3424 换为 LTC2954，随之做了最小一致性修正：PWR_STATE 的来源与上拉、PWR_INT 的语义与其缺失的 net 条目、IO46 由 PWR_STATE 感知改为悬空、以及 TPS3424 残留全部换名。此为换型一致性修正，不是网表同步，冻结条款其余部分仍有效。",
   "manifest_type": "ewf_hardware_schematic_baseline",
   "project": "Electronic_Wooden_Fish",
   "status": "baseline_not_prototype_verified",
   "source_of_truth": "docs/hardware/电子木鱼-硬件原理图设计基线.md",
   "power_naming_contract": "docs/hardware/电源网络命名规范.md",
-  "designator_policy": "本文档不写器件位号。位号由嘉立创 EDA 在每次导出时生成并在设计期持续重排，固化进文档即会过期并引起歧义，因此 schema 1.2.0 起全部移除，改用功能名与引脚名定位。芯片/模组用器件名：BQ25895、TPS3424、TPS22965、TLV62569、ESP32、M100EG-C2、ES8311、NS4150B、CW2015、QMI8658A、TLV2369、TLV7042、V3V3_A_FILTER；连接器用接口功能名：USB_C、BATTERY、DISPLAY_BTB、4G_CARRIER、SPEAKER、PVDF_CONNECTOR；无源件与指示灯用用途名：VLCD_SEL_V3V3、VLCD_SEL_VMAIN、LCD_RESX_PULLUP、VLCD_DECOUPLING、VLCD_BULK、PVDF_SENSOR、RGB_STATUS_LED；多器件并列端点写作 I2C_DEVICES。<功能名>.<引脚名> 即唯一定位。",
+  "designator_policy": "本文档不写器件位号。位号由嘉立创 EDA 在每次导出时生成并在设计期持续重排，固化进文档即会过期并引起歧义，因此 schema 1.2.0 起全部移除，改用功能名与引脚名定位。芯片/模组用器件名：BQ25895、LTC2954、TPS22965、TLV62569、ESP32、M100EG-C2、ES8311、NS4150B、CW2015、QMI8658A、TLV2369、TLV7042、V3V3_A_FILTER；连接器用接口功能名：USB_C、BATTERY、DISPLAY_BTB、4G_CARRIER、SPEAKER、PVDF_CONNECTOR；无源件与指示灯用用途名：VLCD_SEL_V3V3、VLCD_SEL_VMAIN、LCD_RESX_PULLUP、VLCD_DECOUPLING、VLCD_BULK、PVDF_SENSOR、RGB_STATUS_LED；多器件并列端点写作 I2C_DEVICES。<功能名>.<引脚名> 即唯一定位。",
   "sources": [
     "_bmad-output/planning-artifacts/architecture/architecture-Electronic_Wooden_Fish-2026-09-08/ARCHITECTURE-SPINE.md",
     "docs/hardware/电子木鱼-硬件原理图设计基线.md",
@@ -100,15 +100,30 @@
       ]
     },
     {
-      "signal": "PWR_STATE",
-      "net": "PWR_STATE",
-      "gpio": "IO46",
-      "gpio_number": 46,
-      "direction": "input_strapping",
+      "signal": "PWR_INT",
+      "net": "PWR_INT",
+      "gpio": "IO8",
+      "gpio_number": 8,
+      "direction": "input_interrupt",
       "verification_status": "confirmed",
       "constraints": [
         "固件只读",
-        "长按开关机由 TPS3424/板级电路处理"
+        "开漏低有效，10kΩ 上拉至 V3V3；按下期间持续为低，不是脉冲",
+        "固件必须用边沿中断并自行测低电平时长，不得按电平轮询",
+        "长按开关机由 LTC2954 的 ONT/PDT 计时独立完成，固件不参与"
+      ]
+    },
+    {
+      "signal": "PWR46_UNUSED",
+      "net": null,
+      "gpio": "IO46",
+      "gpio_number": 46,
+      "direction": "unassigned_strapping",
+      "verification_status": "confirmed",
+      "constraints": [
+        "悬空，不接任何网络",
+        "启动绑带：复位窗口靠模组内部弱下拉给 0",
+        "板上不得驱动该脚"
       ]
     },
     {
@@ -516,19 +531,20 @@
       "status": "recommended_initial",
       "verification": "charge_current_ntc_sys_power_path_and_thermal_test"
     },
-    "TPS3424": {
-      "mpn": "TPS3424A11C13ADRLR",
-      "lcsc": null,
-      "package": "SOT-5X3_DRL_8pin",
+    "LTC2954": {
+      "mpn": "LTC2954ITS8-1#TRPBF",
+      "lcsc": "C580654",
+      "package": "TSOT-23-8",
       "values": {
-        "short_press": "50.64ms_candidate_C_SPT_120pF",
-        "long_press": "1.98s_candidate_C_LPT_4.7nF",
-        "spt": "120pF_C1643",
-        "lpt": "4.7nF_C53987",
-        "vdd": "VSYS",
-        "reset": "PWR_STATE_to_TPS22965_ON",
-        "pwr_state_sense": "PWR_STATE_direct_to_IO46",
-        "pwr_button_domain": "VSYS_PB_and_PWR_STATE_shared_read",
+        "turn_on_total": "1.76s_candidate_tDB_ON_32ms_plus_tONT_1.732s",
+        "turn_off_total": "2.18s_candidate_tPD_MIN_64ms_plus_tPDT_2.116s",
+        "cont": "270nF_lcsc_tbd",
+        "cpdt": "330nF_lcsc_tbd",
+        "vin": "VSYS",
+        "en": "open_drain_high_true_pulled_up_100k_to_VSYS_to_PWR_STATE",
+        "pwr_state_pullup": "100kohm_to_VSYS_required_single_group",
+        "pwr_int_sense": "PWR_INT_to_IO8_edge_interrupt_measure_low_duration",
+        "pwr_button_domain": "VSYS_PB_button_only",
         "button_mpn": "TSW063G43-250K",
         "button_lcsc": "C722964",
         "button_quantity": 2,
@@ -536,12 +552,12 @@
         "button_inventory_snapshot_date": "2026-09-13",
         "button_lcsc_live_stock": 70,
         "button_lcsc_query_date": "2026-09-14",
-        "kill": "VDD",
-        "int": "open_drain_to_TP_PWR_INT_with_10kohm_to_V3V3",
-        "reset_int_testpoints": true
+        "kill": "pulled_up_100k_to_V3V3_no_mcu_termination",
+        "int": "open_drain_active_low_to_TP_PWR_INT_with_10kohm_to_V3V3",
+        "en_int_testpoints": true
       },
       "status": "recommended_initial",
-      "verification": "calculate_short_long_press_timing_per_purchased_revision"
+      "verification": "calculate_ont_pdt_timing_per_datasheet_2954fb_and_prototype_kill_512ms_window"
     },
     "TPS22965": {
       "mpn": "TPS22965DSGR",
@@ -680,7 +696,7 @@
       "nominal_voltage": "NVDC_system_voltage",
       "current_target": "tbd",
       "consumers": [
-        "TPS3424.VDD",
+        "LTC2954.VIN",
         "TPS22965.IN",
         "system_power_path"
       ],
@@ -691,7 +707,7 @@
       "name": "VMAIN",
       "class": "switched_battery_high_current",
       "source": "TPS22965.OUT",
-      "control": "TPS3424.RESET_to_PWR_STATE",
+      "control": "LTC2954.EN_via_100k_pullup_to_VSYS",
       "nominal_voltage": "VSYS_system_voltage",
       "current_target": "continuous_gt_1A_peak_gt_2A",
       "consumers": [
@@ -1190,7 +1206,7 @@
       "class": "power_reserved",
       "endpoints": [
         "BQ25895.SYS",
-        "TPS3424.VDD",
+        "LTC2954.VIN",
         "TPS22965.IN",
         "TP_VSYS"
       ],
@@ -1200,20 +1216,34 @@
       "name": "PWR_STATE",
       "class": "power_control",
       "endpoints": [
-        "TPS3424.RESET",
+        "LTC2954.EN",
+        "PWR_STATE_PULLUP_100K",
         "TPS22965.ON",
-        "ESP32.IO46",
+        "TLV62569.EN",
         "TP_PWR_STATE"
       ],
       "status": "recommended_initial",
-      "verification": "reset_latch_and_power_state_waveform",
-      "note": "SYS_EN 是该物理网控制 TPS22965 的功能称呼"
+      "verification": "en_toggle_and_power_state_waveform",
+      "note": "SYS_EN 是该物理网控制 TPS22965 的功能称呼；100kΩ 上拉至 VSYS 为必需项，恰好一组"
+    },
+    {
+      "name": "PWR_INT",
+      "class": "power_control",
+      "endpoints": [
+        "LTC2954.INT",
+        "PWR_INT_PULLUP_10K",
+        "ESP32.IO8",
+        "TP_PWR_INT"
+      ],
+      "status": "recommended_initial",
+      "verification": "int_assertion_and_low_duration_waveform",
+      "note": "开漏低有效按键状态，不是脉冲；按下期间持续为低"
     },
     {
       "name": "PWR_BUTTON",
       "class": "button_vsys_domain",
       "endpoints": [
-        "TPS3424.PB",
+        "LTC2954.PB",
         "SW_PWR_NO",
         "GND"
       ],
@@ -1643,11 +1673,11 @@
       "address": "0x6A"
     },
     {
-      "part": "TPS3424A11C13ADRLR",
-      "lcsc": null,
-      "role": "pushbutton_power_latch",
+      "part": "LTC2954ITS8-1#TRPBF",
+      "lcsc": "C580654",
+      "role": "pushbutton_power_toggle",
       "status": "recommended_initial",
-      "package": "SOT-5X3_DRL_8pin"
+      "package": "TSOT-23-8"
     },
     {
       "reference": "SW_BOOT_NO",
@@ -1666,7 +1696,7 @@
       "reference": "SW_PWR_NO",
       "part": "TSW063G43-250K",
       "lcsc": "C722964",
-      "role": "TPS3424_PB_power_button",
+      "role": "LTC2954_PB_power_button",
       "status": "confirmed_design_locked_inventory_available",
       "package": "SMD_6.1x6.1x4.3mm_SPST",
       "quantity": 1,
@@ -1937,7 +1967,7 @@
         "USB_C",
         "BATTERY",
         "BQ25895",
-        "TPS3424",
+        "LTC2954",
         "TPS22965",
         "TLV62569"
       ],
@@ -1969,7 +1999,7 @@
       ],
       "nets": [
         "BOOT0",
-        "PWR_STATE",
+        "PWR_INT",
         "RESET_N",
         "USB_D+",
         "USB_D-"
@@ -2131,7 +2161,7 @@
     },
     {
       "id": "HW-OI-003",
-      "topic": "TPS3424/TPS22965 外围与 PWR 时序",
+      "topic": "LTC2954/TPS22965 外围与 PWR 时序",
       "verification": "ERC + 按键/掉压波形",
       "status": "must_prototype_validate"
     },
@@ -2246,7 +2276,7 @@
     ],
     "required_gpio_signals": [
       "BOOT0",
-      "PWR_STATE",
+      "PWR_INT",
       "PVDF_ADC",
       "PVDF_CMP_WAKE",
       "I2C_SDA",

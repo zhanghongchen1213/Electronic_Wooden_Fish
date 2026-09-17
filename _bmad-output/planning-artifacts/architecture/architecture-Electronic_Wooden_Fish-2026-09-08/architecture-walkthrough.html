@@ -270,7 +270,7 @@ sequenceDiagram
         <thead><tr><th>功能</th><th>信号</th><th>GPIO</th><th>约束</th></tr></thead>
         <tbody>
           <tr><td>BOOT</td><td>BOOT0</td><td class="mono">IO0</td><td>启动绑带；下载路径</td></tr>
-          <tr><td>PWR</td><td>运行输入</td><td class="mono">IO8</td><td>读 TPS3424 的 PWR_INT 脉冲（短按 50 ms／长按 100 ms）；边沿中断；长按开关机归板级电源</td></tr>
+          <tr><td>PWR</td><td>运行输入</td><td class="mono">IO8</td><td>读 LTC2954 的 PWR_INT（开漏低有效、按下期间持续为低，非脉冲）；边沿中断并自测低电平时长；长按开关机归板级 LTC2954 计时</td></tr>
           <tr><td>RESET</td><td>EN</td><td class="mono">EN</td><td>独立按键/测试点</td></tr>
           <tr><td>PVDF</td><td>ADC</td><td class="mono">IO9</td><td>ADC1_CH8；前端限流/钳位</td></tr>
           <tr><td>PVDF 唤醒</td><td>比较器</td><td class="mono">IO11</td><td>低功耗唤醒；醒后 ADC 确认</td></tr>

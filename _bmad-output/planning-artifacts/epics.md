@@ -118,7 +118,7 @@ inputDocuments:
 - **sync-contract.md 冻结为前置**（架构 Deferred，耦合 AD-3/19）：backend 与 Embedded 各自的模块 spec/实现**拆分前**，须先经 `docs/contracts/sync-contract.md` 冻结：同步字段与状态词表、`round_id` 跨轮归属、未确认完成的「从头开始」跨轮竞态、确认回传字段、快照水位 S/消息序号、JSON schema 与文件粒度（`[ASSUMPTION A-2]`）、WebSocket 帧/心跳/重连参数。→ 落 S0，先于 E2/E4/S1/S3 实现。
 - **固定《心经》canonical 单源**：单一落盘来源、三端构建/打包期嵌入并校验 `scripture_version`；设备内置字形仅覆盖该部经文。（AD-4）→ S0 + S1 + S3 + E3
 - **跨层同步字段清单**：`device_id` · `local_total` · `acked_total` · `scripture_version` · `round_id` · `round_state` · `round_cursor` · `command_revision` · `battery_percent` · `network_mode` · `audio_config_version` · `firmware_version`；事件来源 `physical_pvdf`、`device_touch`；同步状态词表固定（本地已记录/同步中/已同步/待同步/同步失败；待设备应用为命令独立维度）。（PRD §7 + spine §Structural Seed）
-- **板级 GPIO 合同**（spine 默认合同，冲突须先改 spine 再调整）：BOOT IO0 / PWR IO8（读 TPS3424 的 `PWR_INT` 脉冲：短按 50 ms／长按 100 ms；固件只读且必须用边沿中断） / RESET EN / PVDF ADC IO9 / PVDF 唤醒 IO11 / 共享 I²C IO1·IO2（BQ25895·CW2015·CST9217·ES8311·QMI8658C）/ CST9217 IO38·IO39 / QMI8658C INT1 IO41（INT2 不接、不占 IO45）/ CO5300 IO4·40·5·6·7·12·42·47 / ES8311 IO13·14·17·18·21 / NS4150B PA_EN IO48 / Air780EGP UART IO43·44、DTR IO10、RST IO15、NET_STATUS 兼容位 IO16 / M100 GNSS_VCC=NC/TP（BQ25895 的 OTG 脚已硬件接地，不占 GPIO）/ RGB DATA IO3 / USB D−·D+ IO19·IO20。启动绑带：下载要求 GPIO0=0、GPIO46=0。
+- **板级 GPIO 合同**（spine 默认合同，冲突须先改 spine 再调整）：BOOT IO0 / PWR IO8（读 LTC2954 的 `PWR_INT`：开漏低有效，按下期间持续为低、非脉冲；固件只读且必须用边沿中断捕获并自行测低电平时长，应用层不得按电平轮询） / RESET EN / PVDF ADC IO9 / PVDF 唤醒 IO11 / 共享 I²C IO1·IO2（BQ25895·CW2015·CST9217·ES8311·QMI8658C）/ CST9217 IO38·IO39 / QMI8658C INT1 IO41（INT2 不接、不占 IO45）/ CO5300 IO4·40·5·6·7·12·42·47 / ES8311 IO13·14·17·18·21 / NS4150B PA_EN IO48 / Air780EGP UART IO43·44、DTR IO10、RST IO15、NET_STATUS 兼容位 IO16 / M100 GNSS_VCC=NC/TP（BQ25895 的 OTG 脚已硬件接地，不占 GPIO）/ RGB DATA IO3 / USB D−·D+ IO19·IO20。启动绑带：下载要求 GPIO0=0、GPIO46=0。
 - **结构目录 seed**：`Embedded/`（ESP-IDF：components/BSP + platform + services + app_state + main）、`cloud/backend/`（Spring Boot 单进程 jar + `data/` JSON 状态文件）、`cloud/frontend/`（uni-app 微信小程序）；本仓库三个目录已存在但为空，属绿地实现起点。
 - **技术栈基线**：ESP-IDF ≥5.5.4,<5.6.0 + LVGL 8.4（沿用 legbot）；Spring Boot 3.3.7 + Java 17 + Maven（沿用 miaowu `backend/pom.xml`）；uni-app Vue 3 + TS + Vite + Pinia（沿用 miaowu `frontend/package.json`）；本地脚本沿用 miaowu `env-scripts`。版本出处/EOL 与升级时机见 spine Deferred，不在此重复承诺。
 - **复用与不沿用**：复用 `legbot_watch`（CO5300/CST9217/CW2015/QMI8658C/ES8311/NS4150B BSP、共享 I²C、LVGL 主页/状态栏/下滑设置/亮屏时序）与 `main_control`（Air780EGP UART/AT、DTR 休眠唤醒、PDP、HTTPS JSON、退避、GPS 开关）；不照搬其引脚常量、ML307R/BLE/外骨骼业务、QMI8658C INT2→IO45 合同、四主页与产品 payload。
@@ -227,7 +227,7 @@ FR-F-010: Epic S4 - 空态与失败态
 - **As a** 诵经者，**I want** 设备电源行为符合硬件合同（PWR/BOOT/RESET、充电识别、长按关机归板级），**So that** 不会因固件误关机或复位异常而丢节奏。
 
 **Acceptance Criteria:**
-- Given 固件运行中，When 读到 PWR(IO8，读 TPS3424 的 `PWR_INT` 脉冲)/BOOT(IO0)/EN 输入，Then 固件只读 PWR 且必须用边沿中断捕获 `PWR_INT` 脉冲、不得按电平轮询、不模拟软件关机；长按 PWR 不触发固件关机（由板级电源电路处理）。
+- Given 固件运行中，When 读到 PWR(IO8，读 LTC2954 的 `PWR_INT`，开漏低有效、按下期间持续为低)/BOOT(IO0)/EN 输入，Then 固件只读 PWR 且必须用边沿中断捕获 `PWR_INT` 并自行测量低电平时长以区分短按与长按（该信号是按键电平状态、不是脉冲），应用层不得按电平轮询（进入 light-sleep 时该脚的电平唤醒能力仍须保留）、不模拟软件关机；长按 PWR 不触发固件关机（由板级电源电路处理）。
 - Given USB-C 插入充电，When 充电状态变化，Then 固件发布 `charging` 电源状态事件供上层消费，且不打断已持久化状态。
 - Given 需要进入下载模式，When 操作 BOOT+RESET，Then 能完成下载；启动绑带 GPIO0/45/46 采样不被 QMI8658C 输出推错电平。
 

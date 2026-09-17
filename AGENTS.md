@@ -45,14 +45,14 @@
 - 读/写仓库文本文件默认 UTF-8 无 BOM；见到乱码（`纭/锛/涓`、`FF FE` 开头=UTF-16LE）即停并改写，禁止把乱码写入文档/commit。
 
 ### 3.4 电源与按键
-- PWR=IO8（**只读输入**；信号是 TPS3424 的 `PWR_INT` 脉冲，短按 50 ms／长按 100 ms，固件必须用边沿中断，不得按电平轮询）、BOOT0=IO0、EN=复位。IO46 已悬空，不再承担 PWR。**固件不接管硬件关机**：禁止用 `esp_deep_sleep_start`/`esp_restart`/仅关屏/空循环模拟关机；PWR 只做熄屏点亮 / 亮屏切页。
+- PWR=IO8（**只读输入**；信号是 LTC2954 的 `PWR_INT`，开漏低有效，**按下期间持续为低、不是脉冲**，固件必须用边沿中断捕获并自行测低电平时长，不得按电平轮询）、BOOT0=IO0、EN=复位。IO46 已悬空，不再承担 PWR。**固件不接管硬件关机**：禁止用 `esp_deep_sleep_start`/`esp_restart`/仅关屏/空循环模拟关机；**也禁止用任何 GPIO 驱动 LTC2954 的 `KILL`**（该脚只做无主控端接）；PWR 只做熄屏点亮 / 亮屏切页。
 - 4G 发射/低电：先保证累计落盘再执行其它（AD-13）；充电期间暂停输入与音频（FR-E-001）。
 - sdkconfig 锚点（EWF，随 E1 建立）：`CONFIG_LV_COLOR_DEPTH=16`+`CONFIG_LV_COLOR_16_SWAP=y`、`CONFIG_USJ_ENABLE_USB_SERIAL_JTAG=y`、`CONFIG_USJ_NO_AUTO_LS_ON_CONNECTION=y`、`CONFIG_ESP_CONSOLE_USB_SERIAL_JTAG=y`、`CONFIG_LV_MEM_CUSTOM=y`、`CONFIG_LV_DISP_DEF_REFR_PERIOD=8` 等（详见 legbot `sdkconfig.defaults` 蓝本；USB 连接时禁用自动 light sleep 防串口失联）。
 
 ### 3.5 EWF 差异红线（与 legbot 不同，勿照搬错误方向）
 - **无** BLE/Wi-Fi/GPS/外骨骼/云支付 业务链路；`lvgl-design` 与 docs 迁移内容中这些字句仅为排除说明。
 - 设备顶部可呈现 4G/Wi-Fi/蓝牙/GPS 信号组件及 connected/no-signal/disabled 状态；这些图标只表达本地能力状态，不改变 MVP 无 BLE/Wi-Fi/GPS 业务链路的边界。
-- 4G = **Air780EGP**（IO43/44 UART + DTR IO10/RST IO15/NET_STATUS 兼容位 IO16）；`IO8` 现分配为 **PWR 按键输入**（读 TPS3424 的 `PWR_INT` 脉冲），M100 `GNSS_VCC` 留 NC/测试点，不连接 ESP32。AT/联网经验已迁移至 **`docs/embedded/4g/`**（源 `main_control`，HEAD `fb458b9`）；勿从 legbot 引（其用 ML307R 不适用）。完整电源/FPC/载板网络见 `docs/hardware/电子木鱼-硬件网络清单.json`。
+- 4G = **Air780EGP**（IO43/44 UART + DTR IO10/RST IO15/NET_STATUS 兼容位 IO16）；`IO8` 现分配为 **PWR 按键输入**（读 LTC2954 的 `PWR_INT`），M100 `GNSS_VCC` 留 NC/测试点，不连接 ESP32。AT/联网经验已迁移至 **`docs/embedded/4g/`**（源 `main_control`，HEAD `fb458b9`）；勿从 legbot 引（其用 ML307R 不适用）。完整电源/FPC/载板网络见 `docs/hardware/电子木鱼-硬件网络清单.json`。
 - 后端持久化 = **JSON 原子文件、零数据库**（AD-16，覆盖早期 SQLite）。
 - 键盘输入含 PVDF（比较器 IO11 唤醒 + ADC IO9 确认，ADC1_CH8），legbot 无此，按固件 story E2.5 实现。
 - 引脚/板级唯一权威：`ARCHITECTURE-SPINE.md` §板级合同；冲突先改 spine 再调代码。

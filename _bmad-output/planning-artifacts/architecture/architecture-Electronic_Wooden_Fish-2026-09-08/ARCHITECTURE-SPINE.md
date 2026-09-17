@@ -248,7 +248,7 @@ flowchart LR
 | 功能 | 信号 | ESP32-S3 GPIO | 约束 |
 | --- | --- | ---: | --- |
 | BOOT | BOOT0 | IO0 | 启动绑带；保留下载路径 |
-| PWR | 运行态输入 | IO8 | 读 TPS3424 的 `PWR_INT` 脉冲（短按 50 ms／长按 100 ms）；固件只读且**必须用边沿中断**，不得按电平轮询；长按开关机由板级电源 |
+| PWR | 运行态输入 | IO8 | 读 LTC2954 的 `PWR_INT`（开漏低有效，10 kΩ 上拉至 `V3V3`）；PB 按下即拉低并**在按下期间持续为低**，不是脉冲——固件只读且**必须用边沿中断**捕获、自行测低电平时长，不得按电平轮询；长按开关机由板级 LTC2954 的 ONT/PDT 计时独立完成，固件不参与 |
 | RESET | EN | EN | 独立按键/测试点 |
 | PVDF | ADC | IO9 | ADC1_CH8；前端限流/钳位、控输入范围 |
 | PVDF 唤醒 | 比较器输出 | IO11 | 低功耗 GPIO 唤醒；醒后 ADC 确认有效敲击 |
@@ -263,13 +263,27 @@ flowchart LR
 | RGB | DATA | IO3 | 状态灯，不作调试灯 |
 | USB | D− / D+ | IO19/20 | 原生 USB-Serial-JTAG |
 
-GPIO45 保持未接或按模组要求处理（其影响 VDD_SPI 启动采样）；GPIO33–37 通常与 Octal Flash/PSRAM 相关、不作通用 GPIO。启动绑带约束：下载要求 GPIO0=0、GPIO46=0；**IO46 现悬空**，靠模组内部弱下拉在复位采样窗口给出 0，板上不得再驱动该脚；QMI8658A 输出不得在复位采样窗口把 IO0/45 推到错误电平（详见工程验证门禁）。
+**按键行为合同（产品口径，2026-09-17 锁定；实现见《LTC2954ITS8-1 外围电路设计与接线》）**
 
-**PWR 输入电平域**：TPS3424 的 VDD 接 `VSYS`，其推挽 RESET 的高电平即 `VSYS`（最高 4.2 V），超出 ESP32-S3 的 IO 输入上限。因此 PWR 感知**不经 `PWR_STATE`**，而走 `PWR_INT`——TPS3424 的 INT 是开漏输出、由 10 kΩ 上拉到 `V3V3`，电平恒在 0~3.3 V，天然合规。`PWR_STATE` 只用于驱动 TPS22965 的 ON 与 TLV62569 的 EN，不接任何 ESP32 引脚。
+| 当前状态 | 操作 | 硬件动作 | 结果 | 依赖固件 |
+| --- | --- | --- | --- | --- |
+| 关机 | 长按 SW2（PWR）约 2 s | LTC2954 经 ONT 计时后释放 `EN` 为高 | 开机 | **否，纯硬件** |
+| 开机 | 长按 SW2（PWR）约 2 s | LTC2954 经 PDT 计时后释放 `EN` 为低 | 关机 | **否，纯硬件** |
+| 开机 | 短按 SW2（PWR） | LTC2954 `INT` 拉低 → ESP32 IO8 | 固件识别并执行操作 | 是 |
+| 关机 | **先**按住 SW1（BOOT0），**再**长按 SW2 | strapping 在 EN 上升沿采样 GPIO0=0、GPIO46=0 | 进 Joint Download Boot | 否 |
+| 开机 | 插 USB-C | USB-Serial-JTAG，主机自动复位 | 免按键烧录 | 否 |
+
+两条硬约束：**长按开关机必须纯硬件完成**——关机态 ESP32 无电、固件无法参与，这是本方案放弃 TPS3424 的唯一理由，也是选 LTC2954 的唯一判据；**SW1 与 SW2 的按下顺序不可颠倒**——strapping 只在 EN 上升沿采样一次，SW2 先通则 GPIO0 已锁存为 1，下载模式不可达。
+
+GPIO45 保持未接或按模组要求处理（其影响 VDD_SPI 启动采样）；GPIO33–37 通常与 Octal Flash/PSRAM 相关、不作通用 GPIO。启动绑带约束：下载要求 GPIO0=0、GPIO46=0；**IO46 现悬空**，靠模组内部弱下拉在复位采样窗口给出 0，板上不得再驱动该脚；QMI8658A 输出不得在复位采样窗口把 IO0/45 推到错误电平（详见工程验证门禁）。**下载入口的操作序列**：先按住 SW1（BOOT0）不放，再长按 SW2（PWR）至 LTC2954 的 ONT 计时到期使系统上电；SW1 必须持续按住到 V3V3 建立、ESP32 EN 释放并完成 strapping 采样之后。顺序颠倒则 GPIO0 已被采样为 1，下载模式不可达。
+
+**PWR 输入电平域**：LTC2954 的 VIN 接 `VSYS`。PWR 感知**不经 `PWR_STATE`**，而走 `PWR_INT`——LTC2954 的 `INT` 是开漏低有效输出，由 10 kΩ 上拉到 `V3V3`，电平恒在 0~3.3 V，天然合规。`PWR_STATE` 由 LTC2954-1 的开漏 `EN` 经 **100 kΩ 上拉到 `VSYS`** 得到（高电平 = `VSYS`，最高 4.2 V），只驱动 TPS22965 的 ON 与 TLV62569 的 EN，**不接任何 ESP32 引脚**。
+
+**该上拉是必需项，不是可选**：TPS22965（Rev. F）的 ON 只给出 0.5 µA 漏电规格、无内部上拉；TLV62569（Rev. C）明写 EN *"must be terminated and should not be left floating"*。LTC2954-1 的 EN 在 asserted 时为高阻态，若无上拉则 `PWR_STATE` 悬空，下游两脚状态不确定。`PWR_STATE` 上**恰好一组**上拉，不得再并第二组。
 
 **I²C 总线与器件**：BQ25895（TI 固定 7-bit `0x6A`）、CW2015（约 `0x62`）、CST9217（7-bit `0x5A`）、ES8311（地址由 CE/CDATA 配置，首版参考 `0x18`）、QMI8658A（首版 SA0=高，`0x6B`）共用一组总线与上拉；最终地址以目标物料 + 实板上电扫描为准，五个地址不得冲突。QMI8658A 仅接 INT1，INT2 不接、不占 GPIO45。
 
-**电源分轨**：USB-C 单入口经 BQ25895 做 NVDC 充电与系统 power-path；BQ `SYS` pin 对应板级 `VSYS`，TPS3424 锁存并控制 TPS22965 形成 `VMAIN`，Air780EGP/M100 VIN 经该负载开关供电；TLV62569DBVR 为 `VMAIN→V3V3` 首版候选，NS4150B 使用滤波后的 `V3V3_A`。AMS1117 类低压差稳压器不得承担 Air780EGP 主供电；充电期间保持音频供电稳定并验证低频噪声。
+**电源分轨**：USB-C 单入口经 BQ25895 做 NVDC 充电与系统 power-path；BQ `SYS` pin 对应板级 `VSYS`，LTC2954 以长按切换 `EN` 控制 TPS22965 形成 `VMAIN`，Air780EGP/M100 VIN 经该负载开关供电；TLV62569DBVR 为 `VMAIN→V3V3` 首版候选，NS4150B 使用滤波后的 `V3V3_A`。AMS1117 类低压差稳压器不得承担 Air780EGP 主供电；充电期间保持音频供电稳定并验证低频噪声。
 
 **USB 与 4G 载板边界**：USB-C D+/D− 直连 ESP32 USB-Serial-JTAG；BQ25895 D+/D− 不接 USB-C 数据线，固定输入限流并关闭 BC1.2 自动检测。M100 GNSS_VCC 为 NC/测试点；M100 NET_STATUS 不接 ESP32。（`IO8` 已分配为 PWR 按键输入，见上方 GPIO 基线，**不再是保留脚**。）
 
