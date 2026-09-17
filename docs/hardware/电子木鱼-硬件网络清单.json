@@ -1,6 +1,6 @@
 {
   "schema_version": "1.2.0",
-  "maintenance_policy": "已冻结，不随每次网表导出同步。原因：固件工程（Embedded/）尚未建立，当前没有代码消费本清单，逐次手工同步的成本高于收益，且既往手工同步已因位号漂移出过错。待 E1 建立固件工程时，按当次网表一次性重新生成，或届时决定废弃。冻结期间硬件事实以《电子木鱼-硬件原理图设计基线.md》与各《外围电路设计与接线》为准；本文件保留供固件实施阶段取用。本次（2026-09-17）按键控制器由 TPS3424 换为 LTC2954，随之做了最小一致性修正：PWR_STATE 的来源与上拉、PWR_INT 的语义与其缺失的 net 条目、IO46 由 PWR_STATE 感知改为悬空、以及 TPS3424 残留全部换名。此为换型一致性修正，不是网表同步，冻结条款其余部分仍有效。",
+  "maintenance_policy": "已冻结，不随每次网表导出同步。原因：固件工程（Embedded/）尚未建立，当前没有代码消费本清单，逐次手工同步的成本高于收益，且既往手工同步已因位号漂移出过错。待 E1 建立固件工程时，按当次网表一次性重新生成，或届时决定废弃。冻结期间硬件事实以《电子木鱼-硬件原理图设计基线.md》与各《外围电路设计与接线》为准；本文件保留供固件实施阶段取用。本次（2026-09-17）按键控制器由 TPS3424 换为 LTC2954，随之做了最小一致性修正：PWR_STATE 的来源与上拉、PWR_INT 的语义与其缺失的 net 条目、IO46 由 PWR_STATE 感知改为悬空、以及 TPS3424 残留全部换名。此为换型一致性修正，不是网表同步，冻结条款其余部分仍有效。另按最新网表 Netlist_Schematic1_2026-09-17 (4).tel 同步 CW2015CHBD 的核验状态：地址 0x62、电源脚、ALRT 上拉与测试点已由 Cellwise 手册与网表核验通过。",
   "manifest_type": "ewf_hardware_schematic_baseline",
   "project": "Electronic_Wooden_Fish",
   "status": "baseline_not_prototype_verified",
@@ -467,12 +467,12 @@
         "address_7bit": "0x62",
         "address_int": 98,
         "address_source": "Cellwise_CW2015CHBD_datasheet",
-        "verification_status": "recommended_initial",
+        "verification_status": "confirmed",
         "role": "fuel_gauge",
         "power_net": "V3V3",
         "alert": "CW2015_ALRT_TP",
         "quick_start": "software_mode_register",
-        "alert_status": "user_confirmed_netlist_pending"
+        "alert_status": "netlist_verified"
       },
       {
         "part": "CST9217",
@@ -1754,11 +1754,11 @@
       "part": "CW2015CHBD",
       "lcsc": "C881838",
       "role": "fuel_gauge",
-      "status": "recommended_initial",
+      "status": "confirmed",
       "address": "0x62",
       "package": "TDFN8-EP(2x3)",
       "alert": "CW2015_ALRT_TP",
-      "alert_status": "user_confirmed_netlist_pending"
+      "alert_status": "netlist_verified"
     },
     {
       "part": "QMI8658A",

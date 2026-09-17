@@ -1,11 +1,14 @@
 # TLV7042DGKR 与 TLV2369IDGKR PVDF 前端设计与接线
 
+> **本版已失效，待重新收敛。** 依据网表 `Netlist_Schematic1_2026-09-17 (3).tel`（SHA-256 `18e8f80edee5e2a9c78f1a72e781da81276be7833e9795e958a9b3b2246d9ef3`）；未通过项：`PVDF_CMP_WAKE` 网络缺 `TP_PVDF_CMP` 测试点（网络清单与硬件基线均要求该端点），修正后须重新导出网表复核。TLV2369IDGKR 脚 5/6/7 已按单位增益跟随器端接、TLV7042DGKR 脚 5/6 已接确定电平，端接电平落在手册共模输入范围内。
+
 ## 1. 最终版状态
 
 - **版本**：EWF-PVDF-FINAL-2026-09-16
+- **最近核验**：未通过
 - **状态**：设计参数已收口；A 通道、阈值分压、ADC RC、供电和开漏输出已由最新网表核对。B 通道处理、输入钳位和样机参数仍是验收门禁，不能标为已通过。
-- **最新网表**：`Netlist_Schematic1_2026-09-15 (3).tel`
-- **网表 SHA-256**：`c7e341a765f722af1a4e65e0f2cdf66a99585d824c3a4ffb9ab8208ab54b4130`
+- **最新网表**：`Netlist_Schematic1_2026-09-17 (3).tel`
+- **网表 SHA-256**：`18e8f80edee5e2a9c78f1a72e781da81276be7833e9795e958a9b3b2246d9ef3`
 - **项目网络**：`PVDF_RAW`、`TLV_AND`、`PVDF_ADC`、`PVDF_CMP_WAKE`、`IO9/ADC1_CH8`、`IO11`。
 
 ## 2. 最终设计参数
