@@ -22,11 +22,11 @@ status: reconciled
 2. GPIO、芯片、电源、USB、I2C、音频和屏幕引脚从 PRD/addendum 主文移到根目录 `architecture.md`。
 3. 自动切换旧规则被更正为“《心经》完成后停在末字，礼花/弹窗期间忽略敲击；用户选择从头开始或退出”。
 4. 原先的 PostgreSQL 依赖被更正为 backend 内部单文件 SQLite，部署运维不纳入产品 PRD。
-5. 本轮新增的 ESP32-S3-N16R8、CW2015、QMI8658C、CO5300、CST9217、ES8311、NS4150B、原生 USB-Serial-JTAG 和 RESET 路径已写入架构文档。
+5. 本轮新增的 ESP32-S3-N16R8、CW2015、QMI8658A、CO5300、CST9217、ES8311、NS4150B、原生 USB-Serial-JTAG 和 RESET 路径已写入架构文档。
 
 ## 保留为工程门禁的内容（历史对账；当前细节以硬件基线为准）
 
-- GPIO45 启动绑带约束保留；QMI8658C 仅接 INT1→IO41，INT2 不接；IO9 为 PVDF ADC，IO8 已释放为 BQ25895 `BQ_OTG_EN`。
+- GPIO45 启动绑带约束保留；QMI8658A 仅接 INT1→IO41，INT2 不接；IO9 为 PVDF ADC，IO8 已释放为 BQ25895 `BQ_OTG_EN`。
 - Air780E 需要独立高电流电池轨，AMS1117 不承担 4G 主供电。
 - CO5300 FPC 电源/时序、共享 I2C 实际地址、PVDF 模拟前端和音频电源仍需按最终器件资料与上电实测核验。
 - USB 原生下载/JTAG 可去掉 CH340X，但必须保留 GPIO0、EN/RESET、VBUS/GND 和正确启动绑带时序。

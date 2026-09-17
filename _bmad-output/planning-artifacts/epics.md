@@ -35,7 +35,7 @@ inputDocuments:
 #### 嵌入式层 Embedded（`FR-E-*`）
 
 - **FR-E-001 — 电源、充电与复位**：单节锂电 + USB-C 充电 + PWR 硬件开关 + BOOT 与独立 RESET；重启后恢复已持久化的累计数与轮次；充电期间暂停敲击、经文推进与音频，但允许显示充电、电量与同步状态。（→AD-13）
-- **FR-E-002 — PVDF 与低功耗唤醒**：PVDF 为唯一 MVP 实体输入；低功耗比较器输出唤醒，ESP32 ADC 二次确认；QMI8658C 上板但默认不启用，仅接 INT1，不参与 MVP 计数。（→AD-1）
+- **FR-E-002 — PVDF 与低功耗唤醒**：PVDF 为唯一 MVP 实体输入；低功耗比较器输出唤醒，ESP32 ADC 二次确认；QMI8658A 上板但默认不启用，仅接 INT1，不参与 MVP 计数。（→AD-1）
 - **FR-E-003 — 统一有效敲击队列**：`physical_pvdf` 与亮屏木鱼页 `device_touch` 进入**同一个**有效敲击队列；支持 1 秒内 1–20 次；充电中、完成遮罩中、故障锁定中直接忽略。（→AD-1/19）
 - **FR-E-004 — 本地高水位与离线积压**：持久化 `local_total`、`acked_total`、`scripture_version`、`round_state`、`round_cursor` 与待同步标记；离线积压上限 1000；达到上限拒绝新输入并明确提示。（→AD-3/15）
 - **FR-E-005 — 核心音频反馈**：ES8311 + NS4150B + 扬声器输出木鱼音；默认音量 50/100，0 等价静音；高速连击合并为可辨识节奏；音频失败不阻塞计数、持久化与同步；音量跨重启保留。（→AD-12）
@@ -118,11 +118,11 @@ inputDocuments:
 - **sync-contract.md 冻结为前置**（架构 Deferred，耦合 AD-3/19）：backend 与 Embedded 各自的模块 spec/实现**拆分前**，须先经 `docs/contracts/sync-contract.md` 冻结：同步字段与状态词表、`round_id` 跨轮归属、未确认完成的「从头开始」跨轮竞态、确认回传字段、快照水位 S/消息序号、JSON schema 与文件粒度（`[ASSUMPTION A-2]`）、WebSocket 帧/心跳/重连参数。→ 落 S0，先于 E2/E4/S1/S3 实现。
 - **固定《心经》canonical 单源**：单一落盘来源、三端构建/打包期嵌入并校验 `scripture_version`；设备内置字形仅覆盖该部经文。（AD-4）→ S0 + S1 + S3 + E3
 - **跨层同步字段清单**：`device_id` · `local_total` · `acked_total` · `scripture_version` · `round_id` · `round_state` · `round_cursor` · `command_revision` · `battery_percent` · `network_mode` · `audio_config_version` · `firmware_version`；事件来源 `physical_pvdf`、`device_touch`；同步状态词表固定（本地已记录/同步中/已同步/待同步/同步失败；待设备应用为命令独立维度）。（PRD §7 + spine §Structural Seed）
-- **板级 GPIO 合同**（spine 默认合同，冲突须先改 spine 再调整）：BOOT IO0 / PWR IO8（读 LTC2954 的 `PWR_INT`：开漏低有效，按下期间持续为低、非脉冲；固件只读且必须用边沿中断捕获并自行测低电平时长，应用层不得按电平轮询） / RESET EN / PVDF ADC IO9 / PVDF 唤醒 IO11 / 共享 I²C IO1·IO2（BQ25895·CW2015·CST9217·ES8311·QMI8658C）/ CST9217 IO38·IO39 / QMI8658C INT1 IO41（INT2 不接、不占 IO45）/ CO5300 IO4·40·5·6·7·12·42·47 / ES8311 IO13·14·17·18·21 / NS4150B PA_EN IO48 / Air780EGP UART IO43·44、DTR IO10、RST IO15、NET_STATUS 兼容位 IO16 / M100 GNSS_VCC=NC/TP（BQ25895 的 OTG 脚已硬件接地，不占 GPIO）/ RGB DATA IO3 / USB D−·D+ IO19·IO20。启动绑带：下载要求 GPIO0=0、GPIO46=0。
+- **板级 GPIO 合同**（spine 默认合同，冲突须先改 spine 再调整）：BOOT IO0 / PWR IO8（读 LTC2954 的 `PWR_INT`：开漏低有效，按下期间持续为低、非脉冲；固件只读且必须用边沿中断捕获并自行测低电平时长，应用层不得按电平轮询） / RESET EN / PVDF ADC IO9 / PVDF 唤醒 IO11 / 共享 I²C IO1·IO2（BQ25895·CW2015·CST9217·ES8311·QMI8658A）/ CST9217 IO38·IO39 / QMI8658A INT1 IO41（INT2 不接、不占 IO45）/ CO5300 IO4·40·5·6·7·12·42·47 / ES8311 IO13·14·17·18·21 / NS4150B PA_EN IO48 / Air780EGP UART IO43·44、DTR IO10、RST IO15、NET_STATUS 兼容位 IO16 / M100 GNSS_VCC=NC/TP（BQ25895 的 OTG 脚已硬件接地，不占 GPIO）/ RGB DATA IO3 / USB D−·D+ IO19·IO20。启动绑带：下载要求 GPIO0=0、GPIO46=0。
 - **结构目录 seed**：`Embedded/`（ESP-IDF：components/BSP + platform + services + app_state + main）、`cloud/backend/`（Spring Boot 单进程 jar + `data/` JSON 状态文件）、`cloud/frontend/`（uni-app 微信小程序）；本仓库三个目录已存在但为空，属绿地实现起点。
 - **技术栈基线**：ESP-IDF ≥5.5.4,<5.6.0 + LVGL 8.4（沿用 legbot）；Spring Boot 3.3.7 + Java 17 + Maven（沿用 miaowu `backend/pom.xml`）；uni-app Vue 3 + TS + Vite + Pinia（沿用 miaowu `frontend/package.json`）；本地脚本沿用 miaowu `env-scripts`。版本出处/EOL 与升级时机见 spine Deferred，不在此重复承诺。
 - **复用与不沿用**：复用 `legbot_watch`（CO5300/CST9217/CW2015/QMI8658C/ES8311/NS4150B BSP、共享 I²C、LVGL 主页/状态栏/下滑设置/亮屏时序）与 `main_control`（Air780EGP UART/AT、DTR 休眠唤醒、PDP、HTTPS JSON、退避、GPS 开关）；不照搬其引脚常量、ML307R/BLE/外骨骼业务、QMI8658C INT2→IO45 合同、四主页与产品 payload。
-- **工程验证门禁**（PRD §11 + spine）：GPIO0/45/46 绑带与 USB GPIO19/20 无冲突；I²C 扫描 BQ25895/CW2015/CST9217/ES8311/QMI8658C 五器件且地址无冲突；PVDF 单次与 1 秒 20 次计数与完成遮罩忽略；重复 HTTPS/离线恢复/backend 重启/小程序回放与 WebSocket 重连不重复不错序；Air780EGP 发射峰值不掉压；无可信日期不伪造今日统计；命令离线显示待设备应用。
+- **工程验证门禁**（PRD §11 + spine）：GPIO0/45/46 绑带与 USB GPIO19/20 无冲突；I²C 扫描 BQ25895/CW2015/CST9217/ES8311/QMI8658A 五器件且地址无冲突；PVDF 单次与 1 秒 20 次计数与完成遮罩忽略；重复 HTTPS/离线恢复/backend 重启/小程序回放与 WebSocket 重连不重复不错序；Air780EGP 发射峰值不掉压；无可信日期不伪造今日统计；命令离线显示待设备应用。
 - **非目标（不进入任何 story）**：BLE/Wi-Fi 业务链路、GPS 业务、自动 OTA、多设备/换机迁移、公开账号/社交/排行榜/提醒/付费、多平台前端、选经/导入、SQLite/PostgreSQL、量产认证/供应链/云运维。（PRD §8/§9）
 
 #### 设备端 UX 参考（来自 09-08 简报附录 §5，作实现参考，非独立 UX-DR）
@@ -229,7 +229,7 @@ FR-F-010: Epic S4 - 空态与失败态
 **Acceptance Criteria:**
 - Given 固件运行中，When 读到 PWR(IO8，读 LTC2954 的 `PWR_INT`，开漏低有效、按下期间持续为低)/BOOT(IO0)/EN 输入，Then 固件只读 PWR 且必须用边沿中断捕获 `PWR_INT` 并自行测量低电平时长以区分短按与长按（该信号是按键电平状态、不是脉冲），应用层不得按电平轮询（进入 light-sleep 时该脚的电平唤醒能力仍须保留）、不模拟软件关机；长按 PWR 不触发固件关机（由板级电源电路处理）。
 - Given USB-C 插入充电，When 充电状态变化，Then 固件发布 `charging` 电源状态事件供上层消费，且不打断已持久化状态。
-- Given 需要进入下载模式，When 操作 BOOT+RESET，Then 能完成下载；启动绑带 GPIO0/45/46 采样不被 QMI8658C 输出推错电平。
+- Given 需要进入下载模式，When 操作 BOOT+RESET，Then 能完成下载；启动绑带 GPIO0/45/46 采样不被 QMI8658A 输出推错电平。
 
 #### Story E1.4 · 板级总线与 GPIO 合同 bring-up 冒烟
 
@@ -237,7 +237,7 @@ FR-F-010: Epic S4 - 空态与失败态
 - **As a** 设备固件开发者，**I want** 上电对共享 I²C 与 GPIO 布局做一次冒烟扫描，**So that** 在写驱动前确认板级合同与目标物料无冲突。
 
 **Acceptance Criteria:**
-- Given 样机上电，When 执行共享 I²C(IO1/IO2) 扫描，Then 列出 CW2015/CST9217/ES8311/QMI8658C 实际地址，无重复冲突。
+- Given 样机上电，When 执行共享 I²C(IO1/IO2) 扫描，Then 列出 CW2015/CST9217/ES8311/QMI8658A 实际地址，无重复冲突。
 - Given 板级合同已登记，When 比对 GPIO 分配表，Then 无引脚复用冲突（Air780EGP UART IO43/44、USB IO19/20、比较器 IO11 等互不侵占）。
 - Given 某器件地址与合同不符，When 冒烟扫描完成，Then 以日志标记偏差，并提示按「先更新架构主干再调整」流程处理。
 
@@ -308,7 +308,7 @@ FR-F-010: Epic S4 - 空态与失败态
 **Acceptance Criteria:**
 - Given PVDF 产生候选信号，When 比较器输出(IO11)唤醒系统，Then ESP32 醒后由 ADC(IO9) 二次确认，确认通过才投递 `physical_pvdf` 事件。
 - Given 二次确认期间 ADC 输入越界/超阈值，When 判定非有效敲击，Then 丢弃且不推进计数。
-- Given QMI8658C 上板，When MVP 计数流程运行，Then 其不参与敲击判定（仅 INT1 预留未来扩展）。
+- Given QMI8658A 上板，When MVP 计数流程运行，Then 其不参与敲击判定（仅 INT1 预留未来扩展）。
 
 #### Story E2.6 · 20 次/秒与外壳误触的样机演示签收门禁
 

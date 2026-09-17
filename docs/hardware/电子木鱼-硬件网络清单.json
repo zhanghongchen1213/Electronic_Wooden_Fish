@@ -1,6 +1,6 @@
 {
   "schema_version": "1.2.0",
-  "maintenance_policy": "已冻结，不随每次网表导出同步。原因：固件工程（Embedded/）尚未建立，当前没有代码消费本清单，逐次手工同步的成本高于收益，且既往手工同步已因位号漂移出过错。待 E1 建立固件工程时，按当次网表一次性重新生成，或届时决定废弃。冻结期间硬件事实以《电子木鱼-硬件原理图设计基线.md》与各《外围电路设计与接线》为准；本文件保留供固件实施阶段取用。本次（2026-09-17）按键控制器由 TPS3424 换为 LTC2954，随之做了最小一致性修正：PWR_STATE 的来源与上拉、PWR_INT 的语义与其缺失的 net 条目、IO46 由 PWR_STATE 感知改为悬空、以及 TPS3424 残留全部换名。此为换型一致性修正，不是网表同步，冻结条款其余部分仍有效。另按最新网表 Netlist_Schematic1_2026-09-17 (4).tel 同步 CW2015CHBD 的核验状态：地址 0x62、电源脚、ALRT 上拉与测试点已由 Cellwise 手册与网表核验通过。",
+  "maintenance_policy": "已冻结，不随每次导出同步。原因：固件工程（Embedded/）尚未建立，当前没有代码消费本清单，逐次手工同步的成本高于收益，且既往手工同步已因位号漂移出过错。待 E1 建立固件工程时，按当次导出一次性重新生成，或届时决定废弃。冻结期间硬件事实以《电子木鱼-硬件原理图设计基线.md》与各《外围电路设计与接线》为准；本文件保留供固件实施阶段取用。本次（2026-09-17）按键控制器由 TPS3424 换为 LTC2954，随之做了最小一致性修正：PWR_STATE 的来源与上拉、PWR_INT 的语义与其缺失的 net 条目、IO46 由 PWR_STATE 感知改为悬空、以及 TPS3424 残留全部换名。此为换型一致性修正，不是导出同步，冻结条款其余部分仍有效。另同步 CW2015CHBD 的核验状态：地址 0x62、电源脚、ALRT 上拉与测试点已由 Cellwise 手册与接线核验通过。再修正 PVDF 前端拓扑：原 PVDF_RAW / PVDF_ADC 端点把限流电阻置于两网络之间、且不含缓冲输出节点，与实际设计相反；现改为 PVDF_RAW = 限流输出 + 泄放 + 缓冲同相输入 + 测试点，新增 TLV_AND = 缓冲输出 + 反馈 + 隔离电阻 + 比较器同相输入，PVDF_ADC = 隔离输出 + 滤波电容 + IO9 + 测试点，并同步 P05_PVDF 页的元件与网络清单。低漏钳位（PVDF_CLAMP）仍为设计要求的待装配项。",
   "manifest_type": "ewf_hardware_schematic_baseline",
   "project": "Electronic_Wooden_Fish",
   "status": "baseline_not_prototype_verified",
@@ -452,7 +452,7 @@
     "speed_hz_initial": 100000,
     "speed_verification_status": "recommended_initial",
     "arbitration": "single_bsp_owner",
-    "pullup": "shared_pullup_value_tbd",
+    "pullup": "10kohm_to_V3V3",
     "devices": [
       {
         "part": "BQ25895",
@@ -478,7 +478,7 @@
         "part": "CST9217",
         "address_7bit": "0x5A",
         "address_int": 90,
-        "address_source": "PY206_reference",
+        "address_source": "CST9217_datasheet_V1.3_p8_default_0xB4",
         "verification_status": "recommended_initial",
         "role": "touch_controller"
       },
@@ -486,8 +486,8 @@
         "part": "ES8311",
         "address_7bit": "0x18",
         "address_int": 24,
-        "address_source": "CE_CDATA_configuration_reference",
-        "verification_status": "recommended_initial",
+        "address_source": "CE_pin20_tied_low_via_Au_GND",
+        "verification_status": "confirmed",
         "role": "audio_codec",
         "power_net": "V3V3",
         "power_pins": [
@@ -500,8 +500,8 @@
         "part": "QMI8658A",
         "address_7bit": "0x6B",
         "address_int": 107,
-        "address_source": "SA0_high_to_avoid_BQ_0x6A",
-        "verification_status": "recommended_initial",
+        "address_source": "SA0_low_via_GND_to_avoid_BQ_0x6A",
+        "verification_status": "confirmed",
         "role": "imu_future_wom_only",
         "int1_net": "IMU_INT1",
         "int2": "NC"
@@ -596,7 +596,11 @@
         "series_limit": "1Mohm",
         "bias_bleed": "10Mohm",
         "adc_series": "1kohm",
-        "adc_filter": "100nF"
+        "adc_filter": "100nF",
+        "threshold_high": "1Mohm",
+        "threshold_low": "47kohm",
+        "threshold_filter": "100nF",
+        "open_drain_pullup": "10kohm"
       },
       "status": "recommended_initial",
       "verification": "clamp_leakage_common_mode_threshold_hysteresis_and_adc_range"
@@ -1339,22 +1343,35 @@
       "name": "PVDF_RAW",
       "class": "analog_unprotected",
       "endpoints": [
-        "PVDF_CONNECTOR.PVDF+",
-        "R_PVDF_LIMIT.IN",
+        "R_PVDF_SER.OUT",
+        "R_PVDF_BIAS",
+        "PVDF_BUFFER.+INA",
         "TP_PVDF_RAW"
       ],
       "status": "confirmed"
     },
     {
-      "name": "PVDF_ADC",
-      "class": "analog_protected",
+      "name": "TLV_AND",
+      "class": "analog_buffered",
       "endpoints": [
-        "R_PVDF_LIMIT.OUT",
-        "PVDF_CLAMP",
+        "PVDF_BUFFER.OUTA",
+        "PVDF_BUFFER.-INA",
+        "R_PVDF_ADC.IN",
+        "PVDF_COMPARATOR.INA+"
+      ],
+      "status": "confirmed"
+    },
+    {
+      "name": "PVDF_ADC",
+      "class": "analog_filtered",
+      "endpoints": [
+        "R_PVDF_ADC.OUT",
+        "C_PVDF_ADC",
         "ESP32.IO9",
         "TP_PVDF_ADC"
       ],
-      "status": "confirmed"
+      "status": "confirmed",
+      "note": "低漏钳位（PVDF_CLAMP）是设计要求的待装配项，尚未落图；见《电子木鱼-硬件原理图设计基线.md》§5.4 与该前端设计文档的未闭合事项"
     },
     {
       "name": "PVDF_CMP_WAKE",
@@ -1762,7 +1779,7 @@
     },
     {
       "part": "QMI8658A",
-      "lcsc": null,
+      "lcsc": "C3021082",
       "role": "future_wom_imu",
       "status": "recommended_initial",
       "address": "0x6B",
@@ -2078,15 +2095,20 @@
     },
     {
       "id": "P05_PVDF",
-      "title": "PVDF 限流 / 钳位 / 比较器 / ADC",
+      "title": "PVDF 限流 / 缓冲 / 比较器 / ADC",
       "components": [
         "PVDF_CONNECTOR",
         "PVDF_SENSOR",
-        "R_PVDF_LIMIT",
-        "TLV2369"
+        "R_PVDF_SER",
+        "R_PVDF_BIAS",
+        "R_PVDF_ADC",
+        "C_PVDF_ADC",
+        "TLV2369",
+        "TLV7042"
       ],
       "nets": [
         "PVDF_RAW",
+        "TLV_AND",
         "PVDF_ADC",
         "PVDF_CMP_WAKE",
         "V3V3",
@@ -2332,6 +2354,8 @@
       "M100_RXD",
       "M100_DTR",
       "M100_RST",
+      "PVDF_RAW",
+      "TLV_AND",
       "PVDF_ADC",
       "PVDF_CMP_WAKE",
       "LCD_RST",

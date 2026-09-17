@@ -281,7 +281,7 @@ GPIO45 保持未接或按模组要求处理（其影响 VDD_SPI 启动采样）�
 
 **该上拉是必需项，不是可选**：TPS22965（Rev. F）的 ON 只给出 0.5 µA 漏电规格、无内部上拉；TLV62569（Rev. C）明写 EN *"must be terminated and should not be left floating"*。LTC2954-1 的 EN 在 asserted 时为高阻态，若无上拉则 `PWR_STATE` 悬空，下游两脚状态不确定。`PWR_STATE` 上**恰好一组**上拉，不得再并第二组。
 
-**I²C 总线与器件**：BQ25895（TI 固定 7-bit `0x6A`）、CW2015（约 `0x62`）、CST9217（7-bit `0x5A`）、ES8311（地址由 CE/CDATA 配置，首版参考 `0x18`）、QMI8658A（首版 SA0=高，`0x6B`）共用一组总线与上拉；最终地址以目标物料 + 实板上电扫描为准，五个地址不得冲突。QMI8658A 仅接 INT1，INT2 不接、不占 GPIO45。
+**I²C 总线与器件**：BQ25895（TI 固定 7-bit `0x6A`）、CW2015（约 `0x62`）、CST9217（7-bit `0x5A`）、ES8311（地址由 CE/CDATA 配置，首版参考 `0x18`）、QMI8658A（首版 SA0=低，`0x6B`）共用一组总线与上拉；最终地址以目标物料 + 实板上电扫描为准，五个地址不得冲突。QMI8658A 仅接 INT1，INT2 不接、不占 GPIO45。
 
 **电源分轨**：USB-C 单入口经 BQ25895 做 NVDC 充电与系统 power-path；BQ `SYS` pin 对应板级 `VSYS`，LTC2954 以长按切换 `EN` 控制 TPS22965 形成 `VMAIN`，Air780EGP/M100 VIN 经该负载开关供电；TLV62569DBVR 为 `VMAIN→V3V3` 首版候选，NS4150B 使用滤波后的 `V3V3_A`。AMS1117 类低压差稳压器不得承担 Air780EGP 主供电；充电期间保持音频供电稳定并验证低频噪声。
 
