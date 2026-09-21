@@ -1,0 +1,23 @@
+# 电子木鱼生产环境默认配置。
+# 生产域名与微信 AppID 在部署前替换为 EWF 的正式值，不复制 miaowu 配置。
+spring:
+  application:
+    name: electronic-wooden-fish-backend
+  jackson:
+    time-zone: Asia/Shanghai
+
+server:
+  port: 9218
+
+app:
+  data-dir: ./data
+
+jwt:
+  secret: 'replace-with-ewf-jwt-secret'
+  access-token-expiration: 7200000
+  refresh-token-expiration: 2592000000
+
+wechat:
+  mini:
+    app-id: 'replace-with-ewf-wechat-app-id'
+    app-secret: 'replace-with-ewf-wechat-app-secret'

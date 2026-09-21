@@ -1,0 +1,23 @@
+# 电子木鱼本地测试环境配置。
+spring:
+  config:
+    activate:
+      on-profile: local
+  jackson:
+    time-zone: Asia/Shanghai
+
+server:
+  port: 9218
+
+app:
+  data-dir: ./data
+
+jwt:
+  secret: 'replace-with-ewf-local-jwt-secret'
+  access-token-expiration: 7200000
+  refresh-token-expiration: 2592000000
+
+wechat:
+  mini:
+    app-id: 'replace-with-ewf-local-wechat-app-id'
+    app-secret: 'replace-with-ewf-local-wechat-app-secret'

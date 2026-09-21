@@ -3,17 +3,22 @@ name: Electronic_Wooden_Fish
 type: architecture-spine
 purpose: build-substrate
 altitude: feature
-paradigm: "嵌入式：分层 BSP/Driver + FreeRTOS 服务任务事件驱动固件；跨层：设备为事实记录器 + backend 权威的幂等高水位同步"
+paradigm: '嵌入式：分层 BSP/Driver + FreeRTOS 服务任务事件驱动固件；跨层：设备为事实记录器 + backend 权威的幂等高水位同步'
 scope: 整个电子木鱼产品——嵌入式层 Embedded 与软件层 cloud/backend、cloud/frontend
 status: final
 created: 2026-09-08
-updated: 2026-09-21
+updated: 2026-09-22
 binds: [Embedded(FR-E-*), cloud/backend(FR-B-*), cloud/frontend(FR-F-*)]
 sources:
   - _bmad-output/planning-artifacts/briefs/brief-Electronic_Wooden_Fish-2026-09-08/brief.md
   - _bmad-output/planning-artifacts/prds/prd-Electronic_Wooden_Fish-2026-09-07/prd.md
   - /Users/hongchenke/Documents/Github/legbot_watch/_bmad-output/planning-artifacts/architecture/architecture-legbot_watch-2026-07-09/ARCHITECTURE-SPINE.md
   - /Users/hongchenke/Documents/Github/miaowu（backend/pom.xml、frontend/package.json、env-scripts）
+  - /Users/hongchenke/Documents/Github/miaowu/backend/src/main/resources/application.yml
+  - /Users/hongchenke/Documents/Github/miaowu/backend/src/main/resources/application-local.yml
+  - /Users/hongchenke/Documents/Github/miaowu/frontend/.env
+  - /Users/hongchenke/Documents/Github/miaowu/frontend/.env.development
+  - cloud/env-scripts/{start-local-test-backend.sh,stop.sh,build-prod-backend.sh,upload-backend-jars.sh}
   - docs/hardware/电子木鱼-硬件原理图设计基线.md
   - docs/hardware/电子木鱼-硬件网络清单.json
   - docs/hardware/电源网络命名规范.md
@@ -23,7 +28,7 @@ sources:
 
 > **本文件是电子木鱼的跨层架构不变量单一事实源。** 产品意图与功能行为以 [产品简报](../../briefs/brief-Electronic_Wooden_Fish-2026-09-08/brief.md) 和 [PRD](../../prds/prd-Electronic_Wooden_Fish-2026-09-07/prd.md) 为准；板级 GPIO、电源、FPC、器件连接和网络清单以 `docs/hardware/` 为唯一硬件事实源。本项目是个人自用原型：一台设备、一个固定 backend、无量产认证与云运维体系。
 >
-> **本轮覆盖决策：** 后端持久化改为 **JSON 文件、零数据库**，覆盖 PRD FR-B-009 与旧根文档「单文件 SQLite」决定（AD-16）；backend→小程序实时通道**保留 WebSocket**（AD-17）。Fast-path 推断以 `[ASSUMPTION]` 标注；出处与版本核验见 §版本与依据核验出处。
+> **本轮覆盖决策：** 后端持久化改为 **JSON 文件、零数据库**，覆盖 PRD FR-B-009 与旧根文档「单文件 SQLite」决定（AD-16）；backend→小程序实时通道**保留 WebSocket**（AD-17）。本轮新增环境配置与交付脚本契约（AD-20）：backend/frontend 配置文件位置固定，本地脚本不启用公网隧道，Huawei Cloud 只执行通用 Maven/JDK 构建，上传脚本固定 EWF Jar 路径。明文密钥为当前原型的显式风险接受项，正式公开部署前必须复核。出处与版本核验见 §版本与依据核验出处。
 
 ## Design Paradigm
 
@@ -152,7 +157,7 @@ flowchart TD
 
 - **Binds:** backend 进程形态、数据落盘、日统计、鉴权、接口信封
 - **Prevents:** 依赖外部数据库服务、重启丢状态、把配置基线越改越偏
-- **Rule:** backend 沿用 miaowu 骨架：Java 17 + Spring Boot 3.3.7 + Maven（`[ASSUMPTION A-4]`——版本出处与 OSS EOL 见 §版本与依据核验出处及 Deferred），接口统一 `/api/v1` + `{code,message,data}` 信封（code=0 成功），微信登录→单设备身份映射（沿用 miaowu WechatMiniClient/JWT 模式；MVP 单身份单设备，`[ASSUMPTION A-5]`）。**框架版本锚 miaowu pom（用户指定基线）；零库 JSON 原子写的做法借鉴 `legbot_watch/cloud`（其运行于 Spring Boot 3.5.16 + 无库——仅作写入模式先例，不随之改框架版本；升级到受支持维护线见 Deferred）**。**持久化不引入任何数据库**：单实例单进程，后端状态（ack 高水位、游标/轮次、完成、命令、日统计）以 JSON 文件原子落盘（临时文件 + fsync + rename），保存于 `cloud/backend/data/`；backend 重启后全部恢复（SM-5）。`[ASSUMPTION A-2]` JSON 文件 schema 与文件粒度不在本 spine 冻结，须在 backend/embedded 模块 spec 拆分前经 `docs/contracts/sync-contract.md` 收敛。禁启用第二套平行云后端。
+- **Rule:** backend 沿用 miaowu 骨架：Java 17 + Spring Boot 3.3.7 + Maven（`[ASSUMPTION A-4]`——版本出处与 OSS EOL 见 §版本与依据核验出处及 Deferred），接口统一 `/api/v1` + `{code,message,data}` 信封（code=0 成功），微信登录→单设备身份映射（沿用 miaowu WechatMiniClient/JWT 模式；MVP 单身份单设备，`[ASSUMPTION A-5]`）。**框架版本锚 miaowu pom（用户指定基线）；零库 JSON 原子写的做法借鉴 `legbot_watch/cloud`（其运行于 Spring Boot 3.5.16 + 无库——仅作写入模式先例，不随之改框架版本；升级到受支持维护线见 Deferred）**。**持久化不引入任何数据库**：单实例单进程，后端状态（ack 高水位、游标/轮次、完成、命令、日统计）以 JSON 文件原子落盘（临时文件 + fsync + rename），保存于 `cloud/backend/data/`；backend 重启后全部恢复（SM-5）。生产默认配置固定为 `cloud/backend/src/main/resources/application.yml`，本地配置固定为同目录 `application-local.yml` 并由 `local` profile 激活；两者只承载 EWF 的 Spring/JWT/微信登录/JSON 配置，不迁入 miaowu 的数据库、支付、OBS 或管理后台配置。`[ASSUMPTION A-2]` JSON 文件 schema 与文件粒度不在本 spine 冻结，须在 backend/embedded 模块 spec 拆分前经 `docs/contracts/sync-contract.md` 收敛。禁启用第二套平行云后端。
 
 #### AD-17 — frontend 只消费已确认差量：WebSocket 推送 + 快照水位补齐
 
@@ -164,7 +169,7 @@ flowchart TD
 
 - **Binds:** frontend 目录结构、构建/调试、API 接入
 - **Prevents:** 引入多端/App/H5 工程面、绕过统一 API 封装、本地数据入正式统计
-- **Rule:** 沿用 miaowu `frontend` 的 uni-app（Vue 3 + TS + Vite + Pinia）骨架与 HBuilderX 调试方式，仅构建微信小程序。所有后端访问经单一 `VITE_API_BASE_URL` 与统一 `api/request` 封装（信封 + 鉴权头），不直接散落请求；客户端状态只放 Pinia/本地存储，不作权威数据（AD-2）。
+- **Rule:** 沿用 miaowu `frontend` 的 uni-app（Vue 3 + TS + Vite + Pinia）骨架与 HBuilderX 调试方式，仅构建微信小程序。所有后端访问经单一 `VITE_API_BASE_URL` 与统一 `api/request` 封装（信封 + 鉴权头），不直接散落请求；客户端状态只放 Pinia/本地存储，不作权威数据（AD-2）。生产环境配置固定为 `cloud/frontend/.env`，本地测试固定为 `cloud/frontend/.env.development`，本地默认 API 为 `http://localhost:9218/api/v1`；本项目不依赖 `.env.development.local` 运行时覆盖。
 
 #### AD-19 — 经文消费与展示语义：一敲一字、标点随附、不预览未来
 
@@ -172,38 +177,45 @@ flowchart TD
 - **Prevents:** 跳字/重字/乱序、标点空格换行消耗敲击、设备或小程序预览「未来」经文
 - **Rule:** 每轮推进按 canonical 序列（AD-4）：一次有效敲击推进下一个**可消费汉字**；标点、空格、换行随相邻汉字在同一步内自动出现，**不消耗敲击、不单独推进游标**（FR-B-003）。无论设备本地镜像还是小程序已确认呈现，都**不得预览未来经文**，未填充位置以低对比度占位；正式计数每次有效敲击只 +1。跨轮次以 `round_id` 区分（AD-3）：「从头开始」创建新轮次并回到首字、历史统计保留；「退出」保留完成状态与历史（FR-B-005/FR-E-006）。设备端 7 字带与视觉细节由 UX 四份规范承接，本 AD 只锁跨层可消费/计数语义。
 
+#### AD-20 — 环境配置与交付脚本契约：路径固定、脚本无公网隧道、构建产物单一
+
+- **Binds:** `cloud/backend` 配置、`cloud/frontend` 环境变量、本地起停、Huawei Cloud 构建、后端 Jar 上传
+- **Prevents:** backend/frontend 各自选择配置位置、local profile 未激活、脚本继续携带 miaowu 支付隧道、CI 构建找错工程、上传错误 Jar 或错误远端目录
+- **Rule:** backend 生产配置只能从 `cloud/backend/src/main/resources/application.yml` 读取，本地测试只能使用同目录 `application-local.yml` 与 `local` profile；frontend 生产/本地文件分别为 `cloud/frontend/.env` 与 `.env.development`。同一环境的 backend `wechat.mini.app-id` 与 frontend `VITE_WX_APPID` 必须保持一致。`cloud/env-scripts/start-local-test-backend.sh` 和 `stop.sh` 只管理 `cloud/backend` 的 `saas.jar`、`9218` 端口、日志与 PID，不启动 cloudflared、不生成支付回调覆盖文件，也不匹配 miaowu 路径；脚本解析项目根时优先使用显式 CI 根目录和脚本所在 checkout，避免被当前工作目录中的另一份 checkout 抢先匹配。`build-prod-backend.sh` 必须在通用 Linux + JDK 17 + Maven 3.9.x 环境识别 `cloud/backend/pom.xml`，执行 `mvn -B -U clean package -DskipTests`，生成并校验 `cloud/backend/target/saas.jar.sha256`；`upload-backend-jars.sh` 上传前必须校验 Jar 与该校验文件匹配，再将二者上传到当前约定的 `/www/wwwroot/woodenfish`，SSH 密码按当前原型要求固定写在脚本中且不从环境变量读取。`VITE_API_BASE_URL` 是包含 `/api/v1` 的 REST base，WebSocket 的 origin/path 由同步契约派生，不在 env 中重复拼接 REST 前缀。Huawei Cloud 只提供脚本执行环境，具体流水线编排不在本 AD 冻结。
+
 ## Consistency Conventions
 
-| 关注点 | 约定 |
-| --- | --- |
-| 命名 | 同步字段全小写下划线（清单见 §Structural Seed）；事件来源固定 `physical_pvdf`/`device_touch`；固件日志中文、模块 TAG 用 ASCII；新增组件/服务命名对照 legbot 风格 |
-| 数据与格式 | 接口信封 `{code,message,data}`、code=0 成功；经文/游标/统计以 backend 为权威；设备不保存绝对敲击时间；JSON 文件写入原子化（tmp+rename） |
-| 状态与跨切 | 同步状态词表固定：本地已记录/同步中/已同步/待同步/同步失败（累计）；待设备应用（命令，独立维度）；无第二计数路径、无第二套平行云后端 |
-| 文档承接 | 设备端视觉、文案、默认值与统计页展示范围由 UX 四份规范承接；板级硬件事实由 `docs/hardware/` 承接，spine 不重复 |
+| 关注点     | 约定                                                                                                                                                                                                                                                                                               |
+| ---------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| 命名       | 同步字段全小写下划线（清单见 §Structural Seed）；事件来源固定 `physical_pvdf`/`device_touch`；固件日志中文、模块 TAG 用 ASCII；新增组件/服务命名对照 legbot 风格                                                                                                                                   |
+| 数据与格式 | 接口信封 `{code,message,data}`、code=0 成功；经文/游标/统计以 backend 为权威；设备不保存绝对敲击时间；JSON 文件写入原子化（tmp+rename）                                                                                                                                                            |
+| 状态与跨切 | 同步状态词表固定：本地已记录/同步中/已同步/待同步/同步失败（累计）；待设备应用（命令，独立维度）；无第二计数路径、无第二套平行云后端                                                                                                                                                               |
+| 环境与交付 | backend 配置固定为 `application.yml`/`application-local.yml`；frontend 固定为 `.env`/`.env.development`；本地 profile=local、端口=9218、产物=`saas.jar`+`.sha256`；`VITE_API_BASE_URL` 含 `/api/v1` REST 前缀；本地脚本无公网隧道；CI 只依赖通用 JDK17/Maven，上传目标为 `/www/wwwroot/woodenfish` |
+| 文档承接   | 设备端视觉、文案、默认值与统计页展示范围由 UX 四份规范承接；板级硬件事实由 `docs/hardware/` 承接，spine 不重复                                                                                                                                                                                     |
 
 ## Stack（seed——草拟时经本地基线 + web 复核）
 
-| 名称 | 版本 / 依据 |
-| --- | --- |
-| 嵌入式框架 | ESP-IDF ≥5.5.4,<5.6.0（`[ASSUMPTION A-3]`：与 legbot 复用 BSP/managed_components 对齐；v5.5 现处维护期、最新 5.5.5，v6.0 为现行 major，升级时机见 Deferred） |
-| 嵌入式 UI | LVGL 8.4（沿用 legbot 锁档；上游 8.4 支持已于 2025-03 结束，见 Deferred「不升 LVGL9」知情项） |
-| 主控 | ESP32-S3-N16R8（16MB Flash / 8MB PSRAM 型号，采购以封装手册为准） |
-| 4G | Air780EGP 完整模组组件（沿用 `main_control` 已验证设计，AT/HTTPS） |
-| 后端 | Java 17 + Spring Boot 3.3.7（沿用 miaowu `backend/pom.xml` 基线；发行版建议 Temurin/Corretto，`[ASSUMPTION A-8]`） |
-| 前端 | uni-app：Vue 3 + TypeScript + Vite + Pinia，仅微信小程序（沿用 miaowu `frontend/package.json` 基线） |
-| 本地脚本 | 沿用 miaowu `env-scripts` 起停/构建约定（本地 profile=local；`[ASSUMPTION A-6]`） |
+| 名称         | 版本 / 依据                                                                                                                                                             |
+| ------------ | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| 嵌入式框架   | ESP-IDF ≥5.5.4,<5.6.0（`[ASSUMPTION A-3]`：与 legbot 复用 BSP/managed_components 对齐；v5.5 现处维护期、最新 5.5.5，v6.0 为现行 major，升级时机见 Deferred）            |
+| 嵌入式 UI    | LVGL 8.4（沿用 legbot 锁档；上游 8.4 支持已于 2025-03 结束，见 Deferred「不升 LVGL9」知情项）                                                                           |
+| 主控         | ESP32-S3-N16R8（16MB Flash / 8MB PSRAM 型号，采购以封装手册为准）                                                                                                       |
+| 4G           | Air780EGP 完整模组组件（沿用 `main_control` 已验证设计，AT/HTTPS）                                                                                                      |
+| 后端         | Java 17 + Spring Boot 3.3.7（沿用 miaowu `backend/pom.xml` 基线；发行版建议 Temurin/Corretto，`[ASSUMPTION A-8]`）                                                      |
+| 前端         | uni-app：Vue 3 + TypeScript + Vite + Pinia，仅微信小程序（沿用 miaowu `frontend/package.json` 基线）                                                                    |
+| 本地/CI 脚本 | `cloud/env-scripts` 沿用 miaowu 的起停/构建骨架，但只面向 EWF `cloud/backend`；local profile=local、默认端口 9218、产物 `saas.jar`；CI 为通用 JDK17 + Maven 3.9.x shell |
 
 ### 版本与依据核验出处（2026-09-08 复核）
 
-| 承诺 | 出处 / 证据 |
-| --- | --- |
-| ESP-IDF：v5.5 维护期、5.5.5（2026-07）、v6.0 现行 major（2026-03） | web：Espressif release notes（release-notes.espressif.com）；本地：legbot `dependencies.lock`/`main/idf_component.yml` 锁 ≥5.5.4,<5.6.0 |
-| Spring Boot 3.3.x OSS EOL 2025-06-30 | web：endoflife.date/spring-boot；本地：miaowu `backend/pom.xml` 3.3.7 |
-| LVGL 8.4 上游支持已于 2025-03 结束 | web：lvgl.io policies；本地：legbot lock lvgl 8.4.0 |
-| Java 17：Oracle JDK 17 Premier 至 2026-09-30，Temurin/Corretto 续期 | web：endoflife.date/java |
-| uni-app Vue3+TS+Vite+Pinia 基线 | 本地：miaowu `frontend/package.json`（2025-05 快照，Vue 3.5/Vite 5/TS 5.7/Pinia 2.3） |
-| ESP32-S3 原生 USB-Serial-JTAG / 内置 JTAG / 数据手册 | 从被删除旧根文档迁移：docs.espressif.com/projects/esp-idf/…/usb-serial-jtag-console、…/builtin-jtag、documentation.espressif.com esp32_s3 datasheet |
-| 零库 JSON 原子写先例 | 本地：legbot `cloud`（Spring Boot 无库、JSON 落盘） |
+| 承诺                                                                | 出处 / 证据                                                                                                                                         |
+| ------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------- |
+| ESP-IDF：v5.5 维护期、5.5.5（2026-07）、v6.0 现行 major（2026-03）  | web：Espressif release notes（release-notes.espressif.com）；本地：legbot `dependencies.lock`/`main/idf_component.yml` 锁 ≥5.5.4,<5.6.0             |
+| Spring Boot 3.3.x OSS EOL 2025-06-30                                | web：endoflife.date/spring-boot；本地：miaowu `backend/pom.xml` 3.3.7                                                                               |
+| LVGL 8.4 上游支持已于 2025-03 结束                                  | web：lvgl.io policies；本地：legbot lock lvgl 8.4.0                                                                                                 |
+| Java 17：Oracle JDK 17 Premier 至 2026-09-30，Temurin/Corretto 续期 | web：endoflife.date/java                                                                                                                            |
+| uni-app Vue3+TS+Vite+Pinia 基线                                     | 本地：miaowu `frontend/package.json`（2025-05 快照，Vue 3.5/Vite 5/TS 5.7/Pinia 2.3）                                                               |
+| ESP32-S3 原生 USB-Serial-JTAG / 内置 JTAG / 数据手册                | 从被删除旧根文档迁移：docs.espressif.com/projects/esp-idf/…/usb-serial-jtag-console、…/builtin-jtag、documentation.espressif.com esp32_s3 datasheet |
+| 零库 JSON 原子写先例                                                | 本地：legbot `cloud`（Spring Boot 无库、JSON 落盘）                                                                                                 |
 
 ## Structural Seed
 
@@ -214,7 +226,12 @@ Electronic_Wooden_Fish/
   Embedded/                  # ESP-IDF 工程：components/BSP + platform + services + app_state + main
   cloud/
     backend/                 # Spring Boot 单进程 jar；data/ 下 JSON 状态文件；接口 /api/v1
+      src/main/resources/application.yml
+      src/main/resources/application-local.yml
     frontend/                # uni-app 微信小程序（Vue3+TS+Vite，单 VITE_API_BASE_URL）
+      .env
+      .env.development
+    env-scripts/              # 本地起停、通用 CI 构建、Jar 上传
   _bmad-output/planning-artifacts/architecture/...   # 本 spine
 ```
 
@@ -258,36 +275,42 @@ flowchart LR
 
 ## Capability → Architecture Map
 
-| 能力 / 区域（PRD） | 落在 | 由…治理 |
-| --- | --- | --- |
-| FR-E-001~010 嵌入式输入/持久化/屏幕/音频/电源/4G | `Embedded`（BSP + services + app_state） | AD-1/3/4/6/19（跨层）＋ AD-7~15 |
-| FR-B-001~009 后端身份/幂等同步/游标/命令/统计/推送 | `cloud/backend` | AD-1/2/3/4/5/6/16/19 |
-| FR-F-001~010 小程序呈现/回放/记录/设备/设置 | `cloud/frontend` | AD-2/3/4/5/6/17/18/19 |
-| 跨层同步字段与最终一致（SM-1~5） | 同步契约（sync-contract） | AD-1~6、AD-19 |
+| 能力 / 区域（PRD）                                 | 落在                                     | 由…治理                         |
+| -------------------------------------------------- | ---------------------------------------- | ------------------------------- |
+| FR-E-001~010 嵌入式输入/持久化/屏幕/音频/电源/4G   | `Embedded`（BSP + services + app_state） | AD-1/3/4/6/19（跨层）＋ AD-7~15 |
+| FR-B-001~009 后端身份/幂等同步/游标/命令/统计/推送 | `cloud/backend`                          | AD-1/2/3/4/5/6/16/19            |
+| FR-F-001~010 小程序呈现/回放/记录/设备/设置        | `cloud/frontend`                         | AD-2/3/4/5/6/17/18/19           |
+| 跨层同步字段与最终一致（SM-1~5）                   | 同步契约（sync-contract）                | AD-1~6、AD-19                   |
 
 > 备注：FR-E 亦受跨层 AD-1/3/4/6/19 约束；设备端视觉/文案/默认值等 UX 细节由 UX 四份规范承接，板级细节由 `docs/hardware/` 承接。
 
 ## Deferred（含复核清单）
 
-| 事项 | 为何可等 / 复核条件 |
-| --- | --- |
-| 离线「完成→从头开始」跨轮竞态 + `round_id` 对账细节 `[耦合 AD-3/19]` | backend 与 Embedded 各自不会凭空发明一致协议；**须在 backend/embedded 模块（epic/lane）spec 拆分前**经 `docs/contracts/sync-contract.md` 冻结：跨轮差值归属、未确认完成的本地重置、确认回传字段 |
-| JSON 持久化 schema 与文件粒度 `[ASSUMPTION A-2，用户已确认不在 spine 冻结]` | 只锁不变量（零库/原子写/单实例/重启可恢复）；schema、日统计与 ack 的非原子写顺序须随上条一并收敛后再冻结 |
-| WebSocket 帧格式/心跳/断线重连参数 `[通道已确认，原 A-1]` | 已定用 WebSocket；帧/序号/心跳细节下沉 sync-contract 后冻结 |
-| 嵌入式 IDF 档位：≥5.5.4,<5.6.0 `[ASSUMPTION A-3]` | 为复用 legbot BSP/managed_components；v5.5 处维护期。升级 v6.0 在固件初版稳定后单独评估迁移 |
-| Spring Boot 3.3.7 沿用 miaowu pom `[ASSUMPTION A-4]` | 3.3.x OSS 已于 2025-06 EOL；后端零库持久化更接近 `legbot_watch/cloud`（其运行于 3.5.16）。**升级目标为现行受支持 OSS 线 4.0.x/4.1.x（3.5 亦已 EOL）**，时机 = backend 功能稳定、进入文档化部署前 |
-| 不升 LVGL9 的知情保留 | 上游 8.4 支持 2025-03 结束；因复用 legbot 生成 UI/驱动基线暂不升级，固件初版后单独评估 |
-| Java 17 发行版 `[ASSUMPTION A-8]` | Oracle JDK 17 Premier 2026-09-30 截止；本地采用 Temurin/Corretto 等免费发行版即可 |
-| 微信登录→单设备映射细节 `[ASSUMPTION A-5]` | MVP 单作者单设备，无需复杂账号治理；openid/JWT 实现随 bmad-spec/backend 落定 |
-| 端口与本地脚本沿用 miaowu `env-scripts` `[ASSUMPTION A-6]` | 本地 profile=local 起停/构建即可；具体端口随实现确认 |
-| 运行期公网形态 `[ASSUMPTION A-7]` | 小程序合法 HTTPS/wss 域名 + 备案 + backend 主机由作者以开发者/体验版自备；进入正式部署前落实。与本地 dev 脚本分属两个信封，勿混为一谈 |
-| 部署与运维信封 | 个人原型沿用 miaowu `env-scripts` 本地起停/构建脚本；无 CI/CD、宝塔与云运维文档重定义 |
-| 设备 UI 默认值（音量 50/中亮度/15s）与统计页展示范围 | **已承接（2026-09-11）**：设备轨 DEVICE-01 经作者逐屏签收，规格冻结在 `UI_CONTRACT-device.md` 与 `DESIGN.md`/`EXPERIENCE.md`。统计页限定今日与累计，近 7/30 日与连续天数归小程序记录页；默认值 音量 50 / 亮度中 / 15 秒熄屏 |
-| 分区表 / NVS schema / 低功耗参数 / CO5300 首帧与亮度档 / CST9217 实际地址 / PVDF 前端与比较器料号 | 属 `docs/hardware/` 与样机验证必须冻结的工程项；冻结前不得写入承诺性参数 |
-| 硬件细分 seed（具体 I²C 上拉阻值、AMOLED FPC 供电时序、扬声器腔体、电池容量、稳压/充电料号） | 只可在原理图/数据手册/样机验证后回填，本 spine 不作产品承诺 |
-| 音频高速合并阈值 / 动画队列长度 / 活动窗口时长 | 表现类参数按样机演示签收后定标 |
-| OTA、BLE/Wi‑Fi 产品通道、GPS 业务、QMI8658A 业务、选经/导入 | 明确非 MVP 非目标 |
-| 多设备、换机迁移、公开账号、社交、排行榜、提醒、付费、多端前端 | 非个人原型目标，未来若变化需重开架构 |
+| 事项                                                                                              | 为何可等 / 复核条件                                                                                                                                                                                                         |
+| ------------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| 离线「完成→从头开始」跨轮竞态 + `round_id` 对账细节 `[耦合 AD-3/19]`                              | backend 与 Embedded 各自不会凭空发明一致协议；**须在 backend/embedded 模块（epic/lane）spec 拆分前**经 `docs/contracts/sync-contract.md` 冻结：跨轮差值归属、未确认完成的本地重置、确认回传字段                             |
+| JSON 持久化 schema 与文件粒度 `[ASSUMPTION A-2，用户已确认不在 spine 冻结]`                       | 只锁不变量（零库/原子写/单实例/重启可恢复）；schema、日统计与 ack 的非原子写顺序须随上条一并收敛后再冻结                                                                                                                    |
+| WebSocket 帧格式/心跳/断线重连参数 `[通道已确认，原 A-1]`                                         | 已定用 WebSocket；帧/序号/心跳细节下沉 sync-contract 后冻结                                                                                                                                                                 |
+| 嵌入式 IDF 档位：≥5.5.4,<5.6.0 `[ASSUMPTION A-3]`                                                 | 为复用 legbot BSP/managed_components；v5.5 处维护期。升级 v6.0 在固件初版稳定后单独评估迁移                                                                                                                                 |
+| Spring Boot 3.3.7 沿用 miaowu pom `[ASSUMPTION A-4]`                                              | 3.3.x OSS 已于 2025-06 EOL；后端零库持久化更接近 `legbot_watch/cloud`（其运行于 3.5.16）。**升级目标为现行受支持 OSS 线 4.0.x/4.1.x（3.5 亦已 EOL）**，时机 = backend 功能稳定、进入文档化部署前                            |
+| 不升 LVGL9 的知情保留                                                                             | 上游 8.4 支持 2025-03 结束；因复用 legbot 生成 UI/驱动基线暂不升级，固件初版后单独评估                                                                                                                                      |
+| Java 17 发行版 `[ASSUMPTION A-8]`                                                                 | Oracle JDK 17 Premier 2026-09-30 截止；本地采用 Temurin/Corretto 等免费发行版即可                                                                                                                                           |
+| 微信登录→单设备映射细节 `[ASSUMPTION A-5]`                                                        | MVP 单作者单设备，无需复杂账号治理；openid/JWT 实现随 bmad-spec/backend 落定                                                                                                                                                |
+| 生产 API 域名与微信 AppID                                                                         | 本轮只冻结 `application*.yml`、`.env` 与 `.env.development` 的字段和位置，不复制 miaowu 当前值；进入真实部署/微信联调前补齐 EWF 正式值并完成三处 AppID 对齐                                                                 |
+| EWF backend 构建基线                                                                              | 当前 `cloud/backend` 尚无 `pom.xml`/源码；Java 17、Spring Boot 3.3.7、Jar `finalName=saas` 与 SHA-256 sidecar 需在 backend 骨架落地时由实际工程验证，不能把 miaowu 的 pom 视为已构建事实                                    |
+| 明文应用密钥与 SSH 密码                                                                           | 当前个人原型按用户要求固定写入 application 配置和上传脚本；在仓库公开、多人协作或正式生产前必须迁移到受控密钥管理并重新审查日志/备份暴露面                                                                                  |
+| 运行期公网形态 `[ASSUMPTION A-7]`                                                                 | 小程序合法 HTTPS/wss 域名 + 备案 + backend 主机由作者以开发者/体验版自备；本地脚本不负责公网隧道。进入真机预览/正式部署前落实                                                                                               |
+| Huawei Cloud 流水线编排                                                                           | 构建脚本已固定为通用 Linux + JDK17 + Maven 契约；CodeArts/其他流水线的触发、凭据注入、进程重启和回滚策略留待部署阶段确认                                                                                                    |
+| 远端进程托管与健康检查                                                                            | 上传脚本只负责 SCP 到 `/www/wwwroot/woodenfish`；云服务器上的启动、重启、反向代理、HTTPS/WSS、日志轮转和回滚不在本 spine 冻结                                                                                               |
+| 产物签名/供应链证明                                                                               | 当前以构建生成的 SHA-256 sidecar 解决本地上传前的同名 Jar 误传；正式 CI/CD 接入后再评估制品仓库、签名和远端部署回执                                                                                                         |
+| 本地 9218 端口                                                                                    | 9218 作为 EWF 本地后端保留端口；`stop.sh` 的 PID/路径/端口清理只服务本项目，开发者不得在同一环境用该端口运行其他服务                                                                                                        |
+| 生产占位值门禁                                                                                    | 当前 `.env` 与 `application.yml` 保留 EWF 域名/AppID 占位值；正式构建/发布前必须替换并由 CI 做 fail-closed 检查，不得把占位值带入线上                                                                                       |
+| 设备 UI 默认值（音量 50/中亮度/15s）与统计页展示范围                                              | **已承接（2026-09-11）**：设备轨 DEVICE-01 经作者逐屏签收，规格冻结在 `UI_CONTRACT-device.md` 与 `DESIGN.md`/`EXPERIENCE.md`。统计页限定今日与累计，近 7/30 日与连续天数归小程序记录页；默认值 音量 50 / 亮度中 / 15 秒熄屏 |
+| 分区表 / NVS schema / 低功耗参数 / CO5300 首帧与亮度档 / CST9217 实际地址 / PVDF 前端与比较器料号 | 属 `docs/hardware/` 与样机验证必须冻结的工程项；冻结前不得写入承诺性参数                                                                                                                                                    |
+| 硬件细分 seed（具体 I²C 上拉阻值、AMOLED FPC 供电时序、扬声器腔体、电池容量、稳压/充电料号）      | 只可在原理图/数据手册/样机验证后回填，本 spine 不作产品承诺                                                                                                                                                                 |
+| 音频高速合并阈值 / 动画队列长度 / 活动窗口时长                                                    | 表现类参数按样机演示签收后定标                                                                                                                                                                                              |
+| OTA、BLE/Wi‑Fi 产品通道、GPS 业务、QMI8658A 业务、选经/导入                                       | 明确非 MVP 非目标                                                                                                                                                                                                           |
+| 多设备、换机迁移、公开账号、社交、排行榜、提醒、付费、多端前端                                    | 非个人原型目标，未来若变化需重开架构                                                                                                                                                                                        |
 
 ## 工程验证门禁（跨层入口；硬件证据归档于 `docs/hardware/`）
 

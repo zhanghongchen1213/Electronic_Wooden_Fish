@@ -165,11 +165,11 @@ PYTHONDONTWRITEBYTECODE=1 python3 \
 
 ## PWR 实体键与板级电源所有权
 
-- PWR 是主板实体电源键，运行态输入连接 ESP32-S3 `IO46`；BOOT0 连接 `IO0`。GPIO46 同时是 strapping pin，应用启动后只允许作为输入读取，不得输出驱动。
+- PWR 是主板实体电源键，运行态输入是 LTC2954 `PWR_INT`，连接 ESP32-S3 `IO8`；BOOT0 连接 `IO0`。`IO46` 在 EWF 定稿硬件中悬空，仅保留启动绑带属性，不得恢复为 PWR 输入。
 - 板级电源电路独立完成 PWR 长按关机与长按开机，不依赖应用固件。硬件关机后 USB 停止枚举；长按 PWR 重新开机后 USB 恢复枚举。
 - 关机状态同时按下 PWR 与 BOOT0，由板级电源路径与 ESP32-S3 Boot ROM 进入下载模式；应用固件不实现、不模拟也不接管该路径。
-- 应用固件只处理设备已运行时、释放后确认的 PWR 短按：熄屏时点亮屏幕，亮屏时依次循环切换四个常驻页面；屏幕熄灭完全由自动熄屏策略负责，不提供手动熄屏入口。持续按住只用于避免误判为短按，不得产生软件本机关机 terminal action。
-- 禁止使用 PMIC 臆造调用、`esp_deep_sleep_start()`、`esp_restart()`、仅关屏或无限循环模拟本机关机。任何 PWR 输入都不得生成外骨骼 BLE 关机请求。
+- 应用固件只处理设备已运行时、释放后确认的 PWR 短按：熄屏时点亮屏幕，亮屏时依次循环切换木鱼页、经文页和统计页；设置页通过下滑进入。屏幕熄灭完全由自动熄屏策略负责，不提供手动熄屏入口。持续按住只用于避免误判为短按，不得产生软件本机关机动作。
+- 禁止使用 PMIC 臆造调用、`esp_deep_sleep_start()`、`esp_restart()`、仅关屏或无限循环模拟本机关机。任何 PWR 输入都不得生成 BLE、GPS 或外骨骼业务请求。
 - PWR 有效电平和去抖参数必须以运行态目标板实测为依据；板级长按阈值只做物理验收，不得用 host fake clock 冒充硬件证据。
 
 ## ESP-IDF 固件 C/H 编码规则
@@ -244,21 +244,10 @@ static const char *TAG = "MODULE_NAME";
 - 应用这些格式与文档规则时，不要改变函数签名、公开数据结构、硬件资源取值或运行时行为。
 - 保留 BSP 所有权规则：开发板 GPIO、总线实例和禁用 SDMMC 的策略由 `components/BSP` 定义，其他模块通过项目 API 使用。
 
-## 云端线上联调单一事实来源
+## EWF 嵌入式与 cloud 边界
 
-- `cloud/` 是本项目唯一的线上联调系统。不要新建平行云实现。
-- `docs/contracts/cloud_api_contract.md` 是手环与后端通信合同；`cloud/specs/online-test-system_design.md` 是架构与验收标准；`cloud/README.md` 是启动和部署手册。
-- 修改接口字段、架构边界或部署方式时，必须同步更新上述对应职责文档，禁止在其他文件维护第二套口径。
-- 生产后端地址固定为 `https://watch-api.xianlitech.com`，生产前端地址固定为 `https://watch.xianlitech.com`。
-- 本地后端默认端口为 `9219`，本地前端默认端口为 `5173`。
-- 后端固定使用 Java 17 + Spring Boot 3.5.16；前端固定使用 Vue 3 + TypeScript + Vite + Element Plus。
-- 当前云端只支持单后端实例，以 JSON 原子落盘保存设备、支付状态和最新 telemetry；不保存完整 telemetry 历史，但每台设备额外保存最近 100 个合法 `fixed` GPS 轨迹点。
-- 管理设备列表只返回 `trackPointCount`，完整轨迹通过 `GET /api/v1/admin/devices/{mac}/track` 按需获取；地图配置通过 `GET /api/v1/admin/map/config` 获取。
-- 高德地图 Key 与安全密钥通过后端 YAML 字段配置，并允许环境变量 `AMAP_JS_API_KEY`、`AMAP_SECURITY_JS_CODE` 覆盖；安全密钥不得进入前端包或管理响应。公开代理 `GET /api/v1/map/_AMapService/**` 只转发到 `https://restapi.amap.com/**`，必须移除客户端 `jscode` 后注入后端配置值。
-- 任一高德配置为空时，后端必须正常启动且地图配置返回 `configured=false`；设备列表、支付管理和无地图功能不得受影响。
-- 前端设备时间使用每秒更新的相对时间并以 tooltip 提供绝对时间；轨迹通过按需弹窗加载，必须覆盖未配置、无点、单点、多点、失败重试、关闭销毁和鉴权失效状态。
-- 固件云地址必须是 HTTPS。默认 ML307R 使用 `auth=0`，固件不内置 PEM，默认 NVS 不保存 CA；日志必须明确提示服务端身份未校验。
-- 可选 CA 字段只保留兼容读取能力，当前默认配置不得填充，也不得让 CA 缺失阻塞云请求。
-- 固件只初始化完全空白的云配置，不按 URL 内容识别、迁移或改写已保存配置；已有、部分或损坏配置保持不变。
-- 设备共享 Token 不得进入前端包、UI 或普通日志。管理端使用无状态 HTTP Basic，不引入登录 Session 或 Cookie。
-- `auth=0` 仅适用于线上测试和客户联调。进入真实收费运营前，必须另行设计服务端身份认证、设备独立密钥和 OTA 更新机制。
+- `Embedded/` 只负责设备驱动、设备 UI、输入、音频、电源、本地持久化和 Air780EGP HTTPS 活动窗口；不得引入 BLE、GPS、外骨骼或 ML307R 业务。
+- `cloud/` 是 EWF 唯一软件层实现。Embedded 只能通过已冻结的 HTTPS JSON 同步合同访问它，不得维护第二套后端或把 cloud 状态写入设备 UI 的业务私有变量。
+- 接口字段、状态和命令修订必须以 PRD、`ARCHITECTURE-SPINE.md` 和后续 `docs/contracts/sync-contract.md` 为准；联调使用 mock/stub，不在 Embedded 中复制 cloud 数据库或页面逻辑。
+- EWF 后端使用 Java 17 + Spring Boot 3.3.7、`/api/v1` 信封和 JSON 原子文件持久化；小程序使用 uni-app Vue 3 + TypeScript + Vite，仅面向微信小程序。具体实现规则由 `cloud/AGENTS.md` 维护。
+- Air780EGP 生产通信必须使用 HTTPS；设备 Token、会话材料和内部调试信息不得进入 UI 或普通日志。认证与证书的最终合同由 cloud 层规格冻结，不能从 legbots_watch 旧地址或旧模块推断。

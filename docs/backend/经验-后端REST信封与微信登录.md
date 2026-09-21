@@ -154,7 +154,7 @@ miaowu `env-scripts/{start-local-test-backend.sh, stop.sh, build-prod-backend.sh
 
 | miaowu 做法 / 坑位 | EWF 怎么用 |
 | --- | --- |
-| **profile=local + 端口可配**：`start-local-test-backend.sh` 里 `SPRING_PROFILE=${SPRING_PROFILE:-local}`、`BACKEND_PORT=${BACKEND_PORT:-9219}`，最终 `java -jar target/saas.jar --spring.profiles.active=local ...`；`application-local.yml` 用 `spring.config.activate.on-profile: local` 激活。 | EWF 照抄：脚本内置 `PROFILE=local`、端口可被环境变量覆盖；`cloud/backend` 下建 `application.yml` + `application-local.yml` 两件套。S1.1 story 的「可用 env-scripts 按 profile=local 一键起停」即此。 |
+| **profile=local + 端口可配**：`start-local-test-backend.sh` 里 `SPRING_PROFILE=${SPRING_PROFILE:-local}`、`BACKEND_PORT=${BACKEND_PORT:-9218}`，最终 `java -jar target/saas.jar --spring.profiles.active=local ...`；`application-local.yml` 用 `spring.config.activate.on-profile: local` 激活。 | EWF 照抄：脚本内置 `PROFILE=local`、端口可被环境变量覆盖；`cloud/backend` 下建 `application.yml` + `application-local.yml` 两件套。S1.1 story 的「可用 env-scripts 按 profile=local 一键起停」即此。 |
 | **杀端口**：启动/停止先读 pid 文件，再 `pkill -f` 精确匹配 jar 路径，再 `kill_listener_by_port`（`lsof -tiTCP:$port -sTCP:LISTEN`，先 TERM 后 KILL）。 | 复制 `kill_listener_by_port`（含 lsof 不存在时 netstat 回退）与 `stop.sh` 的 pid 文件 + pkill + lsof 三连。日志/pid 统一放 `logs/`（`APP_LOG_ROOT` 可覆盖），EWF 沿用。 |
 | **可读日志 + 启动就绪等待**：`nohup java -jar … > "$BACKEND_LOG_FILE" 2>&1 &`；`wait_for_backend_ready` 循环 `curl http://localhost:$PORT/`，同时 grep 日志里的 `APPLICATION FAILED TO START`/`BeanCreationException`/`Could not resolve placeholder` 等失败指纹，进程退出立即 `tail -n 120` 报错。 | 复制该就绪函数（含失败指纹表）；对 EWF 把探活 URL 改指 `/api/v1/health` 或根信封即可。 |
 | **JDK 探测**：`/usr/libexec/java_home -v 17` → Homebrew openjdk@17 兜底，找不到即报错退出。 | EWF 同（Java 17 基线，锚 miaowu pom）。 |
