@@ -1,0 +1,101 @@
+# STATUS DEFINITIONS:
+# ==================
+# Epic Status:
+#   - backlog: Epic not yet started
+#   - in-progress: Epic actively being worked on
+#   - done: All stories in epic completed
+
+# Story Status:
+#   - backlog: Story only exists in epic file
+#   - ready-for-dev: Story file created, ready for development
+#   - in-progress: Developer actively working on implementation
+#   - review: Implementation complete, ready for review
+#   - done: Story completed
+
+# Retrospective Status:
+#   - optional: Can be completed but not required
+#   - done: Retrospective has been completed
+
+# Action Item Status:
+#   - open: Committed during a retrospective, not yet addressed
+#   - in-progress: Actively being worked on
+#   - done: Completed
+
+# WORKFLOW NOTES:
+# ===============
+# - Epic transitions to 'in-progress' automatically when its first story starts (via build's sprint sync)
+# - Stories can be worked in parallel if team capacity allows
+# - Developer typically creates the next story after the previous one is 'done' to incorporate learnings
+# - Dev moves story to 'review', then runs code-review (fresh context, different LLM recommended)
+# - Retrospective appends its action items to action_items; the status view surfaces open ones
+generated: 09-22-2026 02:37
+last_updated: 09-22-2026 02:37
+project: Electronic_Wooden_Fish
+project_key: NOKEY
+tracking_system: file-system
+story_location: _bmad-output/implementation-artifacts
+development_status:
+  epic-1: backlog
+  1-1-建立定稿电源-启动与-bsp-自检: backlog
+  1-2-闭合-pvdf-唤醒与-adc-二次确认: backlog
+  1-3-启用-usb-serial-jtag-诊断路径: backlog
+  epic-1-retrospective: optional
+
+  epic-2: backlog
+  2-1-统一有效敲击队列与输入闸门: backlog
+  2-2-实现本地高水位事务持久化与离线积压: backlog
+  2-3-提供木鱼音频与低打扰反馈: backlog
+  2-4-实现触摸-pwr-导航与设备设置持久化: backlog
+  2-5-实现-air780egp-活动窗口客户端与-https-mock: backlog
+  2-6-实现-boot0-自动模式: backlog
+  2-7-保护低电和故障下的核心链路: backlog
+  epic-2-retrospective: optional
+
+  epic-3: backlog
+  3-1-建立设备-ui-骨架与字体合同: backlog
+  3-2-实现木鱼页七字带与三环反馈: backlog
+  3-3-实现经文页-13-槽-append-only-流: backlog
+  3-4-实现设备统计页与诵读进度: backlog
+  3-5-实现设置页与同步状态闭包: backlog
+  3-6-实现完成遮罩与跨轮操作: backlog
+  epic-3-retrospective: optional
+
+  epic-4: backlog
+  4-1-建立-canonical-心经-与版本校验: backlog
+  4-2-冻结跨层同步契约: backlog
+  4-3-建立-backend-启动-接口信封与环境基线: backlog
+  4-4-实现微信登录与单设备身份: backlog
+  4-5-建立-json-原子持久化基线: backlog
+  4-6-提供状态快照与恢复基准: backlog
+  epic-4-retrospective: optional
+
+  epic-5: backlog
+  5-1-实现高水位幂等同步: backlog
+  5-2-实现轮次-完成与跨轮动作: backlog
+  5-3-实现可信时间和历史统计: backlog
+  5-4-实现命令修订和待设备应用收敛: backlog
+  5-5-实现-websocket-差量推送: backlog
+  5-6-实现错误语义-重试与安全边界: backlog
+  5-7-验证业务状态重启与原子恢复: backlog
+  epic-5-retrospective: optional
+
+  epic-6: backlog
+  6-1-建立-mini-06-小程序壳层-令牌和导航: backlog
+  6-2-实现登录直达与权限状态: backlog
+  6-3-实现在线心经持续阅读流: backlog
+  6-4-实现断线查询与离线回放: backlog
+  6-5-实现完成态-礼花和篇章归档: backlog
+  6-6-实现记录页统计: backlog
+  6-7-实现设备状态页与同步动作: backlog
+  6-8-实现设置镜像与待应用状态: backlog
+  6-9-完成空态-失败态-权限态和视觉卫生门禁: backlog
+  epic-6-retrospective: optional
+
+  epic-7: backlog
+  7-1-对接-air780egp-真机-https-活动窗口: backlog
+  7-2-验证命令修订从小程序到设备生效: backlog
+  7-3-验证-websocket-与快照回放闭环: backlog
+  7-4-验证高峰输入-动画连续性和端到端实时性: backlog
+  7-5-验证完成-自动模式与跨轮一致性: backlog
+  7-6-完成样机验收与风险回写: backlog
+  epic-7-retrospective: optional

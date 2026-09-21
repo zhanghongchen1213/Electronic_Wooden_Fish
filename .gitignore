@@ -28,9 +28,20 @@ _bmad
 *.swp
 *.swo
 .cursor
-.claude
-.agents
 .DS_Store
 tmp/*   
 docs/hardware/芯片手册
 docs/hardware/参考原理图
+
+# 忽略 .claude / .agents 其余内容，只跟踪 epic autopilot
+# 父目录被整段忽略时，Git 不会进入子目录，否定规则必须逐级放开
+.claude/*
+!.claude/skills/
+.claude/skills/*
+!.claude/skills/bmad-epic-autopilot/
+!.claude/skills/bmad-code-review/
+.agents/*
+!.agents/skills/
+.agents/skills/*
+!.agents/skills/bmad-epic-autopilot/
+!.agents/skills/bmad-code-review/

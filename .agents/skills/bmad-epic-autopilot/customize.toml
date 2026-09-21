@@ -1,0 +1,34 @@
+# DO NOT EDIT -- overwritten on every update.
+#
+# Workflow customization surface for bmad-epic-autopilot. Mirrors the
+# agent customization shape under the [workflow] namespace.
+
+[workflow]
+
+# --- Configurable below. Overrides merge per BMad structural rules: ---
+#   scalars: override wins • arrays (persistent_facts, activation_steps_*): append
+#   arrays-of-tables with `code`/`id`: replace matching items, append new ones.
+
+# Steps to run before the standard activation (config load).
+# Overrides append. Use for pre-flight loads, compliance checks, etc.
+
+activation_steps_prepend = []
+
+# Steps to run after config load but before the workflow begins.
+# Overrides append.
+
+activation_steps_append = []
+
+# Persistent facts the orchestrator keeps in mind for the whole run.
+# The orchestrator itself reads NO implementation code, so this is empty by
+# default; all red-line context is carried by the per-phase subagents via
+# their fixed prompt templates. Overrides append.
+#
+# Each entry is either a literal sentence or a `file:` reference (globs ok).
+
+persistent_facts = []
+
+# Scalar: executed when the workflow reaches its final step. Override wins.
+# Leave empty for no custom post-completion behavior.
+
+on_complete = ""
