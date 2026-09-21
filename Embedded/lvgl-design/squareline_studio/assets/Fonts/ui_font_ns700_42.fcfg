@@ -1,0 +1,16 @@
+{
+  "codename": "ns700_42",
+  "ttf_path": "/assets/Fonts/NotoSansSC-700.ttf",
+  "bin_path": "/assets/Fonts/ui_font_ns700_42.bin",
+  "c_path": "/assets/Fonts/ui_font_ns700_42.c",
+  "cfg_path": "/assets/Fonts/ui_font_ns700_42.fcfg",
+  "size": 42,
+  "bpp": 4,
+  "letters": 0,
+  "ranges": [
+    "0x20-0x7e"
+  ],
+  "symbols": "串付传位动反口器在失完定屏幕总感成振摸播支放显未正清源电知示线绑络网触计请败资量除音频馈？",
+  "customparams": "--no-compress --no-prefilter",
+  "uploaded": false
+}

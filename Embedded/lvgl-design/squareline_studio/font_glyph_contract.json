@@ -1,0 +1,380 @@
+{
+  "schema_version": 1,
+  "description": "SquareLine 静态文本之外，运行时写入标签的完整字形合同。selector 使用 SquareLine 逻辑对象名；状态投影字体自动汇总，C 代码驱动的多字体路径使用 font_codes 显式声明。",
+  "runtime_sources": [
+    {
+      "path": "components/services/ui_service/ui_service.c",
+      "functions": [
+        "build_runtime_model",
+        "selftest_prompt"
+      ]
+    },
+    {
+      "path": "components/ui/bindings/ui_runtime_binding.c",
+      "functions": [
+        "apply_model_projection",
+        "apply_home_assist_status",
+        "apply_leg_positions",
+        "set_alerts",
+        "set_setting_toggle",
+        "set_ble_candidate_state",
+        "set_selftest_result_row",
+        "set_payment_pending",
+        "set_touch_selftest",
+        "update_touch_selftest_visual",
+        "set_retry_detail",
+        "selftest_item_name",
+        "show_clear_binding_modal"
+      ]
+    },
+    {
+      "path": "components/ui/ui_selftest_summary.c",
+      "functions": [
+        "ui_selftest_category_name"
+      ]
+    }
+  ],
+  "runtime_labels": [
+    {
+      "selector": "ui_home_normal_icon_assist_state",
+      "font_codes": ["lucide_42"],
+      "texts": ["", ""],
+      "source_path": "components/ui/bindings/ui_runtime_binding.c"
+    },
+    {
+      "selector": "ui_home_normal_txt_assist_state",
+      "texts": ["助力开启", "助力关闭"],
+      "source_path": "components/ui/bindings/ui_runtime_binding.c"
+    },
+    {
+      "selector": "ui_home_disconnected_txt_last_snapshot",
+      "texts": ["%u档 %u%% %lu步", "暂无有效状态"]
+    },
+    {
+      "selector": "ui_payment_verify_failed_txt_payment_verify_failed",
+      "font_codes": ["ns700_40"],
+      "texts": ["验证失败"],
+      "source_path": "components/ui/bindings/ui_runtime_binding.c"
+    },
+    {
+      "selector": "ui_payment_verify_failed_txt_payment_failure_reason",
+      "font_codes": ["ns600_18"],
+      "texts": ["验证失败，请重新验证"],
+      "source_path": "components/ui/bindings/ui_runtime_binding.c"
+    },
+    {
+      "selector": "ui_payment_required_txt_payment_required",
+      "font_codes": ["ns700_42"],
+      "texts": ["请完成支付"],
+      "source_path": "components/ui/bindings/ui_runtime_binding.c"
+    },
+    {
+      "selector": "ui_mode_default_lbl_current_mode",
+      "texts": ["标准", "极限", "健身", "下山", "小碎步"]
+    },
+    {
+      "selector": "ui_mode_default_btn_mode_standard_label",
+      "font_codes": ["ns700_22", "ns700_24"],
+      "texts": ["标准"],
+      "source_path": "components/ui/generated/screens/ui_ui_scr_main_shell.c"
+    },
+    {
+      "selector": "ui_mode_default_btn_mode_extreme_label",
+      "font_codes": ["ns700_22", "ns700_24"],
+      "texts": ["极限"],
+      "source_path": "components/ui/generated/screens/ui_ui_scr_main_shell.c"
+    },
+    {
+      "selector": "ui_mode_default_btn_mode_sport_label",
+      "font_codes": ["ns700_22", "ns700_24"],
+      "texts": ["健身", "小碎步"],
+      "source_path": "components/ui/bindings/ui_runtime_binding.c"
+    },
+    {
+      "selector": "ui_mode_default_btn_mode_eco_label",
+      "font_codes": ["ns700_22", "ns700_24"],
+      "texts": ["下山"],
+      "source_path": "components/ui/generated/screens/ui_ui_scr_main_shell.c"
+    },
+    {
+      "selector": "ui_mode_disconnected_btn_mode_standard_label_selected_disabled",
+      "font_codes": ["ns700_22", "ns700_24"],
+      "texts": ["标准"],
+      "source_path": "components/ui/generated/screens/ui_ui_scr_main_shell.c"
+    },
+    {
+      "selector": "ui_mode_disconnected_btn_mode_extreme_label_disabled",
+      "font_codes": ["ns700_22", "ns700_24"],
+      "texts": ["极限"],
+      "source_path": "components/ui/generated/screens/ui_ui_scr_main_shell.c"
+    },
+    {
+      "selector": "ui_mode_disconnected_btn_mode_sport_label_disabled",
+      "font_codes": ["ns700_22", "ns700_24"],
+      "texts": ["健身", "小碎步"],
+      "source_path": "components/ui/bindings/ui_runtime_binding.c"
+    },
+    {
+      "selector": "ui_mode_disconnected_btn_mode_eco_label_disabled",
+      "font_codes": ["ns700_22", "ns700_24"],
+      "texts": ["下山"],
+      "source_path": "components/ui/generated/screens/ui_ui_scr_main_shell.c"
+    },
+    {
+      "selector": "ui_mode_default_lbl_exo_poweroff",
+      "font_codes": ["ns700_24", "ns700_30"],
+      "texts": ["外骨骼关机"],
+      "source_path": "components/ui/generated/screens/ui_ui_scr_main_shell.c"
+    },
+    {
+      "selector": "ui_mode_disconnected_lbl_exo_poweroff_disabled",
+      "font_codes": ["ns700_24", "ns700_30"],
+      "texts": ["外骨骼关机"],
+      "source_path": "components/ui/generated/screens/ui_ui_scr_main_shell.c"
+    },
+    {
+      "selector": "ui_mode_default_icon_mode_standard",
+      "font_codes": ["lucide_40", "lucide_44"],
+      "texts": [""],
+      "source_path": "components/ui/generated/screens/ui_ui_scr_main_shell.c"
+    },
+    {
+      "selector": "ui_mode_default_icon_mode_extreme",
+      "font_codes": ["lucide_40", "lucide_44"],
+      "texts": [""],
+      "source_path": "components/ui/generated/screens/ui_ui_scr_main_shell.c"
+    },
+    {
+      "selector": "ui_mode_default_icon_mode_sport",
+      "font_codes": ["lucide_40", "lucide_44"],
+      "texts": ["", ""],
+      "source_path": "components/ui/bindings/ui_runtime_binding.c"
+    },
+    {
+      "selector": "ui_mode_default_icon_mode_eco",
+      "font_codes": ["lucide_40", "lucide_44"],
+      "texts": [""],
+      "source_path": "components/ui/generated/screens/ui_ui_scr_main_shell.c"
+    },
+    {
+      "selector": "ui_mode_disconnected_icon_mode_standard_selected_disabled",
+      "font_codes": ["lucide_40", "lucide_44"],
+      "texts": [""],
+      "source_path": "components/ui/generated/screens/ui_ui_scr_main_shell.c"
+    },
+    {
+      "selector": "ui_mode_disconnected_icon_mode_extreme_disabled",
+      "font_codes": ["lucide_40", "lucide_44"],
+      "texts": [""],
+      "source_path": "components/ui/generated/screens/ui_ui_scr_main_shell.c"
+    },
+    {
+      "selector": "ui_mode_disconnected_icon_mode_sport_disabled",
+      "font_codes": ["lucide_40", "lucide_44"],
+      "texts": ["", ""],
+      "source_path": "components/ui/bindings/ui_runtime_binding.c"
+    },
+    {
+      "selector": "ui_mode_disconnected_icon_mode_eco_disabled",
+      "font_codes": ["lucide_40", "lucide_44"],
+      "texts": [""],
+      "source_path": "components/ui/generated/screens/ui_ui_scr_main_shell.c"
+    },
+    {
+      "selector": "ui_mode_default_icon_exo_poweroff",
+      "font_codes": ["lucide_32", "lucide_40", "lucide_56"],
+      "texts": [""],
+      "source_path": "components/ui/generated/screens/ui_ui_scr_main_shell.c"
+    },
+    {
+      "selector": "ui_mode_disconnected_icon_exo_poweroff_disabled",
+      "font_codes": ["lucide_32", "lucide_40", "lucide_56"],
+      "texts": [""],
+      "source_path": "components/ui/generated/screens/ui_ui_scr_main_shell.c"
+    },
+    {
+      "selector": "ui_device_info_row_left_leg_position_value",
+      "texts": ["--", "%d°"]
+    },
+    {
+      "selector": "ui_device_info_row_right_leg_position_value",
+      "texts": ["--", "%d°"]
+    },
+    {
+      "selector": "ui_device_info_row_firmware_label",
+      "texts": ["手环版本", "设备版本"]
+    },
+    {
+      "selector": "ui_device_info_row_bound_mac_value",
+      "texts": ["未绑定"]
+    },
+    {
+      "selector": "ui_maintenance_row_cellular_value",
+      "texts": ["已联网", "连接中", "点击连接", "自检中", "不可用"]
+    },
+    {
+      "selector": "ui_maintenance_row_gps_label",
+      "texts": ["GPS", "GPS 定位", "GPS 授时"]
+    },
+    {
+      "selector": "ui_maintenance_row_gps_value",
+      "texts": ["点击搜星", "搜星中", "冷却中", "已授时", "已定位", "不可用"]
+    },
+    {
+      "selector": "ui_maintenance_row_selftest_value",
+      "texts": ["待确认", "运行中", "查看结果", "需要复测", "上次未完成", "尚未运行"]
+    },
+    {
+      "selector": "ui_home_normal_rail_ble_icon",
+      "texts": ["", ""],
+      "source_path": "components/ui/bindings/ui_manifest_projection.c"
+    },
+    {
+      "selector": "ui_home_normal_rail_watch_battery_icon",
+      "font_codes": ["lucide_22", "lucide_28"],
+      "texts": ["", ""],
+      "source_path": "components/ui/bindings/ui_runtime_binding.c"
+    },
+    {
+      "selector": "ui_control_connected_rail_ble_icon",
+      "texts": ["", ""],
+      "source_path": "components/ui/bindings/ui_manifest_projection.c"
+    },
+    {
+      "selector": "ui_control_connected_rail_watch_battery_icon",
+      "font_codes": ["lucide_22", "lucide_28"],
+      "texts": ["", ""],
+      "source_path": "components/ui/bindings/ui_runtime_binding.c"
+    },
+    {
+      "selector": "ui_mode_default_rail_ble_icon",
+      "texts": ["", ""],
+      "source_path": "components/ui/bindings/ui_manifest_projection.c"
+    },
+    {
+      "selector": "ui_mode_default_rail_watch_battery_icon",
+      "font_codes": ["lucide_22", "lucide_28"],
+      "texts": ["", ""],
+      "source_path": "components/ui/bindings/ui_runtime_binding.c"
+    },
+    {
+      "selector": "ui_alerts_empty_rail_watch_battery_icon",
+      "font_codes": ["lucide_22", "lucide_28"],
+      "texts": ["", ""],
+      "source_path": "components/ui/bindings/ui_runtime_binding.c"
+    },
+    {
+      "selector": "ui_alerts_empty_rail_4g_icon",
+      "texts": ["", ""],
+      "source_path": "components/ui/bindings/ui_manifest_projection.c"
+    },
+    {
+      "selector": "ui_alerts_empty_rail_gps_icon",
+      "texts": ["", ""],
+      "source_path": "components/ui/bindings/ui_manifest_projection.c"
+    },
+    {
+      "selector": "ui_cmp_alert_row_alert_exo_battery_icon",
+      "texts": ["", "", "", "", "", ""]
+    },
+    {
+      "selector": "ui_cmp_alert_row_alert_exo_battery_label",
+      "texts": ["温度异常", "外骨骼低电", "手环严重低电", "手环低电", "音频资源异常", "4G 未就绪", "GPS 未定位"]
+    },
+    {
+      "selector": "ui_cmp_alert_row_alert_exo_battery_state",
+      "texts": ["过高", "%u%%", "请检查", "未联网", "搜索中", "未定位"]
+    },
+    {
+      "selector": "ui_cmp_setting_toggle_component_setting_value",
+      "texts": ["已开启", "已关闭"]
+    },
+    {
+      "selector": "ui_cmp_ble_candidate_row_device_candidate_1_rssi",
+      "texts": ["%d dBm", "连接中", "连接失败"]
+    },
+    {
+      "selector": "ui_selftest_progress_val_current_item",
+      "texts": ["屏幕显示", "触摸", "供电", "传感", "音频资源", "GPS 定位", "4G 网络", "BLE"]
+    },
+    {
+      "selector": "ui_selftest_manual_val_manual_item",
+      "texts": ["屏幕显示", "触摸", "I2C 总线", "电量计", "传感器", "音频播放", "GPS 串口", "GPS 定位", "4G 网络", "振动反馈", "音频资源", "未知"]
+    },
+    {
+      "selector": "ui_selftest_idle_txt_selftest_count",
+      "texts": ["07"]
+    },
+    {
+      "selector": "ui_selftest_idle_txt_selftest_scope",
+      "texts": ["7 类 · 11 项内部检查"]
+    },
+    {
+      "selector": "ui_selftest_progress_txt_progress_total",
+      "texts": ["/ 07"]
+    },
+    {
+      "selector": "ui_selftest_manual_lbl_manual_item",
+      "texts": ["人工确认 · %02u / 07"]
+    },
+    {
+      "selector": "ui_selftest_manual_txt_manual_question",
+      "texts": ["画面是否完整、无闪烁？", "点击目标，滑块超过 50% 即可", "是否听到清晰的提示音？", "是否感受到振动？", "请等待自动检查完成"]
+    },
+    {
+      "selector": "ui_selftest_manual_txt_manual_action_hint",
+      "texts": ["点击此处\\n再次播放", "观察结果后\\n选择结果"]
+    },
+    {
+      "selector": "ui_cmp_selftest_result_row_result_display_icon",
+      "texts": ["", "", ""]
+    },
+    {
+      "selector": "ui_cmp_selftest_result_row_result_display_state",
+      "texts": ["通过", "失败", "未完成", "跳过", "未运行"]
+    },
+    {
+      "selector": "ui_selftest_manual_touch_touch_target_state",
+      "texts": ["已点击", "待点击"]
+    },
+    {
+      "selector": "ui_selftest_manual_touch_touch_coordinate",
+      "texts": ["点击坐标：%d , %d", "点击坐标：-- , --"]
+    },
+    {
+      "selector": "ui_selftest_retry_detail_val_retry_item",
+      "texts": ["无失败项", "屏幕显示", "触摸", "供电", "传感", "音频资源", "GPS 定位", "4G 网络"]
+    },
+    {
+      "selector": "ui_selftest_retry_detail_txt_retry_eyebrow",
+      "texts": ["FAILED ITEM · %02u / %02u"]
+    },
+    {
+      "selector": "ui_selftest_retry_detail_lbl_retry_item_action",
+      "texts": ["设置环境并重试", "重试本项"]
+    },
+    {
+      "selector": "ui_clear_binding_confirm_txt_confirm_title",
+      "texts": ["清除失败", "正在清除", "清除绑定？"]
+    },
+    {
+      "selector": "ui_clear_binding_confirm_txt_confirm_effect",
+      "texts": ["未能清除绑定，请重试。", "正在清除绑定，请稍候。", "将清除绑定设备和控制资格。"]
+    },
+    {
+      "selector": "ui_clear_binding_confirm_txt_confirm_rebind",
+      "texts": ["当前绑定仍然保留。", "完成前不可重复提交。", "下次使用必须重新授权。"]
+    },
+    {
+      "selector": "ui_clear_binding_confirm_btn_confirm_clear_binding_label",
+      "texts": ["重试清除", "清除中", "清除"]
+    }
+  ],
+  "bounded_external_text": [
+    {
+      "selector": "ui_cmp_ble_candidate_row_device_candidate_1_name",
+      "policy": "printable_ascii_or_mac_fallback",
+      "enforced_by": "is_printable_ascii_text"
+    }
+  ]
+}

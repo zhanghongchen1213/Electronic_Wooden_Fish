@@ -1,0 +1,16 @@
+{
+  "codename": "ns600_16",
+  "ttf_path": "/assets/Fonts/NotoSansSC-600.ttf",
+  "bin_path": "/assets/Fonts/ui_font_ns600_16.bin",
+  "c_path": "/assets/Fonts/ui_font_ns600_16.c",
+  "cfg_path": "/assets/Fonts/ui_font_ns600_16.fcfg",
+  "size": 16,
+  "bpp": 4,
+  "letters": 0,
+  "ranges": [
+    "0x20-0x7e"
+  ],
+  "symbols": "·…中为位低候全击动右向回境完定已待成执择最本滑点环秒稍至行记请跳轮过返选通部长项",
+  "customparams": "--no-compress --no-prefilter",
+  "uploaded": false
+}

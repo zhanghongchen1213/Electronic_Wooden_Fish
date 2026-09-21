@@ -1,0 +1,14 @@
+{
+  "codename": "lucide_48",
+  "ttf_path": "/assets/Fonts/Lucide-1.16.0.ttf",
+  "bin_path": "/assets/Fonts/ui_font_lucide_48.bin",
+  "c_path": "/assets/Fonts/ui_font_lucide_48.c",
+  "cfg_path": "/assets/Fonts/ui_font_lucide_48.fcfg",
+  "size": 48,
+  "bpp": 4,
+  "letters": 0,
+  "ranges": [],
+  "symbols": "",
+  "customparams": "--no-compress --no-prefilter",
+  "uploaded": false
+}

@@ -1,0 +1,16 @@
+{
+  "codename": "ns700_34",
+  "ttf_path": "/assets/Fonts/NotoSansSC-700.ttf",
+  "bin_path": "/assets/Fonts/ui_font_ns700_34.bin",
+  "c_path": "/assets/Fonts/ui_font_ns700_34.c",
+  "cfg_path": "/assets/Fonts/ui_font_ns700_34.fcfg",
+  "size": 34,
+  "bpp": 4,
+  "letters": 0,
+  "ranges": [
+    "0x20-0x7e"
+  ],
+  "symbols": "传位供动启哪在失定屏幕感摸无显检正测源现电示络网自触试败资里音项频？",
+  "customparams": "--no-compress --no-prefilter",
+  "uploaded": false
+}

@@ -1,0 +1,16 @@
+{
+  "codename": "ns600_20",
+  "ttf_path": "/assets/Fonts/NotoSansSC-600.ttf",
+  "bin_path": "/assets/Fonts/ui_font_ns600_20.bin",
+  "c_path": "/assets/Fonts/ui_font_ns600_20.c",
+  "cfg_path": "/assets/Fonts/ui_font_ns600_20.fcfg",
+  "size": 20,
+  "bpp": 4,
+  "letters": 0,
+  "ranges": [
+    "0x20-0x7e"
+  ],
+  "symbols": "上中亮作动危复始完尚屏幕度开待成操未果查次测熄看确秒结自行要认运险需",
+  "customparams": "--no-compress --no-prefilter",
+  "uploaded": false
+}

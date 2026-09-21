@@ -1,0 +1,16 @@
+{
+  "codename": "mo500_16",
+  "ttf_path": "/assets/Fonts/Montserrat-500.ttf",
+  "bin_path": "/assets/Fonts/ui_font_mo500_16.bin",
+  "c_path": "/assets/Fonts/ui_font_mo500_16.c",
+  "cfg_path": "/assets/Fonts/ui_font_mo500_16.fcfg",
+  "size": 16,
+  "bpp": 4,
+  "letters": 0,
+  "ranges": [
+    "0x20-0x7e"
+  ],
+  "symbols": "定未绑",
+  "customparams": "--no-compress --no-prefilter",
+  "uploaded": false
+}

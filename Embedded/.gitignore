@@ -1,0 +1,22 @@
+build/*
+.vscode
+.cache
+managed_components
+docs/ESPWatch-S3-4G
+docs/hardware/datasheets/
+
+.agents
+.claude
+tests
+
+# Python 本地缓存与字节码
+__pycache__/
+*.py[cod]
+
+# SquareLine Studio — 本地临时与自动备份（不应入库）
+lvgl-design/squareline_studio/backup/
+lvgl-design/squareline_studio/cache/
+lvgl-design/squareline_studio/project.info
+
+tmp
+docs/hardware_test_records

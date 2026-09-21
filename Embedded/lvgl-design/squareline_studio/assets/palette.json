@@ -1,0 +1,15 @@
+{
+  "bg": "#000000",
+  "text": "#FFFFFF",
+  "focus": "#D7FF00",
+  "success": "#30D158",
+  "warning": "#FFD60A",
+  "danger": "#FF453A",
+  "cyan": "#64D2FF",
+  "blue": "#0A84FF",
+  "muted": "#8E98A7",
+  "disabled": "#484D56",
+  "divider": "#30343B",
+  "surface": "#16181C",
+  "surface_2": "#262A31"
+}

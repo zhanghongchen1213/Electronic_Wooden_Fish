@@ -1,0 +1,16 @@
+{
+  "codename": "ns500_19",
+  "ttf_path": "/assets/Fonts/NotoSansSC-500.ttf",
+  "bin_path": "/assets/Fonts/ui_font_ns500_19.bin",
+  "c_path": "/assets/Fonts/ui_font_ns500_19.c",
+  "cfg_path": "/assets/Fonts/ui_font_ns500_19.fcfg",
+  "size": 19,
+  "bpp": 4,
+  "letters": 0,
+  "ranges": [
+    "0x20-0x7e"
+  ],
+  "symbols": "·内查检类部项",
+  "customparams": "--no-compress --no-prefilter",
+  "uploaded": false
+}

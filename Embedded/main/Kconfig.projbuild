@@ -1,0 +1,38 @@
+menu "legbot_watch bring-up options"
+
+config LEGBOT_MAINTENANCE_UI
+    bool
+    default y
+    select LV_FONT_MONTSERRAT_18
+    help
+        固定启用最小维护壳层及其 18 像素关键字体。
+
+config LEGBOT_AUDIO_BRINGUP_AUTOPLAY
+    bool "在启动自检挂钩中播放固定音频"
+    default n
+    help
+        仅供 Story 1.4 板级 bring-up 验收构建使用。正式默认配置必须保持关闭。
+
+config LEGBOT_SELFTEST_DEV_BENCH_AUTORUN
+    bool "在启动自检挂钩中运行完整硬件自检"
+    default n
+    help
+        仅供开发台架绕过维护页面并自动运行完整自检的构建使用。
+        正式默认配置必须保持关闭，不得开机自动振动、播放或进入人工自检。
+
+config LEGBOT_WRIST_RAISE_CALIBRATION_TRACE
+    bool "输出抬腕亮屏标定轨迹"
+    default n
+    help
+        输出 WoM、原始/屏幕坐标加速度、分类结论和显示回报时序，
+        仅供左右腕数据采集与参数冻结使用。正式默认配置必须保持关闭。
+
+config LEGBOT_POWER_DIAGNOSTIC_BUILD
+    bool "输出一次性低功耗测量诊断"
+    default n
+    help
+        仅供功耗分析仪台架记录运行镜像、固件 profile、外设目标状态、
+        动态电源配置和当前 PM 锁。启动就绪后只输出一次，正式发布构建
+        必须保持关闭，不得用周期日志干扰 automatic light sleep 验收。
+
+endmenu

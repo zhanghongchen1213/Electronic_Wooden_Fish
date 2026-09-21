@@ -1,0 +1,16 @@
+{
+  "codename": "ns700_30",
+  "ttf_path": "/assets/Fonts/NotoSansSC-700.ttf",
+  "bin_path": "/assets/Fonts/ui_font_ns700_30.bin",
+  "c_path": "/assets/Fonts/ui_font_ns700_30.c",
+  "cfg_path": "/assets/Fonts/ui_font_ns700_30.fcfg",
+  "size": 30,
+  "bpp": 4,
+  "letters": 0,
+  "ranges": [
+    "0x20-0x7e"
+  ],
+  "symbols": "传位供关在外定屏幕感搜摸新显机正源电示索络网触资重音频骨骼",
+  "customparams": "--no-compress --no-prefilter",
+  "uploaded": false
+}

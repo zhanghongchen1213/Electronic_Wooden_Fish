@@ -1,0 +1,16 @@
+{
+  "codename": "mo700_62",
+  "ttf_path": "/assets/Fonts/Montserrat-700.ttf",
+  "bin_path": "/assets/Fonts/ui_font_mo700_62.bin",
+  "c_path": "/assets/Fonts/ui_font_mo700_62.c",
+  "cfg_path": "/assets/Fonts/ui_font_mo700_62.fcfg",
+  "size": 62,
+  "bpp": 4,
+  "letters": 0,
+  "ranges": [
+    "0x20-0x7e"
+  ],
+  "symbols": "",
+  "customparams": "--no-compress --no-prefilter",
+  "uploaded": false
+}

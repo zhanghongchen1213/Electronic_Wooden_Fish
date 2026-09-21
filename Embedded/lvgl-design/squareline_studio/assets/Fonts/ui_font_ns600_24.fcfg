@@ -1,0 +1,16 @@
+{
+  "codename": "ns600_24",
+  "ttf_path": "/assets/Fonts/NotoSansSC-600.ttf",
+  "bin_path": "/assets/Fonts/ui_font_ns600_24.bin",
+  "c_path": "/assets/Fonts/ui_font_ns600_24.c",
+  "cfg_path": "/assets/Fonts/ui_font_ns600_24.fcfg",
+  "size": 24,
+  "bpp": 4,
+  "letters": 0,
+  "ranges": [
+    "0x20-0x7e"
+  ],
+  "symbols": "。候制和在备定将控未格正清稍绑能设试请资重除，",
+  "customparams": "--no-compress --no-prefilter",
+  "uploaded": false
+}

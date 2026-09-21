@@ -1,0 +1,16 @@
+{
+  "codename": "ns700_26",
+  "ttf_path": "/assets/Fonts/NotoSansSC-700.ttf",
+  "bin_path": "/assets/Fonts/ui_font_ns700_26.bin",
+  "c_path": "/assets/Fonts/ui_font_ns700_26.c",
+  "cfg_path": "/assets/Fonts/ui_font_ns700_26.fcfg",
+  "size": 26,
+  "bpp": 4,
+  "letters": 0,
+  "ranges": [
+    "0x20-0x7e"
+  ],
+  "symbols": "付位前即后定当态支效新无时暂有档步状立证超连重验",
+  "customparams": "--no-compress --no-prefilter",
+  "uploaded": false
+}

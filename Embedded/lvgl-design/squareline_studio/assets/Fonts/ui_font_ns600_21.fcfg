@@ -1,0 +1,16 @@
+{
+  "codename": "ns600_21",
+  "ttf_path": "/assets/Fonts/NotoSansSC-600.ttf",
+  "bin_path": "/assets/Fonts/ui_font_ns600_21.bin",
+  "c_path": "/assets/Fonts/ui_font_ns600_21.c",
+  "cfg_path": "/assets/Fonts/ui_font_ns600_21.fcfg",
+  "size": 21,
+  "bpp": 4,
+  "letters": 0,
+  "ranges": [
+    "0x20-0x7e"
+  ],
+  "symbols": "严位低外定就常度异手未温源环电绪资重音频骨骼",
+  "customparams": "--no-compress --no-prefilter",
+  "uploaded": false
+}

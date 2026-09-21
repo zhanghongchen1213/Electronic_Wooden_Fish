@@ -1,0 +1,2 @@
+# 项目组件覆盖 ESP-IDF esp_pm 时继续复用固定 v5.5.4 的原始配置菜单。
+source "$IDF_PATH/components/esp_pm/Kconfig"

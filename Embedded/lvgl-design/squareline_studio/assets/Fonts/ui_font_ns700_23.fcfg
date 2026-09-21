@@ -1,0 +1,16 @@
+{
+  "codename": "ns700_23",
+  "ttf_path": "/assets/Fonts/NotoSansSC-700.ttf",
+  "bin_path": "/assets/Fonts/ui_font_ns700_23.bin",
+  "c_path": "/assets/Fonts/ui_font_ns700_23.c",
+  "cfg_path": "/assets/Fonts/ui_font_ns700_23.fcfg",
+  "size": 23,
+  "bpp": 4,
+  "letters": 0,
+  "ranges": [
+    "0x20-0x7e"
+  ],
+  "symbols": "、击到动即取受可否听块完待感成振提整无是晰查标检消清滑点烁画的目示等自请超过闪面音，？",
+  "customparams": "--no-compress --no-prefilter",
+  "uploaded": false
+}

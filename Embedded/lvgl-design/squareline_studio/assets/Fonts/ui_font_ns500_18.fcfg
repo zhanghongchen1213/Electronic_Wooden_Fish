@@ -1,0 +1,16 @@
+{
+  "codename": "ns500_18",
+  "ttf_path": "/assets/Fonts/NotoSansSC-500.ttf",
+  "bin_path": "/assets/Fonts/ui_font_ns500_18.bin",
+  "c_path": "/assets/Fonts/ui_font_ns500_18.c",
+  "cfg_path": "/assets/Fonts/ui_font_ns500_18.fcfg",
+  "size": 18,
+  "bpp": 4,
+  "letters": 0,
+  "ranges": [
+    "0x20-0x7e"
+  ],
+  "symbols": "交位作前勿可境复始定已开当才择提操新未果环结解请选释重，",
+  "customparams": "--no-compress --no-prefilter",
+  "uploaded": false
+}
