@@ -5,7 +5,7 @@ type: ui-contract
 surface: miniapp
 status: final
 created: 2026-09-08
-updated: 2026-09-13
+updated: 2026-09-21
 selected_style: MINI-06
 source_master: A358t
 frozen_sources:
@@ -115,4 +115,4 @@ Pen 中每个 PageId 只保留 canonical screen；局部状态进入组件状态
 
 
 ## 7. FR / story 校验
-- 覆盖 FR-F-001~010 全部页面与空/失败态；对照 epics S3.1~S3.6、S4.1~S4.5。
+- 覆盖 FR-F-001~010 全部页面与空/失败态；Epic/Story 待基线审查通过后重新生成。

@@ -523,7 +523,7 @@ mv "$EWF_MONITOR_LOG" "$EWF_INTERRUPTED_LOG"
 
 - **E1 平台底座**：上电/复位行为、充电/硬断、I²C 扫描、GPIO 冒烟、烧录→看日志→JTAG 通道可用、USB 连接时日志不因自动 light-sleep 失联。
 - **E2 拿起就敲**：注入/真实敲击不漏记乱序、本地计数持久化、充电/故障门控忽略输入。
-- **E3/E4 及软件层**：按各自 story 门禁（见 `_bmad-output/planning-artifacts/epics.md`）填入。
+- **后续 Epic/Story 与软件层**：待用户审查规划基线并重新生成 Epic/Story 后，按新的 story 门禁填入。
 
 收到「步骤 N 开始」后应立即：
 
@@ -790,7 +790,7 @@ mv "$EWF_MONITOR_LOG" "$EWF_SERIAL_LOG"
 ## 18. 相关文档
 
 - [docs/embedded/README.md](../README.md)：设备侧文档索引、迁移来源/排除表、固件规则引用。
-- [ARCHITECTURE-SPINE.md](../../../_bmad-output/planning-artifacts/architecture/architecture-Electronic_Wooden_Fish-2026-09-08/ARCHITECTURE-SPINE.md)：AD-8/AD-11/AD-13/AD-14、板级 GPIO 合同与工程门禁；引脚冲突一律以 spine 为准。
-- [_bmad-output/planning-artifacts/epics.md](../../../_bmad-output/planning-artifacts/epics.md)：E1.1（工程骨架）、E1.2（USB-Serial-JTAG 通道）等 story 门禁；分区表/NVS 冻结项见其附录说明。
+- [ARCHITECTURE-SPINE.md](../../../_bmad-output/planning-artifacts/architecture/architecture-Electronic_Wooden_Fish-2026-09-08/ARCHITECTURE-SPINE.md)：AD-8/AD-11/AD-13/AD-14 与跨层工程门禁。
+- [电子木鱼-硬件原理图设计基线.md](../../hardware/电子木鱼-硬件原理图设计基线.md)：板级 GPIO、启动、电源和硬件验证门禁；引脚冲突回到 `docs/hardware/` 收敛。
 - [docs/embedded/guides/低功耗策略与实测验收.md](./低功耗策略与实测验收.md)：全链路低功耗真机验收方法学（EWF 能耗验收配合本文流程执行）。
 - Windows/其他环境工具链：不在本文范围。

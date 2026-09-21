@@ -13,11 +13,11 @@
 | `docs/handoffs/` | 交接文档（当前：UI 设计移交） |
 | `lvgl-design/` | 设备 OLED(LVGL) UX 真源（冻结 Pen；同名 HTML 由作者导出） |
 | `miniapp-design/` | 小程序 UX 真源（冻结 Pen；同名 HTML 由作者导出） |
-| `_bmad-output/planning-artifacts/` | BMAD 规划产物（brief/prd/architecture/epics/ux-designs） |
+| `_bmad-output/planning-artifacts/` | BMAD 规划产物（brief/prd/architecture/ux-designs；Epic/Story 待审查后生成） |
 
 ## 2. BMAD 状态指针
 
-- 阶段：planning 完成（PRD/架构/epics final）＋ UX 规范 final；设备 `DEVICE-01`（母版 `hbTEa`）与小程序 `MINI-06`（母版 `A358t`）均已锁定为 UX 视觉基线，**尚未进入 sprint/build**。源码目录为空，绿地。
+- 阶段：planning 基线完成（PRD/架构/UX final）；Epic/Story 已按决策删除，待用户审查通过后重新生成。设备 `DEVICE-01`（母版 `hbTEa`）与小程序 `MINI-06`（母版 `A358t`）均已锁定为 UX 视觉基线，**尚未进入 sprint/build**。源码目录为空，绿地。
 - 两份 Pen 是当前视觉真源；同名 HTML 由作者导出。方向稿、候选板、导出脚本、SquareLine 规划文件和旧校验工具已清理。
 - 权威与下一步的**唯一入口**：`docs/handoffs/2026-09-08-bmad-status-ui-design-handoff.md`。
 - 菜单码：`SP` sprint → `BD` build；`CU` bmad-ux（UX 已在跑，后续 Update）。改动产出前先 `git status` 了解未提交集合。
@@ -55,7 +55,7 @@
 - 4G = **Air780EGP**（IO43/44 UART + DTR IO10/RST IO15/NET_STATUS 兼容位 IO16）；`IO8` 现分配为 **PWR 按键输入**（读 LTC2954 的 `PWR_INT`），M100 `GNSS_VCC` 留 NC/测试点，不连接 ESP32。AT/联网经验已迁移至 **`docs/embedded/4g/`**（源 `main_control`，HEAD `fb458b9`）；勿从 legbot 引（其用 ML307R 不适用）。完整电源/FPC/载板网络见 `docs/hardware/电子木鱼-硬件网络清单.json`。
 - 后端持久化 = **JSON 原子文件、零数据库**（AD-16，覆盖早期 SQLite）。
 - 键盘输入含 PVDF（比较器 IO11 唤醒 + ADC IO9 确认，ADC1_CH8），legbot 无此，按固件 story E2.5 实现。
-- 引脚/板级唯一权威：`ARCHITECTURE-SPINE.md` §板级合同；冲突先改 spine 再调代码。
+- 引脚/板级唯一权威：`docs/hardware/电子木鱼-硬件原理图设计基线.md`、`docs/hardware/电源网络命名规范.md`、`docs/hardware/电子木鱼-硬件网络清单.json` 及对应外围电路文档；跨层边界由 `ARCHITECTURE-SPINE.md` 约束，冲突先在硬件事实源收敛。
 
 ### 3.6 软件层规则（backend / frontend，经验源 miaowu，HEAD b1e0a660）
 - **backend（`cloud/backend`，Spring Boot）**：接口统一 `/api/v1` + `{code,message,data}` 信封（code=0 成功）；错误码 = `{HTTP 状态}{两位序号}`；业务错误回 **HTTP 200 + 业务码**（GlobalExceptionHandler），不破坏 HTTP 语义；微信登录走 `WechatMiniClient` 模式（code2Session 先取 String body 再解析、AppID 三处对齐、session_key 清空与 openId 脱敏、access_token 提前 300s 缓存）；JWT 过滤器分级 + `ThreadLocal finally clear()`；持久化 **JSON 原子文件零库**（AD-16，**禁止引入 SQL/DB**）；单身份单设备（无角色/租户）。
@@ -87,4 +87,4 @@
 ## 5. 规范来源（provenance）
 
 - 本文件 §3 与 `docs/embedded/**` 均迁移/适配自 `legbot_watch`（HEAD `41a5ab8b9`，2026-09-08 迁移）；各文档头部含 provenance 块。
-- `legbot_watch` 是**只读蓝本**：本仓不得反向修改 legbot；若某规则与 EWF 产品冲突，以 EWF PRD/ARCHITECTURE-SPINE/UX 契约为准并在迁移文档注明。
+- `legbot_watch` 是**只读蓝本**：本仓不得反向修改 legbot；若某规则与 EWF 产品冲突，以 EWF PRD、`ARCHITECTURE-SPINE.md`、`docs/hardware/` 和 UX 契约各自职责为准并在迁移文档注明。

@@ -2,7 +2,7 @@
 # Air780EGP AT 零响应与恢复
 
 > 状态：EWF 绿地阶段方法学排障知识。恢复路径提炼自 `main_control`（M100EG-C2 4G/GPS 驱动，含 Air780EGP HTTPS 经验，2026-09-05 实现）；EWF 4G 模组同为 **Air780EGP**，需在自有目标板上重新闭环。所有实测项未验证前一律 `DEFERRED`，不得从编译成功推导出通信可靠。
-> 引脚唯一权威：`_bmad-output/planning-artifacts/architecture/architecture-Electronic_Wooden_Fish-2026-09-08/ARCHITECTURE-SPINE.md` §板级合同（冲突一律以 spine 为准，先改 spine 再调整）。电源/载板逐网以 `docs/hardware/电子木鱼-硬件网络清单.json` 为准。
+> 引脚、电源与载板网络唯一权威：`docs/hardware/电子木鱼-硬件原理图设计基线.md`、`docs/hardware/电源网络命名规范.md`、`docs/hardware/电子木鱼-硬件网络清单.json` 与对应外围电路文档。
 > 最近更新：2026-09-08
 
 ## 1. 结论（先读）
@@ -66,22 +66,22 @@
 - 响应日志同样过滤：敏感事务的响应行不逐行 `ESP_LOGI`。
 - EWF 沿用该约定：任何含 `token`/`Authorization`/请求体的日志分支都必须走脱敏路径，违反即视为泄露缺陷。
 
-## 7. 板级引脚与电平复核（按 EWF spine §板级合同）
+## 7. 板级引脚与电平复核（按 EWF 硬件事实源）
 
 | 信号 | ESP32-S3 GPIO | 来源 | 约束 |
 | --- | ---: | --- | --- |
-| Air780EGP UART TX / RX | IO43 / IO44 | spine §板级合同 | 模组独占 UART；单 AT 入口 + 单事务所有权 |
-| Air780EGP DTR（休眠/唤醒控制） | IO10 | spine §板级合同 | 与源工程 GPIO7 不同，按 EWF 原理图接线；**开漏驱动** |
-| Air780EGP RST / NET_STATUS 兼容位 | IO15 / IO16 | spine §板级合同 | RST、NET_STATUS 源实现保持输入高阻；NET_STATUS 缺脚时 TP/NC |
+| Air780EGP UART TX / RX | IO43 / IO44 | 硬件主基线与网络清单 | 模组独占 UART；单 AT 入口 + 单事务所有权 |
+| Air780EGP DTR（休眠/唤醒控制） | IO10 | 硬件主基线与网络清单 | 与源工程 GPIO7 不同，按 EWF 原理图接线；**开漏驱动** |
+| Air780EGP RST / NET_STATUS 兼容位 | IO15 / IO16 | 硬件主基线与网络清单 | RST、NET_STATUS 源实现保持输入高阻；NET_STATUS 缺脚时 TP/NC |
 | M100 GNSS_VCC | NC | 硬件基线 | 留 NC/TP，不由 ESP32 驱动（BQ25895 的 OTG 脚已硬件接地，不存在 `BQ_OTG_EN` GPIO；`IO8` 现为 PWR 按键输入） |
 
 - 源工程 DTR 约定（`gps.h` + `gps_config.h`）：`GPS_DTR_AWAKE_LEVEL = 0`（低电平唤醒）、`GPS_DTR_SLEEP_LEVEL = 1`（高电平休眠），ESP32 侧用**开漏**驱动，预置安全电平后再挂 UART。
 - **电平极性必须复核整模组手册**：EWF 换板后 DTR 接线与电平有效极性以 Air780EGP 硬件手册/整机原理图为准，源工程值只作移植默认，不得在样机/原理图核验前冻结。若手册极性相反，仅需对调 `AWAKE`/`SLEEP` 两个宏，故障树与恢复流程不变。
-- 与 spine 冲突时一律以 spine 为准：本文件不冻结任何未核验电平/引脚，实施前先读 spine §板级合同与整机原理图。
+- 与硬件主基线冲突时先回到 `docs/hardware/` 收敛：本文件不冻结任何未核验电平/引脚，实施前先读硬件主基线与整机原理图。
 
 ## 8. 源证据索引（迁移核对用）
 
 - `main_control/components/BSP/GPS/gps.c`：`gps_uart_init`（DTR 开漏预置 + UART 挂接/清残留重挂）、`gps_update_timeout_count`（超时计数/清零）、`gps_send_at_internal`（发 AT 前 `uart_flush_input`、读超时才 `++`）、`gps_sync_modem`（候选波特率逐档 `AT` 重同步）、`gps_recover_modem`（DTR 唤醒 + 100 ms + 重同步，失败清假状态）、`gps_clear_live_status`（复位实时标志）、`gps_prepare_sleep`（退出前 `AT+CSCLK=1` 等）、`gps_driver_task`（退避表与 `recovery_index` 单调/封顶/清零）。
 - `main_control/components/BSP/GPS/gps_config.h`：§AT、网络与 GNSS 时序（阈值/退避表/编译期单调校验）。
 - `main_control/docs/Function/景区管理四态授权与异常路径说明.md`：仅取「启动后保持原状态，同步失败不改变当前状态」与「快/慢重试」重试语义，已剥离景区/支付/围栏/管理员语境。
-- EWF 基线：spine §板级合同引脚（IO43/44、IO10）；`低功耗策略与实测验收.md`（活动窗口单次上报、5 s/30 s 轮询节奏）。
+- EWF 基线：`docs/hardware/` 引脚（IO43/44、IO10）；`低功耗策略与实测验收.md`（活动窗口单次上报、5 s/30 s 轮询节奏）。

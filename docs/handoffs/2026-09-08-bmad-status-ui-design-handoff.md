@@ -1,7 +1,7 @@
 # 电子木鱼交接：UX 真源已冻结
 
-- **更新时间**：2026-09-13
-- **当前状态**：planning 已完成；设备侧 DEVICE-01 与小程序侧 MINI-06 的 UX 框架均已锁定。
+- **更新时间**：2026-09-21
+- **当前状态**：PRD、架构主干和 UX 规范均为 final；Epic/Story 按决策暂未创建，等待用户审查基线后重新生成。
 - **实现状态**：Embedded、backend、frontend 仍未进入实现；Stage 5 尚未开始。
 - **HTML 约定**：同名 HTML 由作者从 Pen 导出，本仓库不保存导出脚本或自动组装器。
 
@@ -43,13 +43,13 @@ UX 规范位于 _bmad-output/planning-artifacts/ux-designs/ux-Electronic_Wooden_
 
 ## 4. 已清理的中间产物
 
-方向稿、候选风格板、导出 HTML 副本、组装脚本、旧校验工具、SquareLine 规划工程和临时素材均已从工作区删除。历史决策只保留在 PRD、UX 规范和审计记录中，不再作为现役输入。
+方向稿、候选风格板、导出 HTML 副本、组装脚本、旧校验工具、SquareLine 规划工程和临时素材均已从工作区删除。历史决策以 Git 历史保留，不再作为现役输入。
 
 ## 5. 下一步
 
-1. 作者从两份冻结 Pen 分别导出同名 HTML。
-2. Embedded 依据设备 Pen 和 UI_CONTRACT-device 建立 SquareLine/LVGL 实现链。
-3. frontend 依据小程序 Pen、作者导出的 HTML 和 UI_CONTRACT-miniapp 逐页复刻。
+1. 用户审查 brief、PRD、架构主干和四份 UX 规范。
+2. 审查通过后重新运行 `bmad-create-epics-and-stories`，生成新的 Epic/Story 基线。
+3. 再由 Embedded 依据设备 Pen 和 UI_CONTRACT-device 建立 SquareLine/LVGL 实现链，frontend 依据小程序 Pen 和 UI_CONTRACT-miniapp 逐页复刻。
 4. 任何视觉或状态变更先更新对应 UX 规范，再修改实现。
 
 ## 6. 当前证据
@@ -58,4 +58,3 @@ UX 规范位于 _bmad-output/planning-artifacts/ux-designs/ux-Electronic_Wooden_
 - 小程序 Pen 的页面边界扫描无问题，过程性可见文字扫描为空。
 - 小程序阅读行结构为 17 槽，最新字位于下一个已用槽位。
 - 本轮未修改任何导出脚本、HTML 或前端源码。
-

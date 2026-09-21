@@ -2,7 +2,7 @@
 
 > 范围：EWF `Embedded/` 固件实现规格与排障知识。设备侧代码/框架以 **legbot_watch**（只读蓝本）为基础，本目录多数文档从 `legbot_watch/docs` 迁移/适配而来，每条头部带 provenance（legbot 路径 + HEAD + 判定 + 适配点）。
 >
-> 引脚/板级唯一权威：`ARCHITECTURE-SPINE.md` §板级合同（GPIO 冲突一律以 spine 为准，先改 spine 再调整）。固件强制规则与坑索引见根 **`AGENTS.md`**。
+> 引脚/板级唯一权威：`docs/hardware/电子木鱼-硬件原理图设计基线.md`、`docs/hardware/电源网络命名规范.md`、`docs/hardware/电子木鱼-硬件网络清单.json` 与对应外围电路文档。固件强制规则与坑索引见根 **`AGENTS.md`**。
 
 ## 文档索引
 
@@ -15,7 +15,7 @@
 | `troubleshooting/CO5300-熄亮屏闪屏与整帧时序.md` | 闪屏根因=复位后 GRAM 未定义即 DISPON；先 DISPOFF→整帧→DISPON |
 | `guides/低功耗策略与实测验收.md` | 全链路低功耗方法学（证据分级 IMPLEMENTED/PASS/DEFERRED、CO5300/CST9217/USJ 锚点） |
 | `guides/真机闭环runbook-macos.md` | macOS ESP-IDF 真机编译/烧录/监控/取证 runbook 模板 |
-| `bsp/外设硬件软件二开.md` | 板级 GPIO/总线总表 + 每外设（CO5300/CST9217/CW2015/ES8311/NS4150B/PVDF/按键/USJ）「数据手册事实 + 已知坑」（按 EWF spine 引脚重写） |
+| `bsp/外设硬件软件二开.md` | 板级 GPIO/总线总表 + 每外设（CO5300/CST9217/CW2015/ES8311/NS4150B/PVDF/按键/USJ）「数据手册事实 + 已知坑」（按 EWF `docs/hardware/` 硬件基线重写） |
 | `style/C编码规范-Agent版.md` | EWF 设备侧 C 编码强制基线（显力科技 Agent 精简版） |
 
 > 补充：**`4g/`** —— Air780EGP 4G 轨经验（源 `main_control`，HEAD `fb458b9`），含 README + `Air780EGP-AT联网与HTTPS经验.md` + `troubleshooting/Air780EGP-AT零响应与恢复.md`，见 [`4g/README.md`](4g/README.md)。

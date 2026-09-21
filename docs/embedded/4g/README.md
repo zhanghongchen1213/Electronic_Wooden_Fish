@@ -1,6 +1,6 @@
 # docs/embedded/4g — Air780EGP 4G 轨（设备侧）
 
-> 范围：EWF 唯一 4G 业务链路 = **Air780EGP**（架构 AD-14；UART IO43/44 + DTR IO10/RST IO15/NET_STATUS 兼容位 IO16，引脚以 ARCHITECTURE-SPINE 板级合同为准）。`IO8` 现为 PWR 按键输入（读 LTC2954 的 `PWR_INT` 按键状态，固件用边沿中断捕获并自行测低电平时长），M100 `GNSS_VCC` 留 NC/TP。经验源= `main_control`（HEAD fb458b9，2026-09-08 迁移），其 `components/BSP/GPS/gps.*` 底层即 Air780E 系 AT 固件（`GPS_HTTP_SSL_CONTEXT_ID=153` 直标 Air780EGP）。固件接入实现归 story E4.1/E4.2。
+> 范围：EWF 唯一 4G 业务链路 = **Air780EGP**（架构 AD-14；UART IO43/44 + DTR IO10/RST IO15/NET_STATUS 兼容位 IO16；引脚、电源和载板网络以 `docs/hardware/` 为准）。`IO8` 现为 PWR 按键输入（读 LTC2954 的 `PWR_INT` 按键状态，固件用边沿中断捕获并自行测低电平时长），M100 `GNSS_VCC` 留 NC/TP。经验源= `main_control`（HEAD fb458b9，2026-09-08 迁移），其 `components/BSP/GPS/gps.*` 底层即 Air780E 系 AT 固件（`GPS_HTTP_SSL_CONTEXT_ID=153` 直标 Air780EGP）。固件接入的 Epic/Story 待基线审查通过后重新生成。
 
 ## 文档索引
 | 文件 | 内容 |

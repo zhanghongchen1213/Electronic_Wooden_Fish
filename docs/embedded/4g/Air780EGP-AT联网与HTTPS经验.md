@@ -2,7 +2,7 @@
 # Air780EGP AT 联网与 HTTPS 经验
 
 > 状态：EWF 绿地阶段方法学迁移。底层经验全部提炼自 `main_control`（HEAD fb458b9，2026-09-05 实现）的 `components/BSP/GPS/gps.*`。该驱动面向 **M100EG-C2（Air780E 系 AT 固件）**，其中 `GPS_HTTP_SSL_CONTEXT_ID=153` 直接点名 Air780EGP——即 EWF 所用整颗模组。所有数值与流程未在 EWF 自有板闭环前一律 `DEFERRED`，不得从“代码能编译”推导出“通信可靠”。
-> 引脚/板级唯一权威：`_bmad-output/planning-artifacts/architecture/architecture-Electronic_Wooden_Fish-2026-09-08/ARCHITECTURE-SPINE.md` §板级合同（冲突一律以 spine 为准）。本文件不冻结任何未核验电平/引脚；EWF 具体电源与载板网络见 `docs/hardware/电子木鱼-硬件原理图设计基线.md`。
+> 引脚、电源与载板网络唯一权威：`docs/hardware/电子木鱼-硬件原理图设计基线.md`、`docs/hardware/电源网络命名规范.md`、`docs/hardware/电子木鱼-硬件网络清单.json` 与对应外围电路文档。本文件不冻结任何未核验电平/引脚。
 > 兄弟排障文档（AT 零响应故障树/恢复语义的展开版）：`docs/embedded/4g/troubleshooting/Air780EGP-AT零响应与恢复.md`。
 > 最近更新：2026-09-08
 
@@ -248,7 +248,7 @@ source 实现约定（EWF 必须沿用，违反即视为泄露缺陷）：
 
 ## ⑩ EWF 参数基线表（抄自 gps_config.h，逐行 DEFERRED）
 
-> 下表数值 = `main_control/components/BSP/GPS/gps_config.h` 原值，供 EWF 复制为基线。**每项均标 `DEFERRED`：待 EWF 真机/原理图核验后才可冻结**，不得从编译成功推导可靠。引脚不在此表（引脚唯一权威 = spine §板级合同，见 ⑪ 表）。GNSS 相关行 EWF 默认关闭、保留待用。
+> 下表数值 = `main_control/components/BSP/GPS/gps_config.h` 原值，供 EWF 复制为基线。**每项均标 `DEFERRED`：待 EWF 真机/原理图核验后才可冻结**，不得从编译成功推导可靠。引脚不在此表（引脚唯一权威 = `docs/hardware/`，见 ⑪ 表）。GNSS 相关行 EWF 默认关闭、保留待用。
 
 ### UART 与任务
 
@@ -352,7 +352,7 @@ source 实现约定（EWF 必须沿用，违反即视为泄露缺陷）：
 
 | 自建项 | 说明 | 依据 / 门禁 |
 | --- | --- | --- |
-| **发射峰值 / 掉压** | Air780EGP 高电流电池轨（持续 >1 A / 瞬时 >2 A 能力）。4G 发射峰值时电池轨不得掉压到触发 ESP32-S3 重启；需实测发射瞬态（弱网满功率发射 + 最大占空比上报场景）。 | spine AD-13 / §板级合同「电源分轨」；工程验证门禁「发射峰值电池轨无掉压重启」 |
+| **发射峰值 / 掉压** | Air780EGP 高电流电池轨（持续 >1 A / 瞬时 >2 A 能力）。4G 发射峰值时电池轨不得掉压到触发 ESP32-S3 重启；需实测发射瞬态（弱网满功率发射 + 最大占空比上报场景）。 | spine AD-13；硬件主基线的电源分轨与工程验证门禁 |
 | **SIM 实名 / 资费** | HTTPS 需要 SIM 已实名且套餐含数据流量；停机/欠费/定向流量不足的表现要纳入 AT 恢复与上报失败语义验证。 | EWF 运营商选型自建；main_control 无覆盖 |
 | **载板控制脚 / 天线** | ① DTR（IO10）有效极性、开漏驱动是否与 Air780EGP 整模组手册一致（对调 AWAKE/SLEEP 两宏即可适配，见⑤）；② M100 RST（IO15）方向/极性、NET_STATUS（IO16）是否有载板针脚；③ GNSS_VCC 保持 NC/TP，`IO8` 现为 PWR 按键输入（原 `BQ_OTG_EN` 方案作废：BQ25895 的 OTG 脚已硬件接地，不占 GPIO）；④ 天线选型/布线/天线检测与弱网 CSQ。 | 整模组/载板手册 + 原理图核验后才冻结 |
 
@@ -382,4 +382,4 @@ source 实现约定（EWF 必须沿用，违反即视为泄露缺陷）：
 
 - 本文件：`docs/embedded/4g/Air780EGP-AT联网与HTTPS经验.md`（§①-⑫）。
 - 兄弟排障：`docs/embedded/4g/troubleshooting/Air780EGP-AT零响应与恢复.md`。
-- 固件实现归 story E4.1/E4.2；引脚/电源权威 = `_bmad-output/planning-artifacts/architecture/architecture-Electronic_Wooden_Fish-2026-09-08/ARCHITECTURE-SPINE.md` §板级合同；逐网/电源/载板交叉表见 `docs/hardware/电子木鱼-硬件网络清单.json`。
+- 固件实现的 Epic/Story 待基线审查通过后重新生成；引脚/电源权威 = `docs/hardware/`，逐网/电源/载板交叉表见 `docs/hardware/电子木鱼-硬件网络清单.json`。

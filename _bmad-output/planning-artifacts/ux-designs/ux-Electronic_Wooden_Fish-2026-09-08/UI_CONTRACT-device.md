@@ -5,7 +5,7 @@ type: ui-contract
 surface: device
 status: final
 created: 2026-09-08
-updated: 2026-09-13
+updated: 2026-09-21
 selected_style: DEVICE-01
 source_master: hbTEa
 frozen_sources:
@@ -50,7 +50,7 @@ authority: "UX spines (DESIGN.md / EXPERIENCE.md) > 本契约 > pen/HTML > Squar
 - 状态栏不单独生成顶层屏幕；同步/充电/低电/故障以页面内 `statusbar` 的 `VAR` 标注。
 - 每个 canonical frame 固定 410×502；当前只使用冻结的 DEVICE-01 Pen，历史候选不参与实现。
 
-## 3. 页面闭包表（pen/HTML 必须各有帧；绑定 epics E3 story）
+## 3. 页面闭包表（pen/HTML 必须各有帧；Epic/Story 待基线审查后绑定）
 
 | PageId | 页面 | 作用 | 帧(ST) | 绑定 |
 | --- | --- | --- | --- | --- |
@@ -159,4 +159,4 @@ Pen 中只保留真实改变页面结构或输入边界的 screen：`screen_shel
 - `generated/` 只导出布局、字体和事件空桩；三环描边色（flash）、最新字切换、经文滚动锚点、状态栏信号/电量/同步的颜色与图标补全，全部由 `bindings/` 在 `ui_task` 内驱动。金色闪光只需在 bindings 侧绑定 `{colors.brand.amber.300}` 并在 160ms 后回 idle，母版**不导出**金色描边与任何重复的信号槽节点。
 
 ## 7. FR / story 校验
-- 覆盖 FR-E-006/007/009 全部页面态；FR-E-003/005/008 由状态/反馈帧覆盖；对照 epics E3.1~E3.9。
+- 覆盖 FR-E-006/007/009 全部页面态；FR-E-003/005/008 由状态/反馈帧覆盖；Epic/Story 待基线审查通过后重新生成。

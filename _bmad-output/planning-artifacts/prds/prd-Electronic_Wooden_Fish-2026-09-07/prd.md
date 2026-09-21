@@ -2,7 +2,7 @@
 title: 电子木鱼
 status: final
 created: 2026-09-07
-updated: 2026-09-09
+updated: 2026-09-21
 ---
 
 # PRD：电子木鱼
@@ -14,12 +14,12 @@ updated: 2026-09-09
 文档层级如下：
 
 - 本 PRD：产品目标、用户旅程、跨层行为和验收标准。
-- `ARCHITECTURE-SPINE.md`（架构主干，不变量契约单一事实源，替代原根目录 architecture.md）：硬件拓扑、GPIO、电源、总线、屏幕/音频、4G 传输与数据流；见 `../../architecture/architecture-Electronic_Wooden_Fish-2026-09-08/ARCHITECTURE-SPINE.md`。
-- `docs/embedded/requirements.md`：固件实现规格。
-- `docs/backend/requirements.md`：后端实现规格。
-- `docs/frontend/requirements.md`：小程序实现规格。
-- `docs/contracts/sync-contract.md`：跨层同步字段、状态和修订号合同。
-- 本目录 `addendum.md`：决策反转、验证门禁、参考项目边界和下游文档索引。
+- `ARCHITECTURE-SPINE.md`（跨层架构不变量单一事实源）：同步、边界、技术栈和实现分层；见 `../../architecture/architecture-Electronic_Wooden_Fish-2026-09-08/ARCHITECTURE-SPINE.md`。
+- `docs/embedded/requirements.md`：固件实现规格（待后续 spec 阶段创建，当前未创建）。
+- `docs/backend/requirements.md`：后端实现规格（待后续 spec 阶段创建，当前未创建）。
+- `docs/frontend/requirements.md`：小程序实现规格（待后续 spec 阶段创建，当前未创建）。
+- `docs/contracts/sync-contract.md`：跨层同步字段、状态和修订号合同（待后续 spec/S0 阶段创建，当前未创建）。
+- `docs/hardware/电子木鱼-硬件原理图设计基线.md`：板级 GPIO、电源、FPC、器件连接和硬件验证基线。
 
 本项目是个人开发原型，只维护一台设备和一个固定 backend，不设计量产认证、多设备迁移、复杂账号、CI/CD 或云运维体系。
 
@@ -140,7 +140,7 @@ PVDF 是唯一 MVP 实体输入。低功耗比较器输出唤醒信号，ESP32 A
 
 AMOLED 提供木鱼页、经文页、统计页和下滑设置页。屏幕四周保留 110px 圆弧；顶部状态栏左侧依次展示 4G、Wi-Fi、蓝牙、GPS 四个信号组件，分别支持有信号、无信号、关闭/未启用状态，右侧使用电池符号和百分比展示电量/充电。Wi-Fi、蓝牙、GPS 仅表达设备状态，不改变 MVP 只有 Air780EGP 4G 业务链路的边界。
 
-木鱼页固定 7 个字形位置，最近已诵字左移、新字从右侧进入，只呈现最近已诵内容，空位以低对比度占位，不预览未来经文；标点随相邻字出现但不消耗敲击。页面显示“心经进度”字数、总可消费字数和百分比，以及“今日敲击 N 次”和“累计敲击 M 次”。设备即时进度可含本地尚未确认的新字，须按 AD-2 标记同步状态。“当前诵读”指从 canonical《心经》首字推进到末字的一次完整诵读；总字数由 S0.3 计算，7 字窗口不是字数上限。到达末字后进度保持 100%，进入完成锁定；选择“从头开始”创建新的诵读周期，历史保留。
+木鱼页固定 7 个字形位置，最近已诵字左移、新字从右侧进入，只呈现最近已诵内容，空位以低对比度占位，不预览未来经文；标点随相邻字出现但不消耗敲击。页面显示“心经进度”字数、总可消费字数和百分比，以及“今日敲击 N 次”和“累计敲击 M 次”。设备即时进度可含本地尚未确认的新字，须按 AD-2 标记同步状态。“当前诵读”指从 canonical《心经》首字推进到末字的一次完整诵读；总字数由后续同步契约与实现阶段的 canonical 产物确定，7 字窗口不是字数上限。到达末字后进度保持 100%，进入完成锁定；选择“从头开始”创建新的诵读周期，历史保留。
 
 经文页以大号当前字配合少量已确认前后文展示心经进度；统计页显示今日敲击数与累计敲击数，近 7 日、近 30 日与连续天数由软件层小程序的记录页承担。
 
@@ -338,7 +338,7 @@ WebSocket 断开时切换到查询/回放；重连后只补齐未展示的 backe
 
 ## 11. 工程验证入口
 
-工程验证结果回写架构主干 `ARCHITECTURE-SPINE.md`（见 `../../architecture/architecture-Electronic_Wooden_Fish-2026-09-08/`）和对应 `docs/` 层级规格：
+工程验证结果回写架构主干 `ARCHITECTURE-SPINE.md`（见 `../../architecture/architecture-Electronic_Wooden_Fish-2026-09-08/`）、`docs/hardware/` 和对应 `docs/` 层级规格：
 
 1. GPIO0/45/46 启动绑带、GPIO19/20 USB、GPIO9 ADC、GPIO11 比较器、GPIO43/44/10/15/16/8 Air780EGP 重映射。
 2. CO5300 FPC 供电、QSPI、亮屏/熄屏、CST9217 地址与触摸坐标。

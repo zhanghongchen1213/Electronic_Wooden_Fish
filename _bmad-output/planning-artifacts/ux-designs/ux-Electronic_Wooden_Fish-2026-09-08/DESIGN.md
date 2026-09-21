@@ -4,12 +4,10 @@ description: "一敲一字的电子木鱼双端体验：设备诵经与小程序
 type: design
 status: final
 created: 2026-09-08
-updated: 2026-09-13
+updated: 2026-09-21
 sources:
   - "{planning_artifacts}/briefs/brief-Electronic_Wooden_Fish-2026-09-08/brief.md"
-  - "{planning_artifacts}/briefs/brief-Electronic_Wooden_Fish-2026-09-08/addendum.md"
   - "{planning_artifacts}/prds/prd-Electronic_Wooden_Fish-2026-09-07/prd.md"
-  - "{planning_artifacts}/prds/prd-Electronic_Wooden_Fish-2026-09-07/addendum.md"
   - "{planning_artifacts}/architecture/architecture-Electronic_Wooden_Fish-2026-09-08/ARCHITECTURE-SPINE.md"
 selected_style:
   device: DEVICE-01

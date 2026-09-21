@@ -1,6 +1,6 @@
 # docs/backend — 软件层·后端（EWF backend）
 
-> 范围：EWF `cloud/backend`（Spring Boot，JSON 零库，AD-16/17/18）。经验源= `miaowu`（HEAD b1e0a660，2026-09-08 迁移）——沿用其 REST `/api/v1` + `{code,message,data}` 信封、错误码、全局异常、微信登录、JWT、env-scripts 骨架。后端**模块实现规格** `requirements.md` 仍待 backend spec 阶段（PRD addendum §4），本目录当前只承载迁移的开发经验。
+> 范围：EWF `cloud/backend`（Spring Boot，JSON 零库，AD-16/17/18）。经验源= `miaowu`（HEAD b1e0a660，2026-09-08 迁移）——沿用其 REST `/api/v1` + `{code,message,data}` 信封、错误码、全局异常、微信登录、JWT、env-scripts 骨架。后端**模块实现规格** `requirements.md` 仍待 backend spec 阶段，本目录当前只承载迁移的开发经验。
 
 ## 文档索引
 | 文件 | 内容 |

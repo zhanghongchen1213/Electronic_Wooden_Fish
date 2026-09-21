@@ -4,7 +4,7 @@ description: "一敲一字的电子木鱼双端交互与状态行为。"
 type: experience
 status: final
 created: 2026-09-08
-updated: 2026-09-13
+updated: 2026-09-21
 selected_style:
   device: DEVICE-01
   miniapp: MINI-06
@@ -18,15 +18,13 @@ frozen_sources:
   export_scripts: removed
 sources:
   - "{planning_artifacts}/briefs/brief-Electronic_Wooden_Fish-2026-09-08/brief.md"
-  - "{planning_artifacts}/briefs/brief-Electronic_Wooden_Fish-2026-09-08/addendum.md"
   - "{planning_artifacts}/prds/prd-Electronic_Wooden_Fish-2026-09-07/prd.md"
-  - "{planning_artifacts}/prds/prd-Electronic_Wooden_Fish-2026-09-07/addendum.md"
   - "{planning_artifacts}/architecture/architecture-Electronic_Wooden_Fish-2026-09-08/ARCHITECTURE-SPINE.md"
 ---
 
 # Electronic_Wooden_Fish — EXPERIENCE.md
 
-> 本文件是行为权威，视觉参考 DESIGN.md；两者冲突时按各自职责分别解释。功能边界以 PRD/架构（epics E3/S3/S4）为上限，本文不扩范围。
+> 本文件是行为权威，视觉参考 DESIGN.md；两者冲突时按各自职责分别解释。功能边界以 PRD/架构为上限，Epic/Story 待基线审查通过后重新生成，本文不扩范围。
 
 ## Foundation
 

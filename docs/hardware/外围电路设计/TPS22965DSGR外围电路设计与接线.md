@@ -4,7 +4,7 @@
 > 手册：`TPS22965-RevF.pdf`，TI SLVSBJ0F Rev.F（2012-08，修订 2016-08，32 页），md5 `5f56d7279f9af8127efb51c840bac667`
 > 驱动源手册：`LTC2954-RevFB.pdf`，Linear Technology 2954fb（2011-02-03，18 页），md5 `46a13f77247a35ade6495534190c7bb8`
 > 收口日期：2026-09-17 ｜ 库存快照：`库存列表-20260913211039.xlsx`（2026-09-13 21:10:39）
-> 事实源：[`电子木鱼-硬件原理图设计基线.md`](../电子木鱼-硬件原理图设计基线.md)、[`电子木鱼-硬件网络清单.json`](../电子木鱼-硬件网络清单.json)、[`电源网络命名规范.md`](../电源网络命名规范.md)、[`ARCHITECTURE-SPINE.md`](../../../_bmad-output/planning-artifacts/architecture/architecture-Electronic_Wooden_Fish-2026-09-08/ARCHITECTURE-SPINE.md) §板级合同
+> 事实源：[`电子木鱼-硬件原理图设计基线.md`](../电子木鱼-硬件原理图设计基线.md)、[`电子木鱼-硬件网络清单.json`](../电子木鱼-硬件网络清单.json)、[`电源网络命名规范.md`](../电源网络命名规范.md)
 >
 > 本版只覆盖**接线与手册核验**。ERC、PCB DRC、示波器、电子负载、热测试与样机测试均未执行。
 
@@ -210,7 +210,7 @@ I = CL / SR = 124.9µF / 3834µs/V ≈ **32.6mA**
 - 主手册第 17 页 §9.4 Table 2：TPS22965 在 `ON`=L 时 **VOUT=GND**（内部快速输出放电通路接通）；TPS22965N 无此功能，`ON`=L 时 VOUT 开路。本设计依赖前者，料号歧义列入未闭合事项。
 - 输出下拉电阻 RPD：§7.5（VBIAS=5V，VIN=5V、IOUT=15mA）给 225Ω 典型/300Ω 最大；§7.6（VBIAS=2.5V，VIN=2.5V、IOUT=1mA）给 275Ω 典型/325Ω 最大。与 RON 同理，本工作点落在两表之间，实际值更大的一侧更保守。
 - `VMAIN` 放电时间常数：τ ≈ 124.9µF × 225Ω ≈ **28.1ms**（按 §7.5 典型值）；若按 §7.6 的 275Ω 则约 34.3ms。约 5τ 放到 1%，即 140–170ms。
-- 拉低 `ON` 的是 `PWR_STATE`：LTC2954-1 的开漏 `EN`（经 100kΩ 上拉至 `VSYS`），其高电平等于 `VSYS`、**不接任何 ESP32 引脚**。该断言的权威真源是 [`电源网络命名规范.md`](../电源网络命名规范.md) 的器件 pin 映射表与 [`ARCHITECTURE-SPINE.md`](../../../_bmad-output/planning-artifacts/architecture/architecture-Electronic_Wooden_Fish-2026-09-08/ARCHITECTURE-SPINE.md) 的板级合同。
+- 拉低 `ON` 的是 `PWR_STATE`：LTC2954-1 的开漏 `EN`（经 100kΩ 上拉至 `VSYS`），其高电平等于 `VSYS`、**不接任何 ESP32 引脚**。该断言的权威真源是 [`电源网络命名规范.md`](../电源网络命名规范.md) 的器件 pin 映射表与硬件主基线。
 - 系统关断且 `VSYS` 在位时，该 100kΩ 上拉被 `EN` 持续拉低，静态多耗约 42µA；该电流须计入整机待机，并注意 `VSYS` 若被 4G 发射拉跌到 LTC2954 的欠压锁定门限以下，控制器会复位并保持 `EN` 低，系统锁定在关机态直到再次按键。
 - 主手册第 8 页 §7.7 在 VIN=VON=VBIAS=5V、CT=1000pF、CL=0.1µF 条件下给出 tOFF=9µs（典型）、tF=3µs（典型）。本设计工作点与测量条件均不同，关断沿的实际时间须在整机时序测试中确认。
 

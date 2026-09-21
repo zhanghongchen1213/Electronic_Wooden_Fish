@@ -1,6 +1,6 @@
 # docs/frontend — 软件层·小程序（EWF frontend）
 
-> 范围：EWF `cloud/frontend`（uni-app Vue3+TS+Vite+Pinia，仅微信小程序，AD-18）。经验源= `miaowu`（HEAD b1e0a660，2026-09-08 迁移）——沿用其 `VITE_API_BASE_URL` + 统一 `api/request`（信封+鉴权头）、401 单飞刷新、登录态、Pinia、env-scripts 模式。前端**模块实现规格** `requirements.md` 仍待 frontend spec 阶段（PRD addendum §4），本目录当前只承载迁移的开发经验。
+> 范围：EWF `cloud/frontend`（uni-app Vue3+TS+Vite+Pinia，仅微信小程序，AD-18）。经验源= `miaowu`（HEAD b1e0a660，2026-09-08 迁移）——沿用其 `VITE_API_BASE_URL` + 统一 `api/request`（信封+鉴权头）、401 单飞刷新、登录态、Pinia、env-scripts 模式。前端**模块实现规格** `requirements.md` 仍待 frontend spec 阶段，本目录当前只承载迁移的开发经验。
 
 ## 文档索引
 | 文件 | 内容 |

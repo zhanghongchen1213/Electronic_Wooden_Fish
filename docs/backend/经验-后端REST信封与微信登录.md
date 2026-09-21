@@ -2,7 +2,7 @@
 
 # 经验：后端 REST 信封与微信登录（miaowu → EWF 适配）
 
-> 用途：EWF `cloud/backend`（Spring Boot 3.3.7 + Java 17 + Maven，JSON 零库、单实例单进程）**软件层后端**开工前的迁移经验。本文只写「从 miaowu 后端代码里实际读到的做法/坑位」及其在 EWF 的用法；**模块级实现规格不在此定义**——EWF 前端面 REST 路径、`{code,message,data}` 信封与错误码表应在 `docs/contracts/sync-contract.md`（Story S0）冻结（见 `epics.md` Epic S0、AD-16/17）。
+> 用途：EWF `cloud/backend`（Spring Boot 3.3.7 + Java 17 + Maven，JSON 零库、单实例单进程）**软件层后端**开工前的迁移经验。本文只写「从 miaowu 后端代码里实际读到的做法/坑位」及其在 EWF 的用法；**模块级实现规格不在此定义**——EWF 前端面 REST 路径、`{code,message,data}` 信封与错误码表应在 `docs/contracts/sync-contract.md` 的后续同步契约阶段冻结（AD-16/17）。
 >
 > 阅读对象：后续 backend spec/实现 agent。§①—§⑧ 一律用两列「miaowu 做法 → EWF 怎么用」；§⑨ 是排除表。逐条标注可复制的类/文件，EWF 侧给出**落盘即用或裁剪**的结论。
 
@@ -62,7 +62,7 @@ public class ApiResponse<T> { int code; String message; T data; }
 
 | miaowu 做法 / 坑位 | EWF 怎么用 |
 | --- | --- |
-| 业务抛错统一 `throw new BusinessException(code, msg)`（含 `paramError/unauthorized/notFound/conflict/serverError` 便捷静态），Controller/Service 不返回 null 表示失败。 | 复制 `ErrorCode` + `BusinessException` + `GlobalExceptionHandler`。EWF 的错误码表按自身资源收敛：`40401` 可改指「设备/身份不存在」，去掉 `ROLE_MISMATCH`/`STAR_FROZEN` 等（单身份单设备），但**区间位保留**，避免前后端对「5 位码=HTTP 前缀+序号」的解析规则漂移。最终表在 S0 冻结（`epics.md` S0 story ②）。 |
+| 业务抛错统一 `throw new BusinessException(code, msg)`（含 `paramError/unauthorized/notFound/conflict/serverError` 便捷静态），Controller/Service 不返回 null 表示失败。 | 复制 `ErrorCode` + `BusinessException` + `GlobalExceptionHandler`。EWF 的错误码表按自身资源收敛：`40401` 可改指「设备/身份不存在」，去掉 `ROLE_MISMATCH`/`STAR_FROZEN` 等（单身份单设备），但**区间位保留**，避免前后端对「5 位码=HTTP 前缀+序号」的解析规则漂移。最终表在后续同步契约阶段冻结。 |
 | 「业务失败回 HTTP 200 + body 业务码」是信封体系的**关键约定**，前端 request 封装据此统一弹错。 | EWF 沿用同一约定，且要在 `sync-contract.md` / 前端骨架里写明「只看 body.code，HTTP 状态仅在 401/404/429/500 等协议级时使用」。 |
 | 校验失败文案由后端拼接自 `jakarta.validation` 注解 message；EWF 的 DTO 校验注解（`@NotBlank/@Size` 等）可直接沿用。 | EWF 登录请求（`code`）与各类上报查询 DTO 加 `@Valid`，异常走同一 400 路径。 |
 

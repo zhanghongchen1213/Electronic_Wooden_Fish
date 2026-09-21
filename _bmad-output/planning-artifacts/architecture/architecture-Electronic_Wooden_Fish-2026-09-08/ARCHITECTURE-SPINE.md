@@ -7,24 +7,21 @@ paradigm: "嵌入式：分层 BSP/Driver + FreeRTOS 服务任务事件驱动固�
 scope: 整个电子木鱼产品——嵌入式层 Embedded 与软件层 cloud/backend、cloud/frontend
 status: final
 created: 2026-09-08
-updated: 2026-09-09
+updated: 2026-09-21
 binds: [Embedded(FR-E-*), cloud/backend(FR-B-*), cloud/frontend(FR-F-*)]
 sources:
   - _bmad-output/planning-artifacts/briefs/brief-Electronic_Wooden_Fish-2026-09-08/brief.md
-  - _bmad-output/planning-artifacts/briefs/brief-Electronic_Wooden_Fish-2026-09-08/addendum.md
   - _bmad-output/planning-artifacts/prds/prd-Electronic_Wooden_Fish-2026-09-07/prd.md
-  - legacy root architecture.md（已按用户决定删除，内容并入本 spine，见 reviews/reconcile-arch-parity.md）
   - /Users/hongchenke/Documents/Github/legbot_watch/_bmad-output/planning-artifacts/architecture/architecture-legbot_watch-2026-07-09/ARCHITECTURE-SPINE.md
   - /Users/hongchenke/Documents/Github/miaowu（backend/pom.xml、frontend/package.json、env-scripts）
   - docs/hardware/电子木鱼-硬件原理图设计基线.md
   - docs/hardware/电子木鱼-硬件网络清单.json
-companions:
-  - _bmad-output/planning-artifacts/architecture/architecture-Electronic_Wooden_Fish-2026-09-08/.memlog.md
+  - docs/hardware/电源网络命名规范.md
 ---
 
 # Architecture Spine — Electronic_Wooden_Fish（电子木鱼）
 
-> **本文件是电子木鱼的不变量契约单一事实源。** 产品意图与功能行为权威为 09-08 [产品简报](../brief-Electronic_Wooden_Fish-2026-09-08/brief.md) 与[附录](../brief-Electronic_Wooden_Fish-2026-09-08/addendum.md)（其中与历史 PRD 冲突处以它们为准）。本项目是个人自用原型：一台设备、一个固定 backend、无量产认证与云运维体系。
+> **本文件是电子木鱼的跨层架构不变量单一事实源。** 产品意图与功能行为以 [产品简报](../../briefs/brief-Electronic_Wooden_Fish-2026-09-08/brief.md) 和 [PRD](../../prds/prd-Electronic_Wooden_Fish-2026-09-07/prd.md) 为准；板级 GPIO、电源、FPC、器件连接和网络清单以 `docs/hardware/` 为唯一硬件事实源。本项目是个人自用原型：一台设备、一个固定 backend、无量产认证与云运维体系。
 >
 > **本轮覆盖决策：** 后端持久化改为 **JSON 文件、零数据库**，覆盖 PRD FR-B-009 与旧根文档「单文件 SQLite」决定（AD-16）；backend→小程序实时通道**保留 WebSocket**（AD-17）。Fast-path 推断以 `[ASSUMPTION]` 标注；出处与版本核验见 §版本与依据核验出处。
 
@@ -173,7 +170,7 @@ flowchart TD
 
 - **Binds:** Embedded 游标推进与 7 字带、backend 游标校验、frontend 逐字呈现
 - **Prevents:** 跳字/重字/乱序、标点空格换行消耗敲击、设备或小程序预览「未来」经文
-- **Rule:** 每轮推进按 canonical 序列（AD-4）：一次有效敲击推进下一个**可消费汉字**；标点、空格、换行随相邻汉字在同一步内自动出现，**不消耗敲击、不单独推进游标**（FR-B-003）。无论设备本地镜像还是小程序已确认呈现，都**不得预览未来经文**，未填充位置以低对比度占位；正式计数每次有效敲击只 +1。跨轮次以 `round_id` 区分（AD-3）：「从头开始」创建新轮次并回到首字、历史统计保留；「退出」保留完成状态与历史（FR-B-005/FR-E-006）。设备端 7 字带与视觉细节由 09-08 附录承接（见 Deferred），本 AD 只锁跨层可消费/计数语义。
+- **Rule:** 每轮推进按 canonical 序列（AD-4）：一次有效敲击推进下一个**可消费汉字**；标点、空格、换行随相邻汉字在同一步内自动出现，**不消耗敲击、不单独推进游标**（FR-B-003）。无论设备本地镜像还是小程序已确认呈现，都**不得预览未来经文**，未填充位置以低对比度占位；正式计数每次有效敲击只 +1。跨轮次以 `round_id` 区分（AD-3）：「从头开始」创建新轮次并回到首字、历史统计保留；「退出」保留完成状态与历史（FR-B-005/FR-E-006）。设备端 7 字带与视觉细节由 UX 四份规范承接，本 AD 只锁跨层可消费/计数语义。
 
 ## Consistency Conventions
 
@@ -182,7 +179,7 @@ flowchart TD
 | 命名 | 同步字段全小写下划线（清单见 §Structural Seed）；事件来源固定 `physical_pvdf`/`device_touch`；固件日志中文、模块 TAG 用 ASCII；新增组件/服务命名对照 legbot 风格 |
 | 数据与格式 | 接口信封 `{code,message,data}`、code=0 成功；经文/游标/统计以 backend 为权威；设备不保存绝对敲击时间；JSON 文件写入原子化（tmp+rename） |
 | 状态与跨切 | 同步状态词表固定：本地已记录/同步中/已同步/待同步/同步失败（累计）；待设备应用（命令，独立维度）；无第二计数路径、无第二套平行云后端 |
-| 文档承接 | 设备端视觉/文案/默认值（音量 50/中亮度/15s 熄屏等）与统计页展示范围由 09-08 附录承接，spine 不重复（见 Deferred） |
+| 文档承接 | 设备端视觉、文案、默认值与统计页展示范围由 UX 四份规范承接；板级硬件事实由 `docs/hardware/` 承接，spine 不重复 |
 
 ## Stack（seed——草拟时经本地基线 + web 复核）
 
@@ -241,69 +238,16 @@ flowchart LR
 - `round_id`（单调轮次标识）为本次新增：跨轮归属与「未确认完成的从头开始」以此对齐（AD-3/AD-19）。
 - `command_revision` 语义固定为「设备已应用命令的单调高水位」（AD-5）。
 
-### 板级合同（seed；未核验参数在样机/原理图前不得冻结）
+### 硬件事实源（不在本 spine 重复）
 
-**GPIO 基线（来源：09-08 附录 §3.1；新 BSP 默认合同，冲突须先更新本 spine 再调整）**
+板级 GPIO、启动绑带、PWR/LTC2954、电源分轨、I²C 器件、FPC、4G 载板、BOM、网络清单和硬件验证门禁统一维护在 `docs/hardware/`：
 
-| 功能 | 信号 | ESP32-S3 GPIO | 约束 |
-| --- | --- | ---: | --- |
-| BOOT | BOOT0 | IO0 | 启动绑带；保留下载路径 |
-| PWR | 运行态输入 | IO8 | 读 LTC2954 的 `PWR_INT`（开漏低有效，10 kΩ 上拉至 `V3V3`）；PB 按下即拉低并**在按下期间持续为低**，不是脉冲——固件只读且**必须用边沿中断**捕获、自行测低电平时长，不得按电平轮询；长按开关机由板级 LTC2954 的 ONT/PDT 计时独立完成，固件不参与 |
-| RESET | EN | EN | 独立按键/测试点 |
-| PVDF | ADC | IO9 | ADC1_CH8；前端限流/钳位、控输入范围 |
-| PVDF 唤醒 | 比较器输出 | IO11 | 低功耗 GPIO 唤醒；醒后 ADC 确认有效敲击 |
-| 共享 I²C | SDA / SCL | IO1 / IO2 | BQ25895/CW2015/CST9217/ES8311/QMI8658A 共用；地址必须无冲突 |
-| CST9217 | TP_RST / TP_INT | IO38 / IO39 | 触摸复位与中断 |
-| QMI8658A | INT1 | IO41 | 未来 WoM 扩展；INT2 不接、不占 GPIO45 |
-| CO5300 | RST/CS/SCL/D0/D1/D2/D3/EN | IO4/40/5/6/7/12/42/47 | 沿用 legbot 屏幕资源基线 |
-| ES8311 | I2S_DO/WS/BCLK/MCLK | IO13/14/18/21 | 沿用 legbot 音频资源基线 |
-| NS4150B | PA_EN | IO48 | 静音/暂停/故障回到禁用 |
-| Air780EGP | UART TX/RX | IO43/44 | 从 main_control 抽离板级引脚常量 |
-| Air780EGP | DTR/RST | IO10/15 | 休眠/复位；NET_STATUS 不接 ESP32 |
-| RGB | DATA | IO3 | 状态灯，不作调试灯 |
-| USB | D− / D+ | IO19/20 | 原生 USB-Serial-JTAG |
+- `docs/hardware/电子木鱼-硬件原理图设计基线.md`：板级接口与验证基线；
+- `docs/hardware/电源网络命名规范.md`：正式电源网络与控制信号命名；
+- `docs/hardware/电子木鱼-硬件网络清单.json`：机器可读网络清单；
+- `docs/hardware/外围电路设计/`：器件级逐引脚接线、数据手册依据和未闭合事项。
 
-**按键行为合同（产品口径，2026-09-17 锁定；实现见《LTC2954ITS8-1 外围电路设计与接线》）**
-
-| 当前状态 | 操作 | 硬件动作 | 结果 | 依赖固件 |
-| --- | --- | --- | --- | --- |
-| 关机 | 长按 SW2（PWR）约 2 s | LTC2954 经 ONT 计时后释放 `EN` 为高 | 开机 | **否，纯硬件** |
-| 开机 | 长按 SW2（PWR）约 2 s | LTC2954 经 PDT 计时后释放 `EN` 为低 | 关机 | **否，纯硬件** |
-| 开机 | 短按 SW2（PWR） | LTC2954 `INT` 拉低 → ESP32 IO8 | 固件识别并执行操作 | 是 |
-| 关机 | **先**按住 SW1（BOOT0），**再**长按 SW2 | strapping 在 EN 上升沿采样 GPIO0=0、GPIO46=0 | 进 Joint Download Boot | 否 |
-| 开机 | 插 USB-C | USB-Serial-JTAG，主机自动复位 | 免按键烧录 | 否 |
-
-两条硬约束：**长按开关机必须纯硬件完成**——关机态 ESP32 无电、固件无法参与，这是本方案放弃 TPS3424 的唯一理由，也是选 LTC2954 的唯一判据；**SW1 与 SW2 的按下顺序不可颠倒**——strapping 只在 EN 上升沿采样一次，SW2 先通则 GPIO0 已锁存为 1，下载模式不可达。
-
-GPIO45 保持未接或按模组要求处理（其影响 VDD_SPI 启动采样）；GPIO33–37 通常与 Octal Flash/PSRAM 相关、不作通用 GPIO。启动绑带约束：下载要求 GPIO0=0、GPIO46=0；**IO46 现悬空**，靠模组内部弱下拉在复位采样窗口给出 0，板上不得再驱动该脚；QMI8658A 输出不得在复位采样窗口把 IO0/45 推到错误电平（详见工程验证门禁）。**下载入口的操作序列**：先按住 SW1（BOOT0）不放，再长按 SW2（PWR）至 LTC2954 的 ONT 计时到期使系统上电；SW1 必须持续按住到 V3V3 建立、ESP32 EN 释放并完成 strapping 采样之后。顺序颠倒则 GPIO0 已被采样为 1，下载模式不可达。
-
-**PWR 输入电平域**：LTC2954 的 VIN 接 `VSYS`。PWR 感知**不经 `PWR_STATE`**，而走 `PWR_INT`——LTC2954 的 `INT` 是开漏低有效输出，由 10 kΩ 上拉到 `V3V3`，电平恒在 0~3.3 V，天然合规。`PWR_STATE` 由 LTC2954-1 的开漏 `EN` 经 **100 kΩ 上拉到 `VSYS`** 得到（高电平 = `VSYS`，最高 4.2 V），只驱动 TPS22965 的 ON 与 TLV62569 的 EN，**不接任何 ESP32 引脚**。
-
-**该上拉是必需项，不是可选**：TPS22965（Rev. F）的 ON 只给出 0.5 µA 漏电规格、无内部上拉；TLV62569（Rev. C）明写 EN *"must be terminated and should not be left floating"*。LTC2954-1 的 EN 在 asserted 时为高阻态，若无上拉则 `PWR_STATE` 悬空，下游两脚状态不确定。`PWR_STATE` 上**恰好一组**上拉，不得再并第二组。
-
-**I²C 总线与器件**：BQ25895（TI 固定 7-bit `0x6A`）、CW2015（约 `0x62`）、CST9217（7-bit `0x5A`）、ES8311（地址由 CE/CDATA 配置，首版参考 `0x18`）、QMI8658A（首版 SA0=低，`0x6B`）共用一组总线与上拉；最终地址以目标物料 + 实板上电扫描为准，五个地址不得冲突。QMI8658A 仅接 INT1，INT2 不接、不占 GPIO45。
-
-**电源分轨**：USB-C 单入口经 BQ25895 做 NVDC 充电与系统 power-path；BQ `SYS` pin 对应板级 `VSYS`，LTC2954 以长按切换 `EN` 控制 TPS22965 形成 `VMAIN`，Air780EGP/M100 VIN 经该负载开关供电；TLV62569DBVR 为 `VMAIN→V3V3` 首版候选，NS4150B 使用滤波后的 `V3V3_A`。AMS1117 类低压差稳压器不得承担 Air780EGP 主供电；充电期间保持音频供电稳定并验证低频噪声。
-
-**USB 与 4G 载板边界**：USB-C D+/D− 直连 ESP32 USB-Serial-JTAG；BQ25895 D+/D− 不接 USB-C 数据线，固定输入限流并关闭 BC1.2 自动检测。M100 GNSS_VCC 为 NC/测试点；M100 NET_STATUS 不接 ESP32。（`IO8` 已分配为 PWR 按键输入，见上方 GPIO 基线，**不再是保留脚**。）
-
-**同步活动窗口时序（一次上报）**
-
-```mermaid
-sequenceDiagram
-  participant D as 设备(Embedded)
-  participant A as Air780EGP 4G
-  participant B as backend
-  participant M as 小程序
-  D->>D: 本地落盘 local_total / 动画·音效即时反馈
-  D->>A: 活动窗口内发起 HTTPS 上报(高水位+round_id/游标+已应用命令修订)
-  A->>B: POST 幂等同步包
-  B->>B: 按 device_id+高水位比较；推进差量一次；按确认时间归档；翻转已应用命令
-  B-->>A: acked_total、差量、确认后轮次状态、待应用命令、可信时间
-  A-->>D: 响应；设备以确认轮次收敛本地镜像并应用新命令
-  B-->>M: WebSocket 推送已确认差量（序号 > 快照水位 S）
-  D->>D: 回到低功耗离线记录
-```
+本 spine 只引用这些硬件事实来表达跨层边界，不复制 GPIO 表、电源拓扑或器件连接；硬件冲突先在 `docs/hardware/` 的主基线中收敛，再同步受影响的架构不变量。
 
 ### 嵌入式复用与不沿用（seed）
 
@@ -321,7 +265,7 @@ sequenceDiagram
 | FR-F-001~010 小程序呈现/回放/记录/设备/设置 | `cloud/frontend` | AD-2/3/4/5/6/17/18/19 |
 | 跨层同步字段与最终一致（SM-1~5） | 同步契约（sync-contract） | AD-1~6、AD-19 |
 
-> 备注：FR-E 亦受跨层 AD-1/3/4/6/19 约束；设备端视觉/文案/默认值等 UX 细节由 09-08 附录承接（见 Deferred）。
+> 备注：FR-E 亦受跨层 AD-1/3/4/6/19 约束；设备端视觉/文案/默认值等 UX 细节由 UX 四份规范承接，板级细节由 `docs/hardware/` 承接。
 
 ## Deferred（含复核清单）
 
@@ -339,15 +283,15 @@ sequenceDiagram
 | 运行期公网形态 `[ASSUMPTION A-7]` | 小程序合法 HTTPS/wss 域名 + 备案 + backend 主机由作者以开发者/体验版自备；进入正式部署前落实。与本地 dev 脚本分属两个信封，勿混为一谈 |
 | 部署与运维信封 | 个人原型沿用 miaowu `env-scripts` 本地起停/构建脚本；无 CI/CD、宝塔与云运维文档重定义 |
 | 设备 UI 默认值（音量 50/中亮度/15s）与统计页展示范围 | **已承接（2026-09-11）**：设备轨 DEVICE-01 经作者逐屏签收，规格冻结在 `UI_CONTRACT-device.md` 与 `DESIGN.md`/`EXPERIENCE.md`。统计页限定今日与累计，近 7/30 日与连续天数归小程序记录页；默认值 音量 50 / 亮度中 / 15 秒熄屏 |
-| 分区表 / NVS schema / 低功耗参数 / CO5300 首帧与亮度档 / CST9217 实际地址 / PVDF 前端与比较器料号 | 属「必须由原理图或样机实测冻结」的工程项（09-08 附录 §10）；冻结前不得写入承诺性参数 |
+| 分区表 / NVS schema / 低功耗参数 / CO5300 首帧与亮度档 / CST9217 实际地址 / PVDF 前端与比较器料号 | 属 `docs/hardware/` 与样机验证必须冻结的工程项；冻结前不得写入承诺性参数 |
 | 硬件细分 seed（具体 I²C 上拉阻值、AMOLED FPC 供电时序、扬声器腔体、电池容量、稳压/充电料号） | 只可在原理图/数据手册/样机验证后回填，本 spine 不作产品承诺 |
 | 音频高速合并阈值 / 动画队列长度 / 活动窗口时长 | 表现类参数按样机演示签收后定标 |
 | OTA、BLE/Wi‑Fi 产品通道、GPS 业务、QMI8658A 业务、选经/导入 | 明确非 MVP 非目标 |
 | 多设备、换机迁移、公开账号、社交、排行榜、提醒、付费、多端前端 | 非个人原型目标，未来若变化需重开架构 |
 
-## 工程验证门禁（seed——从被删除旧根文档保真迁移）
+## 工程验证门禁（跨层入口；硬件证据归档于 `docs/hardware/`）
 
-- **芯片/启动**：原生 USB 完成烧录/CDC 日志/OpenOCD；BOOT+RESET 可进下载；PWR 硬断电不破坏启动绑带；GPIO45 全样本采样正确；Flash/PSRAM 保留脚不复用。
-- **总线/外设**：上电 I²C 扫描确认四器件地址无冲突；CO5300 QSPI、CST9217、ES8311/NS4150B、CW2015 分别冒烟；PVDF 单次与 1 秒 20 次稳定计数，完成遮罩期间输入忽略。
+- **芯片/启动**：按 `docs/hardware/电子木鱼-硬件原理图设计基线.md` 的启动绑带、USB、PWR 和保留脚合同完成原生 USB 烧录/CDC 日志/OpenOCD 验证；硬件证据归档在 `docs/hardware/`。
+- **总线/外设**：按硬件主基线与外围电路文档完成 I²C 地址、CO5300、CST9217、ES8311/NS4150B、CW2015 和 PVDF 的冒烟验证；PVDF 单次与 1 秒 20 次稳定计数，完成遮罩期间输入忽略。
 - **功耗/联网**：Air780EGP 发射峰值电池轨无掉压重启；离线/小程序关闭时本地记录、恢复后活动窗口补传，无 BLE/Wi‑Fi 回退。
 - **Cloud/前端**：backend 重启后 JSON 中高水位/游标/统计/配置不丢；重复同步只增加一次；断线重连按快照水位补齐、不重复动画/字符；完成礼花与「从头开始/退出」语义正确。
