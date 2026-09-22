@@ -45,3 +45,6 @@ docs/hardware/参考原理图
 .agents/skills/*
 !.agents/skills/bmad-epic-autopilot/
 !.agents/skills/bmad-code-review/
+_bmad-output/implementation-artifacts/.autopilot
+docs/embedded/build_records
+docs/embedded/hardware_test_records

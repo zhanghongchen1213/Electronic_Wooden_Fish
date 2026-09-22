@@ -35,6 +35,7 @@ extern "C"
         LEGBOT_EVENT_SOURCE_STATE,    /**< 状态服务事件来源。 */
         LEGBOT_EVENT_SOURCE_LOG,      /**< 日志服务事件来源。 */
         LEGBOT_EVENT_SOURCE_SELFTEST, /**< 自检服务事件来源。 */
+        LEGBOT_EVENT_SOURCE_PVDF,     /**< PVDF 候选有效输入事件来源，产品名固定 physical_pvdf。 */
     } legbot_event_source_t;
 
     typedef enum

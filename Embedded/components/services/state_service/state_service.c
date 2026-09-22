@@ -15,11 +15,13 @@
 #include "esp_log.h"
 #include "config_service.h"
 #include "cw2015_bsp.h"
-#include "power_service.h"
-#include "ui_service.h"
 
 static const char *TAG = "SVC_STATE";
 
+/** 电量计 canonical 稳定错误码；原属 power_service.h，Story 1.1 由本服务自己拥有。 */
+#define STATE_SERVICE_BATTERY_OK_CODE "POWER_BATTERY_OK"
+/** 电量计不可用的 canonical 稳定错误码。 */
+#define STATE_SERVICE_BATTERY_UNAVAILABLE_CODE "POWER_BATTERY_UNAVAILABLE"
 /** apply ACK 最高位表示 state_task 未成功应用更新。 */
 #define STATE_SERVICE_ACK_FAILURE_BIT (1UL << 31)
 /** apply ACK 序号使用的低 31 位。 */
@@ -117,7 +119,7 @@ static esp_err_t publish_terminal_update(state_service_update_t *update,
 static uint32_t next_apply_ack_id(void);
 static esp_err_t wait_for_apply_ack(uint32_t ack_id);
 static void acknowledge_update(const state_service_update_t *update, esp_err_t apply_error);
-static void refresh_ui_after_update(const state_service_update_t *update);
+static void observe_applied_update(const state_service_update_t *update);
 static void finish_run(QueueHandle_t queue);
 
 bool state_service_update_requires_model_refresh(
@@ -496,7 +498,7 @@ esp_err_t state_service_publish_selftest_begin(const watch_selftest_begin_update
                                                TickType_t timeout_ticks)
 {
     if (update == NULL || update->run_id == 0U ||
-        update->first_item < SELFTEST_ITEM_AMOLED || update->first_item >= SELFTEST_ITEM_COUNT)
+        update->first_item < SELFTEST_ITEM_BSP_RESOURCE_TABLE || update->first_item >= SELFTEST_ITEM_COUNT)
     {
         return ESP_ERR_INVALID_ARG;
     }
@@ -511,7 +513,7 @@ esp_err_t state_service_publish_selftest_item(const watch_selftest_item_update_t
                                               TickType_t timeout_ticks)
 {
     if (update == NULL || update->run_id == 0U ||
-        update->result.item_id < SELFTEST_ITEM_AMOLED ||
+        update->result.item_id < SELFTEST_ITEM_BSP_RESOURCE_TABLE ||
         update->result.item_id >= SELFTEST_ITEM_COUNT ||
         (update->result.outcome != SELFTEST_OUTCOME_PASS &&
          update->result.outcome != SELFTEST_OUTCOME_FAIL &&
@@ -549,7 +551,7 @@ esp_err_t state_service_publish_selftest_retry_begin(
     TickType_t timeout_ticks)
 {
     if (update == NULL || update->run_id == 0U ||
-        update->item_id < SELFTEST_ITEM_AMOLED || update->item_id >= SELFTEST_ITEM_COUNT)
+        update->item_id < SELFTEST_ITEM_BSP_RESOURCE_TABLE || update->item_id >= SELFTEST_ITEM_COUNT)
     {
         return ESP_ERR_INVALID_ARG;
     }
@@ -565,7 +567,7 @@ esp_err_t state_service_publish_selftest_retry_finish(
     TickType_t timeout_ticks)
 {
     if (update == NULL || update->run_id == 0U ||
-        update->result.item_id < SELFTEST_ITEM_AMOLED ||
+        update->result.item_id < SELFTEST_ITEM_BSP_RESOURCE_TABLE ||
         update->result.item_id >= SELFTEST_ITEM_COUNT ||
         (update->result.outcome != SELFTEST_OUTCOME_PASS &&
          update->result.outcome != SELFTEST_OUTCOME_FAIL &&
@@ -730,7 +732,7 @@ void state_service_run(void)
                 } while (final_error == ESP_ERR_TIMEOUT);
                 if (final_error == ESP_OK)
                 {
-                    refresh_ui_after_update(&final_update);
+                    observe_applied_update(&final_update);
                 }
                 else
                 {
@@ -823,8 +825,8 @@ void state_service_run(void)
         }
         else
         {
-            /* 只有 watch_state 已成功 apply 后才通知 UI 读取新快照。 */
-            refresh_ui_after_update(&update);
+            /* 只有 watch_state 已成功 apply 后才记录本次 typed 更新。 */
+            observe_applied_update(&update);
         }
         acknowledge_update(&update, err);
     }
@@ -1117,22 +1119,14 @@ static void acknowledge_update(const state_service_update_t *update, esp_err_t a
     }
 }
 
-static void refresh_ui_after_update(const state_service_update_t *update)
+/**
+ * @brief 记录一次已成功 apply 的类型化状态更新
+ * @details Story 1.1 没有 UI、音频或充电门控消费者，因此这里只做可追溯观测，
+ *          不向任何旧服务投递唤醒或刷新信号。
+ * @param update 已成功 apply 的 typed 更新
+ */
+static void observe_applied_update(const state_service_update_t *update)
 {
-    if (state_service_update_requires_model_refresh(update->type))
-    {
-        const ui_service_request_t request = {
-            .type = UI_SERVICE_REQUEST_MODEL_UPDATE,
-            .item_id = SELFTEST_ITEM_COUNT,
-        };
-        if (ui_service_post_request(&request, 0) != ESP_OK)
-        {
-            ESP_LOGW(TAG,
-                     "类型化状态已更新但 UI 模型刷新信号未入队，类型=%d",
-                     (int)update->type);
-        }
-        return;
-    }
     uint32_t run_id = 0U;
     if (update->type == STATE_SERVICE_UPDATE_SELFTEST_BEGIN)
     {
@@ -1158,23 +1152,9 @@ static void refresh_ui_after_update(const state_service_update_t *update)
     {
         return;
     }
-    const esp_err_t power_wake_error =
-        power_service_notify_state_change(0);
-    if (power_wake_error != ESP_OK)
-    {
-        ESP_LOGW(TAG,
-                 "自检快照已更新但 power_task 唤醒信号未入队，run_id=%lu，错误=0x%x",
-                 (unsigned long)run_id,
-                 (unsigned)power_wake_error);
-    }
-    esp_err_t err = ui_service_refresh_selftest_results(run_id, 0);
-    if (err != ESP_OK)
-    {
-        ESP_LOGW(TAG,
-                 "自检快照已更新但 UI 刷新信号未入队，run_id=%lu，错误=0x%x",
-                 (unsigned long)run_id,
-                 (unsigned)err);
-    }
+    ESP_LOGD(TAG,
+             "自检快照已应用：run_id=%lu；当前无 UI/电源消费者需要唤醒",
+             (unsigned long)run_id);
 }
 
 static void finish_run(QueueHandle_t queue)
@@ -1185,13 +1165,13 @@ static void finish_run(QueueHandle_t queue)
 
 static const char *canonical_power_error_code(const char *error_code)
 {
-    if (strcmp(error_code, POWER_BATTERY_OK) == 0)
+    if (strcmp(error_code, STATE_SERVICE_BATTERY_OK_CODE) == 0)
     {
-        return POWER_BATTERY_OK;
+        return STATE_SERVICE_BATTERY_OK_CODE;
     }
-    if (strcmp(error_code, POWER_BATTERY_UNAVAILABLE) == 0)
+    if (strcmp(error_code, STATE_SERVICE_BATTERY_UNAVAILABLE_CODE) == 0)
     {
-        return POWER_BATTERY_UNAVAILABLE;
+        return STATE_SERVICE_BATTERY_UNAVAILABLE_CODE;
     }
     return NULL;
 }

@@ -1,7 +1,7 @@
 #!/bin/bash
 
-# Huawei Cloud 或其它 Linux CI 执行：Maven 3.9.x + JDK 17。
-# 脚本只依赖通用 shell、Java 和 Maven，不绑定具体 CI 产品。
+# Huawei Cloud 或其它 Linux CI 执行：Maven 3.9.x + JDK 17 + python3。
+# 脚本依赖通用 shell、Java、Maven 和 python3（canonical 经文版本校验），不绑定具体 CI 产品。
 set -euo pipefail
 
 SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
@@ -100,6 +100,21 @@ case "$MAVEN_VERSION" in
     exit 1
     ;;
 esac
+
+SCRIPTURE_TOOL="$PROJECT_ROOT/docs/contracts/canonical/scripture_tool.py"
+if ! command -v python3 >/dev/null 2>&1; then
+  echo "构建失败：缺少 python3，无法执行 canonical 经文版本校验"
+  exit 1
+fi
+if [ ! -f "$SCRIPTURE_TOOL" ]; then
+  echo "构建失败：缺少 canonical 经文校验工具 $SCRIPTURE_TOOL"
+  exit 1
+fi
+echo "canonical 经文版本校验（FR-C-002 / AD-4，版本不一致即停）"
+if ! python3 "$SCRIPTURE_TOOL" --root "$PROJECT_ROOT" check; then
+  echo "构建失败：canonical 经文版本校验不通过，停止打包"
+  exit 1
+fi
 
 cd "$BACKEND_DIR"
 mvn -B -U clean package -DskipTests

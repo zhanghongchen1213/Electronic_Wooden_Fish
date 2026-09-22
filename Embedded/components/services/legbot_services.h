@@ -1,7 +1,9 @@
 /**
  * @file     legbot_services.h
  * @brief    统一服务框架接口
- * @details  定义固定服务 ID、输入通道能力、服务描述符和服务生命周期入口。
+ * @details  定义 EWF 固定的服务 ID、输入通道能力、服务描述符和服务生命周期入口。
+ *           本 Story 的默认启动图只包含 PWR/BOOT 输入边界与类型化状态聚合，
+ *           BLE/GPS/ML307R/cloud/voice/audio 旧服务不在默认启动前提内。
  * @author   ZHC
  * @date     2026-07-09
  */
@@ -28,18 +30,11 @@ extern "C"
 
     typedef enum
     {
-        LEGBOT_SERVICE_UI = 0,   /**< UI 服务。 */
-        LEGBOT_SERVICE_BLE,      /**< BLE 协议服务。 */
-        LEGBOT_SERVICE_MODEM,    /**< 蜂窝模组服务。 */
-        LEGBOT_SERVICE_GPS,      /**< GPS 定位服务。 */
-        LEGBOT_SERVICE_AUDIO,    /**< 音频服务。 */
-        LEGBOT_SERVICE_POWER,    /**< 电源管理服务。 */
-        LEGBOT_SERVICE_CLOUD,    /**< 云端通信服务。 */
-        LEGBOT_SERVICE_STATE,    /**< 状态聚合服务。 */
-        LEGBOT_SERVICE_LOG,      /**< 关键日志服务。 */
-        LEGBOT_SERVICE_SELFTEST, /**< 自检服务。 */
-        LEGBOT_SERVICE_VOICE,    /**< BOOT0 按键离线语音控制服务。 */
-        LEGBOT_SERVICE_COUNT     /**< 服务数量。 */
+        LEGBOT_SERVICE_POWER = 0, /**< PWR_INT/BOOT0 板级输入边界服务。 */
+        LEGBOT_SERVICE_STATE,     /**< 状态聚合服务。 */
+        LEGBOT_SERVICE_SELFTEST,  /**< 自检服务，按需启动。 */
+        LEGBOT_SERVICE_PVDF,      /**< PVDF 候选有效输入边界服务。 */
+        LEGBOT_SERVICE_COUNT      /**< 服务数量。 */
     } legbot_service_id_t;
 
     typedef enum
@@ -82,13 +77,13 @@ extern "C"
     /**
      * @brief 获取指定服务的消息队列
      * @param id 服务 ID
-     * @return 成功返回通用队列句柄，服务 ID 非法、为 state/audio/GPS/selftest/voice 私有通道或尚未初始化时返回 NULL
+     * @return 成功返回该服务队列句柄；state/selftest 使用专用通道或尚未初始化时返回 NULL
      */
     QueueHandle_t legbot_service_queue(legbot_service_id_t id);
 
     /**
      * @brief 获取 state_service 专用类型化队列
-     * @details 仅供 state_service 实现消费；其他模块必须使用 state_service_publish_battery()。
+     * @details 仅供 state_service 实现消费；其他模块必须使用 state_service_publish_*()。
      * @return state_service 队列句柄，尚未初始化时返回 NULL
      */
     QueueHandle_t legbot_state_service_queue(void);
@@ -103,22 +98,22 @@ extern "C"
      * @brief 初始化服务框架契约资源
      * @return ESP_OK 成功
      *         ESP_ERR_NO_MEM 队列或事件组创建失败
-     *         其他 ESP-IDF 错误码表示子服务初始化失败
+     *         其他 ESP-IDF 错误码表示子服务契约初始化失败
      */
     esp_err_t legbot_services_init_contracts(void);
 
     /**
-     * @brief 启动所有默认服务
+     * @brief 启动全部默认服务
      * @return ESP_OK 成功
      *         ESP_ERR_NO_MEM 任务创建失败
-     *         其他 ESP-IDF 错误码表示服务契约初始化失败
+     *         其他 ESP-IDF 错误码表示子服务契约初始化失败
      */
     esp_err_t legbot_services_start_all(void);
 
     /**
      * @brief 请求停止所有已启动服务
      * @return ESP_OK 成功
-     *         ESP_ERR_TIMEOUT 停止消息投递失败
+     *         ESP_ERR_TIMEOUT 停止消息投递或任务退出超时
      */
     esp_err_t legbot_services_stop_all(void);
 
@@ -129,14 +124,6 @@ extern "C"
      *         其他 ESP-IDF 错误码表示服务契约初始化失败
      */
     esp_err_t legbot_selftest_service_start(void);
-
-    /**
-     * @brief 使用显式 GPS FIX 环境上下文按需启动完整自检
-     * @param indoor_confirmed true 表示操作员已确认室内环境
-     * @return ESP_OK 成功，其他值表示任务、队列或参数错误
-     */
-    esp_err_t legbot_selftest_service_start_with_gps_context(
-        bool indoor_confirmed);
 
 #ifdef __cplusplus
 }

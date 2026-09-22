@@ -1,7 +1,7 @@
 /**
  * @file     key.h
  * @brief    板载按键 BSP 接口
- * @details  定义电源键和 BOOT 键的板级 GPIO 映射、原始读取与运行态边沿回调。
+ * @details  定义 LTC2954 PWR_INT 与 BOOT0 启动绑带的板级 GPIO 映射、原始读取和运行态任意边沿回调。
  * @author   ZHC
  * @date     2026-07-09
  */
@@ -19,11 +19,11 @@ extern "C"
 {
 #endif
 
-/** 电源按键 GPIO，来自权威 BSP 资源表。 */
-#define LEGBOT_KEY_PWR_GPIO LEGBOT_BSP_PWR_KEY_GPIO
+/** LTC2954 PWR_INT GPIO，来自权威 BSP 资源表。 */
+#define LEGBOT_KEY_PWR_GPIO EWF_BSP_PWR_INT_GPIO
 
-/** BOOT 按键 GPIO，来自权威 BSP 资源表。 */
-#define LEGBOT_KEY_BOOT_GPIO LEGBOT_BSP_BOOT_KEY_GPIO
+/** BOOT0 启动绑带 GPIO，来自权威 BSP 资源表。 */
+#define LEGBOT_KEY_BOOT_GPIO EWF_BSP_BOOT0_GPIO
 
     typedef enum
     {
@@ -68,8 +68,9 @@ extern "C"
     esp_err_t key_read_state(legbot_key_state_t *state);
 
     /**
-     * @brief 为运行态 PWR GPIO 登记唯一 ISR 回调
-     * @details GPIO46 保持输入；按当前电平把下一次相反电平配置为中断与 light-sleep 唤醒条件。
+     * @brief 为运行态 PWR_INT 登记唯一 ISR 回调
+     * @details PWR_INT 保持开漏低有效只读输入；按下与释放各产生一次任意边沿中断，
+     *          低电平时长由任务上下文测量，ISR 不做业务决策。
      * @param callback 中断上下文回调，不得访问 I2C 或执行阻塞操作
      * @param context 原样传回给 callback 的上下文
      * @return ESP_OK 登记成功或已登记同一回调
@@ -82,8 +83,9 @@ extern "C"
         void *context);
 
     /**
-     * @brief 按 GPIO46 当前电平重武装下一次相反电平中断与 light-sleep 唤醒
-     * @details 当前为高时等待低电平按下，当前为低时等待高电平释放，避免按住按键造成电平中断风暴。
+     * @brief 使能 PWR_INT 的任意边沿中断与 light-sleep 唤醒
+     * @details PWR_INT 允许在按住期间持续为低，因此必须捕获下降与上升两个边沿，
+     *          不能按电平轮询，也不能只等单次脉冲。
      * @return ESP_OK 重武装成功
      *         ESP_ERR_INVALID_STATE BSP 未初始化或 ISR 尚未登记
      *         其他 ESP-IDF 错误码表示 GPIO 配置失败
@@ -91,8 +93,8 @@ extern "C"
     esp_err_t key_rearm_pwr_isr_for_next_level(void);
 
     /**
-     * @brief 解注册运行态 PWR GPIO ISR 回调
-     * @details 先禁用 GPIO46 中断再移除 handler，不卸载共享 GPIO ISR service。
+     * @brief 解注册运行态 PWR_INT GPIO ISR 回调
+     * @details 先禁用 PWR_INT 中断再移除 handler，不卸载共享 GPIO ISR service。
      * @return ESP_OK 解注册成功或原本未登记
      *         ESP_ERR_INVALID_STATE BSP 未初始化
      *         其他 ESP-IDF 错误码表示 GPIO 操作失败
@@ -101,7 +103,7 @@ extern "C"
 
     /**
      * @brief 为运行态 BOOT0 GPIO 登记唯一 ISR 回调
-     * @details GPIO0 始终保持上拉输入；应用只接收运行态电平变化，不改变关机态 PWR+BOOT0 的 Boot ROM 下载路径。
+     * @details BOOT0 始终保持上拉输入；应用只接收运行态电平变化，不改变关机态 PWR+BOOT0 的 Boot ROM 下载路径。
      * @param callback 中断上下文回调，不得执行阻塞操作
      * @param context 原样传回给 callback 的上下文
      * @return ESP_OK 登记成功或已登记同一回调
@@ -114,8 +116,8 @@ extern "C"
         void *context);
 
     /**
-     * @brief 按 GPIO0 当前电平重武装下一次相反电平中断与 light-sleep 唤醒
-     * @details 当前为高时等待低电平按下，当前为低时等待高电平释放，避免按住形成电平中断风暴。
+     * @brief 使能 BOOT0 的任意边沿中断与 light-sleep 唤醒
+     * @details 运行态短按的按下与释放各产生一次边沿；该操作绝不改写复位采样窗口。
      * @return ESP_OK 重武装成功
      *         ESP_ERR_INVALID_STATE BSP 未初始化或 ISR 尚未登记
      *         其他 ESP-IDF 错误码表示 GPIO 配置失败
@@ -124,7 +126,7 @@ extern "C"
 
     /**
      * @brief 解注册运行态 BOOT0 GPIO ISR 回调
-     * @details 先禁用 GPIO0 中断与唤醒再移除 handler，不卸载共享 GPIO ISR service。
+     * @details 先禁用 BOOT0 中断与唤醒再移除 handler，不卸载共享 GPIO ISR service。
      * @return ESP_OK 解注册成功或原本未登记
      *         ESP_ERR_INVALID_STATE BSP 未初始化
      *         其他 ESP-IDF 错误码表示 GPIO 操作失败

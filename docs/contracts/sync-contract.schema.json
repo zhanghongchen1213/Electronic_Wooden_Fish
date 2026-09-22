@@ -1,0 +1,922 @@
+{
+  "contract_version": "SC-1.0.0",
+  "authority": "docs/contracts/sync-contract.md",
+  "fields": [
+    {
+      "name": "device_id",
+      "type": "string",
+      "unit": "无",
+      "owner": "backend",
+      "authority": "backend",
+      "domain": "不透明标识；单身份单设备，不提供绑定、迁移与多设备",
+      "channel": [
+        "https-report",
+        "ws-frame",
+        "persistence-file"
+      ],
+      "source": "PRD §7"
+    },
+    {
+      "name": "scripture_version",
+      "type": "string",
+      "unit": "无",
+      "owner": "canonical",
+      "authority": "canonical manifest",
+      "domain": "必须等于 canonical manifest 的 scripture_version；不一致即配置错误并停止推进",
+      "channel": [
+        "https-report",
+        "persistence-file"
+      ],
+      "source": "PRD §7"
+    },
+    {
+      "name": "local_total",
+      "type": "integer ≥ 0",
+      "unit": "无",
+      "owner": "设备",
+      "authority": "设备本地事实",
+      "domain": "单调不减；设备重置除外",
+      "channel": [
+        "https-report",
+        "ws-frame",
+        "persistence-file"
+      ],
+      "source": "PRD §7"
+    },
+    {
+      "name": "acked_total",
+      "type": "integer ≥ 0",
+      "unit": "无",
+      "owner": "backend",
+      "authority": "backend",
+      "domain": "单调不减；同值或更低的提交为幂等 no-op",
+      "channel": [
+        "https-report",
+        "https-response",
+        "ws-frame",
+        "persistence-file"
+      ],
+      "source": "PRD §7"
+    },
+    {
+      "name": "round_id",
+      "type": "integer ≥ 1",
+      "unit": "无",
+      "owner": "设备",
+      "authority": "backend 确认",
+      "domain": "严格递增；跨轮归属的唯一分段依据",
+      "channel": [
+        "https-report",
+        "https-response",
+        "ws-frame",
+        "persistence-file"
+      ],
+      "source": "PRD §7"
+    },
+    {
+      "name": "round_state",
+      "type": "enum(in_progress|completed)",
+      "unit": "无",
+      "owner": "设备",
+      "authority": "backend 确认",
+      "domain": "仅两值；完成只由完成确认翻转",
+      "channel": [
+        "https-report",
+        "https-response",
+        "ws-frame",
+        "persistence-file"
+      ],
+      "source": "PRD §7"
+    },
+    {
+      "name": "round_cursor",
+      "type": "integer ≥ 0",
+      "unit": "无",
+      "owner": "设备",
+      "authority": "backend 确认",
+      "domain": "取值域引用 canonical manifest 的 counts.consumable_han；backend 不按经文长度盲推",
+      "channel": [
+        "https-report",
+        "https-response",
+        "ws-frame",
+        "persistence-file"
+      ],
+      "source": "PRD §7"
+    },
+    {
+      "name": "pending_completion",
+      "type": "boolean",
+      "unit": "无",
+      "owner": "设备",
+      "authority": "backend 确认",
+      "domain": "置位期间不得创建新轮次；完成确认后清除",
+      "channel": [
+        "https-report",
+        "https-response",
+        "ws-frame",
+        "persistence-file"
+      ],
+      "source": "PRD §7"
+    },
+    {
+      "name": "command_revision",
+      "type": "integer ≥ 0",
+      "unit": "无",
+      "owner": "backend",
+      "authority": "backend",
+      "domain": "单调递增；backend 只保留并下发最新修订",
+      "channel": [
+        "https-response",
+        "ws-frame",
+        "persistence-file"
+      ],
+      "source": "PRD §7"
+    },
+    {
+      "name": "applied_revision",
+      "type": "integer ≥ 0",
+      "unit": "无",
+      "owner": "设备",
+      "authority": "设备上报",
+      "domain": "单调不减；applied_revision ≥ command_revision 即已生效",
+      "channel": [
+        "https-report",
+        "ws-frame",
+        "persistence-file"
+      ],
+      "source": "PRD §7 正文"
+    },
+    {
+      "name": "snapshot_seq",
+      "type": "integer ≥ 0",
+      "unit": "无",
+      "owner": "backend",
+      "authority": "backend",
+      "domain": "单调递增；在查询响应内冻结，是续订与回放的唯一基准",
+      "channel": [
+        "https-response",
+        "ws-frame",
+        "persistence-file"
+      ],
+      "source": "PRD §7"
+    },
+    {
+      "name": "replay_cursor",
+      "type": "integer ≥ 0",
+      "unit": "无",
+      "owner": "frontend",
+      "authority": "frontend 持久化",
+      "domain": "单调不减；旧轮次事件不得写入当前篇章",
+      "channel": [
+        "persistence-file"
+      ],
+      "source": "PRD §7"
+    },
+    {
+      "name": "last_applied_seq",
+      "type": "integer ≥ 0",
+      "unit": "无",
+      "owner": "frontend",
+      "authority": "frontend 持久化",
+      "domain": "单调不减；初值取自最近一次查询响应的快照水位，此后随被消费的帧推进；丢弃 `seq` 不大于它的帧",
+      "channel": [
+        "persistence-file"
+      ],
+      "source": "PRD §7 正文"
+    },
+    {
+      "name": "action_id",
+      "type": "string",
+      "unit": "无",
+      "owner": "发起端",
+      "authority": "发起端生成",
+      "domain": "不透明幂等去重键；重复提交返回同一结果",
+      "channel": [
+        "https-report",
+        "persistence-file"
+      ],
+      "source": "PRD §7 正文"
+    },
+    {
+      "name": "battery_percent",
+      "type": "integer 0–100",
+      "unit": "无",
+      "owner": "设备",
+      "authority": "设备上报",
+      "domain": "取值 0 到 100；主控不检测充电状态，不产生充电分支",
+      "channel": [
+        "https-report",
+        "ws-frame",
+        "persistence-file"
+      ],
+      "source": "PRD §7"
+    },
+    {
+      "name": "network_mode",
+      "type": "enum(connected|no_signal|disabled)",
+      "unit": "无",
+      "owner": "设备",
+      "authority": "设备上报",
+      "domain": "被动联网状态；其存在不启用 BLE 与 Wi-Fi 业务链路，也不要求小程序接口暴露",
+      "channel": [
+        "https-report",
+        "ws-frame",
+        "persistence-file"
+      ],
+      "source": "PRD §7"
+    },
+    {
+      "name": "audio_config_version",
+      "type": "integer ≥ 0",
+      "unit": "无",
+      "owner": "设备",
+      "authority": "设备",
+      "domain": "单调递增；与音量设置相互独立",
+      "channel": [
+        "https-report",
+        "ws-frame",
+        "persistence-file"
+      ],
+      "source": "PRD §7"
+    },
+    {
+      "name": "firmware_version",
+      "type": "string",
+      "unit": "无",
+      "owner": "设备",
+      "authority": "设备",
+      "domain": "设备页「木鱼版本」的取值来源",
+      "channel": [
+        "https-report",
+        "ws-frame",
+        "persistence-file"
+      ],
+      "source": "PRD §7"
+    }
+  ],
+  "event_sources": [
+    {
+      "name": "physical_pvdf",
+      "origin": "嵌入式低功耗比较器唤醒加 ADC 二次确认",
+      "shares_effective_queue": true,
+      "counts_toward_local_total": true,
+      "cloud_specific_field": "无"
+    },
+    {
+      "name": "device_touch",
+      "origin": "亮屏木鱼页电子木鱼点击",
+      "shares_effective_queue": true,
+      "counts_toward_local_total": true,
+      "cloud_specific_field": "无"
+    },
+    {
+      "name": "automatic_tap",
+      "origin": "嵌入式定时器按固定周期锚点生成",
+      "shares_effective_queue": true,
+      "counts_toward_local_total": true,
+      "cloud_specific_field": "无"
+    }
+  ],
+  "sync_states": [
+    {
+      "wire": "local_recorded",
+      "display": "本地已记录",
+      "meaning": "设备已本地落盘，尚未进入同步窗口"
+    },
+    {
+      "wire": "syncing",
+      "display": "同步中",
+      "meaning": "活动窗口内正在上报"
+    },
+    {
+      "wire": "synced",
+      "display": "已同步",
+      "meaning": "backend 已确认，本地与云端一致"
+    },
+    {
+      "wire": "pending_sync",
+      "display": "待同步",
+      "meaning": "存在未确认差值，等待下一次活动窗口"
+    },
+    {
+      "wire": "sync_failed",
+      "display": "同步失败",
+      "meaning": "本次同步被拒绝或失败，保留本地事实并重试"
+    }
+  ],
+  "command_states": [
+    {
+      "wire": "pending_apply",
+      "display": "待设备应用",
+      "meaning": "backend 已保存命令，设备尚未在该次活动窗口取得"
+    },
+    {
+      "wire": "applied",
+      "display": "已生效",
+      "meaning": "applied_revision ≥ command_revision"
+    }
+  ],
+  "time_states": [
+    {
+      "wire": "untrusted_time",
+      "display": "待校时",
+      "meaning": "未取得可信日期时设备今日区显示该状态，cloud 不伪造当天统计"
+    }
+  ],
+  "ws_frames": [
+    {
+      "type": "snapshot",
+      "direction": "backend_to_frontend",
+      "content": "权威快照、冻结的 snapshot_seq、轮次、命令状态与设备状态",
+      "contract_version_field": "contract_version",
+      "discriminator_field": "type",
+      "seq_field": "seq",
+      "error_object_field": "error",
+      "error_object_required": false,
+      "monotonic_seq": true,
+      "payload_fields": [
+        "device_id",
+        "acked_total",
+        "local_total",
+        "round_id",
+        "round_state",
+        "round_cursor",
+        "pending_completion",
+        "command_revision",
+        "applied_revision",
+        "snapshot_seq",
+        "battery_percent",
+        "network_mode",
+        "audio_config_version",
+        "firmware_version"
+      ],
+      "source": "FR-C-006"
+    },
+    {
+      "type": "delta",
+      "direction": "backend_to_frontend",
+      "content": "已确认差量，带单调 seq 与 round_id",
+      "contract_version_field": "contract_version",
+      "discriminator_field": "type",
+      "seq_field": "seq",
+      "error_object_field": "error",
+      "error_object_required": false,
+      "monotonic_seq": true,
+      "payload_fields": [
+        "acked_total",
+        "local_total",
+        "round_id",
+        "round_cursor"
+      ],
+      "source": "FR-C-009"
+    },
+    {
+      "type": "completion",
+      "direction": "backend_to_frontend",
+      "content": "完成确认",
+      "contract_version_field": "contract_version",
+      "discriminator_field": "type",
+      "seq_field": "seq",
+      "error_object_field": "error",
+      "error_object_required": false,
+      "monotonic_seq": true,
+      "payload_fields": [
+        "round_id",
+        "round_state",
+        "pending_completion"
+      ],
+      "source": "FR-C-016"
+    },
+    {
+      "type": "command_state",
+      "direction": "backend_to_frontend",
+      "content": "命令下发与已生效状态变化，携带 volume、brightness、timeout 载荷",
+      "contract_version_field": "contract_version",
+      "discriminator_field": "type",
+      "seq_field": "seq",
+      "error_object_field": "error",
+      "error_object_required": false,
+      "monotonic_seq": true,
+      "payload_fields": [
+        "command_revision",
+        "applied_revision",
+        "volume",
+        "brightness",
+        "timeout"
+      ],
+      "source": "FR-C-008"
+    },
+    {
+      "type": "heartbeat",
+      "direction": "backend_to_frontend",
+      "content": "应用层心跳请求",
+      "contract_version_field": "contract_version",
+      "discriminator_field": "type",
+      "seq_field": "seq",
+      "error_object_field": "error",
+      "error_object_required": false,
+      "monotonic_seq": true,
+      "payload_fields": [],
+      "source": "AD-17"
+    },
+    {
+      "type": "heartbeat_ack",
+      "direction": "frontend_to_backend",
+      "content": "应用层心跳应答",
+      "contract_version_field": "contract_version",
+      "discriminator_field": "type",
+      "seq_field": "seq",
+      "error_object_field": "error",
+      "error_object_required": false,
+      "monotonic_seq": true,
+      "payload_fields": [],
+      "source": "AD-17"
+    },
+    {
+      "type": "error",
+      "direction": "backend_to_frontend",
+      "content": "协议与权限错误",
+      "contract_version_field": "contract_version",
+      "discriminator_field": "type",
+      "seq_field": "seq",
+      "error_object_field": "error",
+      "error_object_required": true,
+      "monotonic_seq": true,
+      "payload_fields": [],
+      "source": "FR-C-011"
+    }
+  ],
+  "frame_fields": [
+    {
+      "name": "contract_version",
+      "type": "string",
+      "unit": "无",
+      "role": "版本化字段",
+      "domain": "必须等于本契约的 contract_version；不一致即拒绝该帧",
+      "channel": [
+        "ws-frame"
+      ]
+    },
+    {
+      "name": "type",
+      "type": "string",
+      "unit": "无",
+      "role": "帧类型判别字段",
+      "domain": "取值见契约 §10.1 帧类型表",
+      "channel": [
+        "ws-frame"
+      ]
+    },
+    {
+      "name": "seq",
+      "type": "integer ≥ 0",
+      "unit": "无",
+      "role": "单调序号",
+      "domain": "单调递增；只消费 seq 大于快照水位的帧",
+      "channel": [
+        "ws-frame"
+      ]
+    },
+    {
+      "name": "error",
+      "type": "object",
+      "unit": "无",
+      "role": "错误对象",
+      "domain": "协议与权限错误；仅在 error 帧出现，含 code 与 message",
+      "channel": [
+        "ws-frame"
+      ]
+    }
+  ],
+  "command_payload_fields": [
+    {
+      "name": "volume",
+      "type": "integer 0–100",
+      "unit": "无",
+      "domain": "0 到 100；默认 50，0 等价于静音",
+      "source": "FR-E-005 / FR-C-008"
+    },
+    {
+      "name": "brightness",
+      "type": "enum(low|mid|high)",
+      "unit": "无",
+      "domain": "三档；默认中档",
+      "source": "FR-E-007 / UX settings-controls"
+    },
+    {
+      "name": "timeout",
+      "type": "enum(5|15|30)",
+      "unit": "秒",
+      "domain": "三档自动熄屏时长；默认 15",
+      "source": "FR-E-007 / UX settings-controls"
+    }
+  ],
+  "ws_heartbeat": {
+    "initiator": "backend",
+    "ack_frame": "heartbeat_ack",
+    "interval_ms": 30000,
+    "timeout_ms": 10000,
+    "test_bounds": {
+      "interval_ms_max": 45000,
+      "timeout_ms_max": 15000
+    },
+    "note": "应用层心跳是浏览器与小程序 JS 唯一可见的保活机制；切后台静默断连不触发关闭事件，故超时判死不得只依赖关闭事件"
+  },
+  "reconnect": {
+    "strategy": "exponential_full_jitter",
+    "initial_backoff_ms": 1000,
+    "max_backoff_ms": 30000,
+    "max_attempts": 10,
+    "test_bounds": {
+      "max_backoff_ms_max": 30000
+    },
+    "resume_from": "snapshot_seq + 1",
+    "discard_rule": "seq <= last_applied_seq 的帧丢弃",
+    "hole_rule": "序号出现空洞先查询补齐再续播",
+    "single_active_socket": true
+  },
+  "offline_backlog": {
+    "definition_fields": [
+      "local_total",
+      "acked_total"
+    ],
+    "limit": 1000,
+    "comparison": ">=",
+    "device_action": "拒绝新输入并提示",
+    "backend_code": "20004",
+    "backend_confirms_at_limit": true,
+    "drain_rule": "20004 不阻断确认：backend 仍按幂等规则推进 acked_total；设备在拒绝态下继续上报，差值回落到低于上限后恢复接受输入"
+  },
+  "endpoint": {
+    "rest_base_env": "VITE_API_BASE_URL",
+    "rest_base_contains": "/api/v1",
+    "scheme_map": {
+      "https": "wss",
+      "http": "ws"
+    },
+    "path_suffix": "/ws",
+    "token_transport": "query",
+    "token_query_field": "token"
+  },
+  "close_codes": {
+    "standard": [
+      1000,
+      1001,
+      1006,
+      1008
+    ],
+    "business_min": 4000,
+    "business_max": 4999,
+    "no_retry_on": [
+      1000,
+      1008
+    ]
+  },
+  "business_codes": [
+    {
+      "condition": "轮次无法归属",
+      "http_status": 200,
+      "code": "20001"
+    },
+    {
+      "condition": "缺少基准高水位",
+      "http_status": 200,
+      "code": "20002"
+    },
+    {
+      "condition": "设备重置冲突",
+      "http_status": 200,
+      "code": "20003"
+    },
+    {
+      "condition": "队列已满",
+      "http_status": 200,
+      "code": "20004"
+    },
+    {
+      "condition": "经文版本不一致",
+      "http_status": 200,
+      "code": "20005"
+    },
+    {
+      "condition": "命令旧修订",
+      "http_status": 200,
+      "code": "20006"
+    },
+    {
+      "condition": "令牌失效",
+      "http_status": 401,
+      "code": "40101"
+    },
+    {
+      "condition": "协议字段非法",
+      "http_status": 400,
+      "code": "40001"
+    }
+  ],
+  "persistence_files": [
+    {
+      "name": "progress.json",
+      "root": "app.data-dir",
+      "schema_version": 1,
+      "facts": "累计高水位、轮次、游标、完成置位与相关动作去重键",
+      "fields": [
+        "local_total",
+        "acked_total",
+        "round_id",
+        "round_cursor",
+        "round_state",
+        "pending_completion",
+        "action_id"
+      ],
+      "single_transaction": true,
+      "migration": "新增字段时可省略读取并取默认值；删除或改义字段必须递增 schema_version 并提供一次性重写"
+    },
+    {
+      "name": "identity.json",
+      "root": "app.data-dir",
+      "schema_version": 1,
+      "facts": "单身份单设备映射",
+      "fields": [
+        "device_id"
+      ],
+      "single_transaction": false,
+      "migration": "身份不可迁移；重建即重新绑定"
+    },
+    {
+      "name": "commands.json",
+      "root": "app.data-dir",
+      "schema_version": 1,
+      "facts": "命令修订、已应用高水位、待应用命令载荷与设置命令去重键",
+      "fields": [
+        "command_revision",
+        "applied_revision",
+        "action_id",
+        "volume",
+        "brightness",
+        "timeout"
+      ],
+      "single_transaction": false,
+      "migration": "只保留最新修订，旧修订不写回"
+    },
+    {
+      "name": "device_state.json",
+      "root": "app.data-dir",
+      "schema_version": 1,
+      "facts": "设备状态镜像与音频配置版本",
+      "fields": [
+        "battery_percent",
+        "network_mode",
+        "audio_config_version",
+        "firmware_version"
+      ],
+      "single_transaction": false,
+      "migration": "属非权威镜像，可整体重建"
+    },
+    {
+      "name": "daily_stats.json",
+      "root": "app.data-dir",
+      "schema_version": 1,
+      "facts": "按配置时区归档的日统计（由已确认增量派生的按日桶，不承载统一字段事实）",
+      "fields": [],
+      "single_transaction": false,
+      "migration": "日界以 backend 配置时区为准，不按设备本地时间切分"
+    }
+  ],
+  "persistence_scopes": [
+    {
+      "scope": "backend",
+      "carrier": "app.data-dir 下的 §11 文件表",
+      "fields": [
+        "device_id",
+        "local_total",
+        "acked_total",
+        "round_id",
+        "round_cursor",
+        "round_state",
+        "pending_completion",
+        "action_id",
+        "command_revision",
+        "applied_revision",
+        "volume",
+        "brightness",
+        "timeout",
+        "battery_percent",
+        "network_mode",
+        "audio_config_version",
+        "firmware_version"
+      ]
+    },
+    {
+      "scope": "device",
+      "carrier": "Embedded 本地持久化（FR-E-004）",
+      "fields": [
+        "local_total",
+        "acked_total",
+        "round_id",
+        "scripture_version",
+        "round_state",
+        "round_cursor",
+        "pending_completion",
+        "action_id",
+        "applied_revision",
+        "volume",
+        "brightness",
+        "timeout"
+      ]
+    },
+    {
+      "scope": "frontend",
+      "carrier": "小程序本地存储",
+      "fields": [
+        "snapshot_seq",
+        "replay_cursor",
+        "last_applied_seq"
+      ]
+    },
+    {
+      "scope": "canonical",
+      "carrier": "docs/contracts/canonical/heart-sutra.manifest.json（构建期单一落盘来源，AD-4）",
+      "fields": [
+        "scripture_version"
+      ]
+    }
+  ],
+  "samples": [
+    {
+      "id": "https_sync_report",
+      "kind": "https_request",
+      "required": [
+        "device_id",
+        "scripture_version",
+        "local_total",
+        "acked_total",
+        "round_id",
+        "round_state",
+        "round_cursor",
+        "pending_completion",
+        "applied_revision",
+        "battery_percent",
+        "network_mode",
+        "audio_config_version",
+        "firmware_version",
+        "action_id"
+      ],
+      "payload": {
+        "device_id": "device-0001",
+        "scripture_version": "canonical:scripture_version",
+        "local_total": 128,
+        "acked_total": 120,
+        "round_id": 3,
+        "round_state": "in_progress",
+        "round_cursor": 96,
+        "pending_completion": false,
+        "applied_revision": 4,
+        "battery_percent": 76,
+        "network_mode": "connected",
+        "audio_config_version": 1,
+        "firmware_version": "1.0.0",
+        "action_id": "sync-20260922-0001"
+      }
+    },
+    {
+      "id": "https_sync_response",
+      "kind": "https_response",
+      "required": [
+        "acked_total",
+        "round_id",
+        "round_state",
+        "round_cursor",
+        "pending_completion",
+        "command_revision",
+        "volume",
+        "brightness",
+        "timeout",
+        "snapshot_seq"
+      ],
+      "payload": {
+        "acked_total": 128,
+        "round_id": 3,
+        "round_state": "in_progress",
+        "round_cursor": 96,
+        "pending_completion": false,
+        "command_revision": 4,
+        "volume": 50,
+        "brightness": "mid",
+        "timeout": 15,
+        "snapshot_seq": 128
+      }
+    },
+    {
+      "id": "ws_snapshot",
+      "kind": "ws_frame",
+      "frame_type": "snapshot",
+      "required": [
+        "contract_version",
+        "type",
+        "seq",
+        "device_id",
+        "acked_total",
+        "local_total",
+        "round_id",
+        "round_state",
+        "round_cursor",
+        "pending_completion",
+        "command_revision",
+        "applied_revision",
+        "snapshot_seq",
+        "battery_percent",
+        "network_mode",
+        "audio_config_version",
+        "firmware_version"
+      ],
+      "payload": {
+        "contract_version": "SC-1.0.0",
+        "type": "snapshot",
+        "seq": 512,
+        "device_id": "device-0001",
+        "acked_total": 128,
+        "local_total": 128,
+        "round_id": 3,
+        "round_state": "in_progress",
+        "round_cursor": 96,
+        "pending_completion": false,
+        "command_revision": 4,
+        "applied_revision": 4,
+        "snapshot_seq": 512,
+        "battery_percent": 76,
+        "network_mode": "connected",
+        "audio_config_version": 1,
+        "firmware_version": "1.0.0"
+      }
+    },
+    {
+      "id": "ws_delta",
+      "kind": "ws_frame",
+      "frame_type": "delta",
+      "required": [
+        "contract_version",
+        "type",
+        "seq",
+        "acked_total",
+        "local_total",
+        "round_id",
+        "round_cursor"
+      ],
+      "payload": {
+        "contract_version": "SC-1.0.0",
+        "type": "delta",
+        "seq": 513,
+        "acked_total": 129,
+        "local_total": 129,
+        "round_id": 3,
+        "round_cursor": 97
+      }
+    },
+    {
+      "id": "ws_command_state",
+      "kind": "ws_frame",
+      "frame_type": "command_state",
+      "required": [
+        "contract_version",
+        "type",
+        "seq",
+        "command_revision",
+        "applied_revision",
+        "volume",
+        "brightness",
+        "timeout"
+      ],
+      "payload": {
+        "contract_version": "SC-1.0.0",
+        "type": "command_state",
+        "seq": 515,
+        "command_revision": 4,
+        "applied_revision": 3,
+        "volume": 50,
+        "brightness": "mid",
+        "timeout": 15
+      }
+    },
+    {
+      "id": "ws_error",
+      "kind": "ws_frame",
+      "frame_type": "error",
+      "required": [
+        "contract_version",
+        "type",
+        "seq",
+        "error"
+      ],
+      "payload": {
+        "contract_version": "SC-1.0.0",
+        "type": "error",
+        "seq": 514,
+        "error": {
+          "code": "40001",
+          "message": "协议字段非法"
+        }
+      }
+    }
+  ]
+}

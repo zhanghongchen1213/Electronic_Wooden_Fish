@@ -1,7 +1,9 @@
 /**
  * @file     selftest_service.h
- * @brief    typed 硬件自检服务接口
- * @details  定义有界注册表、当前启用自检项目元数据和串行结果引擎的公共契约。
+ * @brief    typed BSP 自检服务接口
+ * @details  定义有界注册表、当前启用自检项目元数据、串行结果引擎和证据类别校验的公共契约。
+ *           自检只覆盖电源、启动绑带、复位观察、板级资源与初始化阶段；设计输入和编译成功
+ *           都不能升级为 hardware_verified。
  * @author   ZHC
  * @date     2026-07-14
  */
@@ -15,63 +17,37 @@
 
 #include "app_state.h"
 #include "esp_err.h"
+#include "freertos/FreeRTOS.h"
+#include "freertos/queue.h"
 #include "legbot_services.h"
 
 /** 自检服务在统一服务表中的固定 ID。 */
 #define LEGBOT_SELFTEST_SERVICE_ID LEGBOT_SERVICE_SELFTEST
-/** Story 1.5 完整项与后续云端扩展的有界注册容量。 */
-#define SELFTEST_REGISTRY_CAPACITY 20U
+/** 当前启用项与后续 Story 扩展的有界注册容量。 */
+#define SELFTEST_REGISTRY_CAPACITY 8U
 /** PRD 已声明项目的最长允许超时。 */
 #define SELFTEST_MAX_TIMEOUT_MS 180000U
 /** selftest_task 私有 typed 命令队列深度。 */
 #define SELFTEST_SERVICE_QUEUE_DEPTH 2U
-/** UI 人工判定回复的有界 typed 队列深度。 */
-#define SELFTEST_UI_REPLY_QUEUE_DEPTH 4U
 /** selftest_task 空闲与取消轮询的有界片段。 */
 #define SELFTEST_SERVICE_POLL_MS 10U
-/** 音频取消请求的有界等待。 */
-#define SELFTEST_AUDIO_CANCEL_TIMEOUT_MS 300U
-/** 音频 handler 为框架终态发布预留的提前量。 */
-#define SELFTEST_AUDIO_TERMINAL_MARGIN_MS 500U
-/** 音频播放并等待人工听感确认的总超时。 */
-#define SELFTEST_AUDIO_TIMEOUT_MS 30000U
+/**
+ * 板级回执是否可用。Story 1.1 无样机，因此恒为 0；
+ * 只有 Story 7.6 归档示波器/实板回执后，才允许把该常量改为 1。
+ */
+#define SELFTEST_SERVICE_BOARD_RECEIPT_AVAILABLE 0U
 
 typedef enum
 {
-    SELFTEST_SERVICE_COMMAND_RUN_ALL = 0, /**< 按固定 PRD 顺序执行完整清单。 */
-    SELFTEST_SERVICE_COMMAND_RETRY_ITEM,  /**< 仅重试既有完整结果中的一个失败项。 */
+    SELFTEST_SERVICE_COMMAND_RUN_ALL = 0, /**< 按固定顺序执行完整清单。 */
     SELFTEST_SERVICE_COMMAND_STOP,        /**< 取消当前项并退出 selftest_task。 */
 } selftest_service_command_type_t;
 
-typedef enum
-{
-    SELFTEST_GPS_FIX_CONTEXT_DEFAULT = 0,      /**< 默认室外或靠窗定位条件。 */
-    SELFTEST_GPS_FIX_CONTEXT_INDOOR_CONFIRMED, /**< 操作员已显式确认室内条件。 */
-} selftest_gps_fix_context_t;
-
-/** UI 对人工自检项目提交的 typed 动作。 */
-typedef enum
-{
-    SELFTEST_UI_REPLY_ACTION_DECISION = 0, /**< 提交最终 pass/fail 判定。 */
-    SELFTEST_UI_REPLY_ACTION_OUTPUT_REPLAY, /**< 请求音频或振动项再次输出。 */
-} selftest_ui_reply_action_t;
-
 typedef struct
 {
-    selftest_service_command_type_t type;       /**< typed 命令类型。 */
-    uint32_t requested_at_ticks;                /**< 命令入队时的单调 tick。 */
-    uint32_t run_id;                            /**< 重试所属运行 ID，完整运行时为 0。 */
-    selftest_item_id_t item_id;                 /**< 重试项目，完整运行时为 SELFTEST_ITEM_COUNT。 */
-    selftest_gps_fix_context_t gps_fix_context; /**< 本轮 FIX 项的显式环境上下文。 */
+    selftest_service_command_type_t type; /**< typed 命令类型。 */
+    uint32_t requested_at_ticks;          /**< 命令入队时的单调 tick。 */
 } selftest_service_command_t;
-
-typedef struct
-{
-    selftest_ui_reply_action_t action; /**< typed 回复动作，零值保持既有最终判定语义。 */
-    uint32_t run_id;                    /**< 回复所属运行 ID。 */
-    selftest_item_id_t item_id;         /**< 回复所属人工项 ID。 */
-    selftest_outcome_t outcome;         /**< 最终判定仅允许 PASS/FAIL；重新输出时必须为 NOT_RUN。 */
-} selftest_ui_reply_t;
 
 typedef struct
 {
@@ -83,16 +59,15 @@ typedef struct
     selftest_item_id_t item_id; /**< 稳定项目 ID。 */
     const char *name;           /**< 编译期固定项目名称。 */
     uint32_t timeout_ms;        /**< PRD 固定超时。 */
-    bool required_in_story;     /**< true 表示 Story 1.5 必须实现，不可以未注册跳过。 */
+    bool required_in_story;     /**< true 表示本 Story 必须实现，不可以未注册跳过。 */
 } selftest_item_metadata_t;
 
 typedef struct
 {
-    uint32_t run_id;                            /**< 当前运行 ID。 */
-    selftest_item_id_t item_id;                 /**< 当前项目 ID。 */
-    uint32_t timeout_ms;                        /**< 当前项目有效超时。 */
-    selftest_gps_fix_context_t gps_fix_context; /**< FIX 项可消费的显式环境上下文。 */
-    void *handler_context;                      /**< 注册时提供的长生命周期上下文。 */
+    uint32_t run_id;          /**< 当前运行 ID。 */
+    selftest_item_id_t item_id; /**< 当前项目 ID。 */
+    uint32_t timeout_ms;      /**< 当前项目有效超时。 */
+    void *handler_context;    /**< 注册时提供的长生命周期上下文。 */
 } selftest_handler_context_t;
 
 /**
@@ -141,12 +116,12 @@ const selftest_item_metadata_t *selftest_service_canonical_items(size_t *count);
 esp_err_t selftest_service_init_contracts(void);
 
 /**
- * @brief 在统一框架创建 selftest_task 前进入 starting 状态
+ * @brief 在统一框架创建 selftest_task 前进入 prepared 状态
  * @return ESP_OK 已准备，ESP_ERR_INVALID_STATE 队列不可用或 task 已活动
  */
 esp_err_t selftest_service_prepare_run(void);
 
-/** @brief 回滚未成功创建的 selftest_task starting 状态。 */
+/** @brief 回滚未成功创建的 selftest_task prepared 状态。 */
 void selftest_service_cancel_prepared_run(void);
 
 /**
@@ -165,30 +140,6 @@ esp_err_t selftest_service_deinit_contracts(void);
 esp_err_t selftest_service_request_run(TickType_t timeout_ticks);
 
 /**
- * @brief 使用显式 GPS FIX 环境上下文请求完整自检
- * @param gps_fix_context 默认环境或操作员已确认室内
- * @param timeout_ticks 等待命令队列空间的有界 tick 数
- * @return ESP_OK 已入队，其他值表示参数、状态或超时错误
- */
-esp_err_t selftest_service_request_run_with_gps_context(
-    selftest_gps_fix_context_t gps_fix_context,
-    TickType_t timeout_ticks);
-
-/**
- * @brief 请求重试既有完整结果中的一个失败项
- * @param run_id 当前完整结果的非零运行 ID
- * @param item_id 当前结果中 outcome=FAIL 的项目 ID
- * @param gps_fix_context GPS FIX 重试使用的显式环境上下文，其他项目忽略
- * @param timeout_ticks 等待命令队列空间的有界 tick 数
- * @return ESP_OK 已入队，其他值表示参数、状态或超时错误
- */
-esp_err_t selftest_service_request_retry_item(
-    uint32_t run_id,
-    selftest_item_id_t item_id,
-    selftest_gps_fix_context_t gps_fix_context,
-    TickType_t timeout_ticks);
-
-/**
  * @brief 请求取消当前项并退出 selftest_task
  * @param timeout_ticks 等待命令队列空间的有界 tick 数
  * @return ESP_OK 已入队
@@ -199,7 +150,7 @@ esp_err_t selftest_service_request_stop(TickType_t timeout_ticks);
 
 /**
  * @brief 进入统一服务框架拥有的 selftest_task 循环
- * @details 仅消费 RUN_ALL/RETRY_ITEM/STOP typed 命令，使用有界等待并串行执行单项。
+ * @details 仅消费 RUN_ALL/STOP typed 命令，使用有界等待并串行执行单项。
  * @return ESP_OK 已安全退出，其他值表示框架级错误
  */
 esp_err_t selftest_service_run(void);
@@ -211,22 +162,16 @@ esp_err_t selftest_service_run(void);
 bool selftest_service_cancel_requested(void);
 
 /**
- * @brief 由 ui_task 提交定长人工判定或振动重放动作
- * @param reply 包含 action、run_id、item_id 和 outcome 的 typed 回复
- * @param timeout_ticks 等待回复队列空间的有界 tick 数
- * @return ESP_OK 已入队
- *         ESP_ERR_INVALID_ARG 参数、action、项目或 outcome 非法
- *         ESP_ERR_INVALID_STATE 回复队列尚未初始化
- *         ESP_ERR_TIMEOUT 队列在有界等待内仍满
- */
-esp_err_t selftest_service_submit_ui_reply(const selftest_ui_reply_t *reply,
-                                           TickType_t timeout_ticks);
-
-/**
  * @brief 获取 selftest_task 栈高水位快照
  * @param metrics 指标输出
  * @return ESP_OK 成功，ESP_ERR_INVALID_ARG 输出指针无效
  */
 esp_err_t selftest_service_metrics_snapshot(selftest_service_metrics_t *metrics);
+
+/**
+ * @brief 获取 selftest_task 私有 typed 命令队列
+ * @return 队列句柄，尚未创建时为 NULL
+ */
+QueueHandle_t selftest_service_queue(void);
 
 #endif /* LEGBOT_SELFTEST_SERVICE_H */

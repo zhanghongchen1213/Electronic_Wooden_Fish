@@ -79,6 +79,8 @@ child 返回后必须验证：
 - sprint status 到达 `review`；
 - B receipt 存在，包含 File List、实际测试命令和退出码；
 - 测试命令退出码为 0；
+- B receipt 必须包含 `build_attempts`、`build_exit_codes`、`build_log_paths`、`final_build_exit_code` 和 `build_recovery`。非 ESP-IDF story 只能填 `build_recovery=not-applicable` 且构建数组为空；涉及 `Embedded/` 或 ESP-IDF 的 story 必须记录每次构建日志和退出码，最终 `build_recovery=resolved` 且最终退出码为 0；
+- 对 ESP-IDF story，任何 `idf.py` 缺失或退出码 `127` 都不能直接进入 C：必须在 B child 内按 macOS runbook 重新激活环境、定位原因、修复并使用新 attempt 重建成功。最终非零构建退出码、缺少日志或未证明修复均视为 B 失败，只允许按本阶段 retry 规则重试；
 - File List 不为空且每个路径可追溯。
 
 然后调用：

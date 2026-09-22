@@ -1463,7 +1463,7 @@ esp_err_t watch_state_apply_selftest_begin(const watch_selftest_begin_update_t *
         return ESP_ERR_INVALID_STATE;
     }
     if (update == NULL || update->run_id == 0U ||
-        update->first_item < SELFTEST_ITEM_AMOLED || update->first_item >= SELFTEST_ITEM_COUNT)
+        update->first_item < SELFTEST_ITEM_BSP_RESOURCE_TABLE || update->first_item >= SELFTEST_ITEM_COUNT)
     {
         return ESP_ERR_INVALID_ARG;
     }
@@ -1484,9 +1484,9 @@ esp_err_t watch_state_apply_selftest_item(const watch_selftest_item_update_t *up
         return ESP_ERR_INVALID_STATE;
     }
     if (update == NULL || update->run_id == 0U ||
-        update->result.item_id < SELFTEST_ITEM_AMOLED ||
+        update->result.item_id < SELFTEST_ITEM_BSP_RESOURCE_TABLE ||
         update->result.item_id >= SELFTEST_ITEM_COUNT ||
-        update->next_item < SELFTEST_ITEM_AMOLED || update->next_item > SELFTEST_ITEM_COUNT ||
+        update->next_item < SELFTEST_ITEM_BSP_RESOURCE_TABLE || update->next_item > SELFTEST_ITEM_COUNT ||
         (update->result.outcome != SELFTEST_OUTCOME_PASS &&
          update->result.outcome != SELFTEST_OUTCOME_FAIL &&
          update->result.outcome != SELFTEST_OUTCOME_SKIP &&
@@ -1577,7 +1577,7 @@ esp_err_t watch_state_apply_selftest_retry_begin(
         return ESP_ERR_INVALID_STATE;
     }
     if (update == NULL || update->run_id == 0U ||
-        update->item_id < SELFTEST_ITEM_AMOLED || update->item_id >= SELFTEST_ITEM_COUNT)
+        update->item_id < SELFTEST_ITEM_BSP_RESOURCE_TABLE || update->item_id >= SELFTEST_ITEM_COUNT)
     {
         return ESP_ERR_INVALID_ARG;
     }
@@ -1616,7 +1616,7 @@ esp_err_t watch_state_apply_selftest_retry_finish(
         return ESP_ERR_INVALID_STATE;
     }
     if (update == NULL || update->run_id == 0U ||
-        update->result.item_id < SELFTEST_ITEM_AMOLED ||
+        update->result.item_id < SELFTEST_ITEM_BSP_RESOURCE_TABLE ||
         update->result.item_id >= SELFTEST_ITEM_COUNT ||
         (update->result.outcome != SELFTEST_OUTCOME_PASS &&
          update->result.outcome != SELFTEST_OUTCOME_FAIL &&

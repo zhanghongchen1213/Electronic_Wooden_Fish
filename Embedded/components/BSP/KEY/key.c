@@ -1,7 +1,7 @@
 /**
  * @file     key.c
  * @brief    板载按键 BSP 实现
- * @details  配置电源键和 BOOT 键为上拉输入，并分别提供动态反向电平 ISR 与 light-sleep 唤醒。
+ * @details  配置 LTC2954 PWR_INT 与 BOOT0 为上拉只读输入，并分别提供任意边沿 ISR 与 light-sleep 唤醒。
  * @author   ZHC
  * @date     2026-07-09
  */
@@ -174,11 +174,14 @@ esp_err_t key_rearm_pwr_isr_for_next_level(void)
     {
         return err;
     }
-    const gpio_int_type_t next_level =
-        gpio_get_level(LEGBOT_KEY_PWR_GPIO) == 0
-            ? GPIO_INTR_HIGH_LEVEL
-            : GPIO_INTR_LOW_LEVEL;
-    err = gpio_wakeup_enable(LEGBOT_KEY_PWR_GPIO, next_level);
+    /* light-sleep 期间按有效低电平武装逐脚唤醒；运行态仍用任意边沿中断测时长。
+       两条链路是不同机制，不得互相替代（见 docs/embedded/guides/低功耗策略与实测验收.md）。 */
+    err = gpio_wakeup_enable(LEGBOT_KEY_PWR_GPIO, GPIO_INTR_LOW_LEVEL);
+    if (err == ESP_OK)
+    {
+        /* PWR_INT 是持续低有效信号；只捕获下降/上升边沿，低电平时长由任务测量。 */
+        err = gpio_set_intr_type(LEGBOT_KEY_PWR_GPIO, GPIO_INTR_ANYEDGE);
+    }
     if (err == ESP_OK)
     {
         err = gpio_intr_enable(LEGBOT_KEY_PWR_GPIO);
@@ -285,11 +288,13 @@ esp_err_t key_rearm_boot_isr_for_next_level(void)
     {
         return err;
     }
-    const gpio_int_type_t next_level =
-        gpio_get_level(LEGBOT_KEY_BOOT_GPIO) == 0
-            ? GPIO_INTR_HIGH_LEVEL
-            : GPIO_INTR_LOW_LEVEL;
-    err = gpio_wakeup_enable(LEGBOT_KEY_BOOT_GPIO, next_level);
+    /* light-sleep 期间按有效低电平武装逐脚唤醒；运行态仍只交接原始边沿。 */
+    err = gpio_wakeup_enable(LEGBOT_KEY_BOOT_GPIO, GPIO_INTR_LOW_LEVEL);
+    if (err == ESP_OK)
+    {
+        /* BOOT0 运行态只交接原始边沿，绝不改变 Boot ROM 的启动采样。 */
+        err = gpio_set_intr_type(LEGBOT_KEY_BOOT_GPIO, GPIO_INTR_ANYEDGE);
+    }
     if (err == ESP_OK)
     {
         err = gpio_intr_enable(LEGBOT_KEY_BOOT_GPIO);
@@ -343,7 +348,7 @@ static void key_pwr_isr(void *argument)
 static void key_boot_isr(void *argument)
 {
     (void)argument;
-    /* 电平保持期间先停中断，由 voice owner 采样后重武装相反电平。 */
+    /* 电平保持期间先停中断，owner 采样后按任意边沿重武装。 */
     (void)gpio_intr_disable(LEGBOT_KEY_BOOT_GPIO);
     const legbot_key_boot_isr_callback_t callback =
         atomic_load_explicit(&s_boot_callback, memory_order_acquire);

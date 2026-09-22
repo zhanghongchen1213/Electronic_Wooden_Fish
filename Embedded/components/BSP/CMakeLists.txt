@@ -5,12 +5,11 @@ set(src_dirs
             CST9217
             ES8311
             KEY
-            L76KB_A58
             CW2015
-            ML307R
             NS4150
+            PVDF
             QMI8658C
-            VIBRATION)
+            )
 
 set(include_dirs
             BSP_INCLUDE
@@ -18,15 +17,15 @@ set(include_dirs
             CST9217
             ES8311
             KEY
-            L76KB_A58
             CW2015
-            ML307R
             NS4150
+            PVDF
             QMI8658C
-            VIBRATION)
+            )
 
 set(requires
             driver
+            esp_adc
             esp_driver_gpio
             esp_driver_i2c
             esp_driver_i2s

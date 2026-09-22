@@ -77,6 +77,7 @@ description: 'Autonomously drive an entire BMad epic through create-story → de
 - **全程零变更性 git 操作**：你和子 Agent 都不得 commit / branch / stash / reset / checkout。只允许只读 `git diff` 用于查看变更。
 - **每个 child 只执行一次阶段**：child 不得自行再次派发同阶段或进入 review→fix 无限循环；retry 只能由本编排器统一执行，单阶段最多 2 次尝试。
 - **sprint-status.yaml 是状态唯一裁判，但不是唯一完成证据**：每阶段还必须核对对应机器 receipt、story 文件、story-local diff、测试退出码与 review quorum，不轻信子 Agent 自述。
+- **ESP-IDF 构建恢复门禁**：涉及 `Embedded/`、ESP-IDF、CMake、固件、硬件、驱动或构建系统的 B 阶段必须遵循当前项目 macOS runbook；`idf.py` 缺失或退出码 `127` 先重新激活环境、定位并修复，再用新日志重建成功，不能即时终止。B receipt 必须记录所有构建尝试、日志、退出码、诊断和修复；最终构建未以 0 退出不得进入 C。
 - **状态门禁**：`backlog→A`、`ready-for-dev/in-progress→B`、`review→C`、`done→跳过`；未知/blocked/缺文件/坏 YAML/空 diff/receipt 缺失统一 fail-closed。
 - **review contract**：C 必须显式传 `review_depth`、`risk_reasons`、`action_policy=autofix`、`unattended=true`、`story_key`、`spec_file`、`diff_file`、`receipt_file`、`test_command` 与 `sprint_status`，禁止 code-review 自己猜目标或重新选择工作树 diff。
 - **风险优先**：命中 API/schema、认证权限、持久化/迁移、并发/状态机、协议/网络、硬件/电源/OTA、依赖/构建、删除、跨组件或测试失败时至少使用 `deep`；无法判断时升级 `deep`。

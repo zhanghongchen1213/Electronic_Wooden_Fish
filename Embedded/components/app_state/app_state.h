@@ -68,18 +68,14 @@ extern "C"
 
     typedef enum
     {
-        SELFTEST_ITEM_AMOLED = 0, /**< AMOLED 五色人工确认项。 */
-        SELFTEST_ITEM_TOUCH,      /**< 触摸点击与滑动人工确认项。 */
-        SELFTEST_ITEM_I2C_SCAN,   /**< 共享 I2C 已焊接器件扫描项。 */
-        SELFTEST_ITEM_CW2015,  /**< CW2015 连续三次电量读取项。 */
-        SELFTEST_ITEM_QMI8658C,   /**< QMI8658C 连续三次六轴读取项。 */
-        SELFTEST_ITEM_AUDIO,      /**< typed 固定资源音频播放项。 */
-        SELFTEST_ITEM_GPS_UART,   /**< 后续 Epic 接入的 GPS UART 扩展项。 */
-        SELFTEST_ITEM_GPS_FIX,    /**< 后续 Epic 接入的 GPS 定位扩展项。 */
-        SELFTEST_ITEM_ML307R,     /**< 后续 Epic 接入的 ML307R 扩展项。 */
-        SELFTEST_ITEM_VIBRATION,  /**< 有界 PWM 振动人工确认项。 */
-        SELFTEST_ITEM_SPIFFS,     /**< SPIFFS 挂载与 typed 音频资源项。 */
-        SELFTEST_ITEM_COUNT       /**< 当前启用的完整自检项数量。 */
+        SELFTEST_ITEM_BSP_RESOURCE_TABLE = 0, /**< BSP 资源表引脚、方向、所有权与保留脚一致性项。 */
+        SELFTEST_ITEM_PWR_BOOT_INPUT,         /**< PWR_INT/BOOT0 只读输入边界与原始电平项。 */
+        SELFTEST_ITEM_RESET_OBSERVATION,      /**< EN/RESET_N 复位原因的软件观察项。 */
+        SELFTEST_ITEM_INIT_STAGES,            /**< 板级初始化阶段的顺序与返回值项。 */
+        SELFTEST_ITEM_DISABLED_RESOURCES,     /**< 未纳管/禁用资源与禁用原因项。 */
+        SELFTEST_ITEM_POWER_MATRIX_PENDING,   /**< 三种供电与 LTC2954 时序的待样机验证项。 */
+        SELFTEST_ITEM_PVDF_INPUT,             /**< PVDF 候选输入二次确认策略与误触发项。 */
+        SELFTEST_ITEM_COUNT                   /**< 当前启用的完整自检项数量。 */
     } selftest_item_id_t;
 
     typedef enum
@@ -120,11 +116,26 @@ extern "C"
         SELFTEST_REASON_WINDOW_EXPIRED    /**< 观察窗口结束，需继续搜索或复测。 */
     } selftest_reason_t;
 
+    /**
+     * @brief 自检项证据类别
+     * @details 设计输入与软件编译成功都不能升级为 hardware_verified；只有附有板级回执时才允许该类别。
+     */
+    typedef enum
+    {
+        SELFTEST_EVIDENCE_DESIGN_INPUT = 0,  /**< 结论直接来自硬件事实源，本固件未观测。 */
+        SELFTEST_EVIDENCE_SOFTWARE_OBSERVED, /**< 结论来自本次运行的软件观测。 */
+        SELFTEST_EVIDENCE_HARDWARE_PENDING,  /**< 需要实板/仪器回执，当前缺失。 */
+        SELFTEST_EVIDENCE_HARDWARE_VERIFIED, /**< 已附可追溯的板级回执。 */
+        SELFTEST_EVIDENCE_FAILED,            /**< 已发现与硬件事实源冲突的证据。 */
+        SELFTEST_EVIDENCE_COUNT              /**< 证据类别数量，不是有效类别。 */
+    } selftest_evidence_t;
+
     typedef struct
     {
         selftest_item_id_t item_id;                      /**< 稳定自检项 ID。 */
         selftest_outcome_t outcome;                      /**< pass/fail/skip 终态。 */
         selftest_reason_t reason;                        /**< typed 原因。 */
+        selftest_evidence_t evidence;                    /**< 本次终态的证据类别。 */
         uint32_t elapsed_ms;                             /**< 单调时钟实测耗时。 */
         char detail_code[SELFTEST_DETAIL_CODE_CAPACITY]; /**< 定长稳定 detail code。 */
     } selftest_item_result_t;

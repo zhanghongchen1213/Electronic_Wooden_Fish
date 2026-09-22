@@ -100,6 +100,50 @@ class AutopilotStateTests(unittest.TestCase):
             self.assertEqual(result["changed_paths"], ["empty.txt"])
             self.assertIn("/dev/null", diff_path.read_text(encoding="utf-8"))
 
+    def test_diff_marks_missing_trailing_newline_so_patch_applies(self):
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory) / "repo"
+            root.mkdir()
+            subprocess.run(["git", "init", "-q", str(root)], check=True)
+            (root / "no-newline.txt").write_text("tail", encoding="utf-8")
+            subprocess.run(["git", "-C", str(root), "add", "no-newline.txt"], check=True)
+            subprocess.run(
+                [
+                    "git",
+                    "-C",
+                    str(root),
+                    "-c",
+                    "user.name=Test",
+                    "-c",
+                    "user.email=test@example.com",
+                    "commit",
+                    "-qm",
+                    "base",
+                ],
+                check=True,
+            )
+
+            snapshot = Path(directory) / "before"
+            self.run_helper("snapshot", "--root", root, "--out", snapshot)
+            (root / "no-newline.txt").write_text("tail changed", encoding="utf-8")
+            (root / "second.txt").write_text("second", encoding="utf-8")
+            diff_path = Path(directory) / "story.diff"
+            self.run_helper(
+                "diff", "--before", snapshot, "--root", root, "--out", diff_path
+            )
+
+            diff = diff_path.read_text(encoding="utf-8")
+            # 三个无尾换行的内容行各需一个标记：no-newline.txt 的旧行与新行、second.txt 的新行。
+            self.assertEqual(diff.count("\\ No newline at end of file"), 3)
+            # 缺少标记时，无尾换行的内容行会与随后的 hunk 头/文件头粘连，
+            # git apply 会报 corrupt patch。反向检查等价于"这是一份可应用的补丁"。
+            completed = subprocess.run(
+                ["git", "-C", str(root), "apply", "--check", "--reverse", str(diff_path)],
+                capture_output=True,
+                text=True,
+            )
+            self.assertEqual(completed.returncode, 0, completed.stderr)
+
     def test_status_validation_fails_closed(self):
         with tempfile.TemporaryDirectory() as directory:
             missing = Path(directory) / "missing.yaml"
@@ -189,7 +233,9 @@ class AutopilotStateTests(unittest.TestCase):
                 '{"story_key":"1-1-demo","story_path":"/tmp/1-1-demo.md",'
                 '"phase":"B","file_list":["src/a.py"],"test_commands":["true"],'
                 '"test_exit_codes":[0],"change_kind":"runtime",'
-                '"runtime_behavior_changed":true,"status":"review","ok":true}',
+                '"runtime_behavior_changed":true,"build_attempts":[],'
+                '"build_exit_codes":[],"build_log_paths":[],"final_build_exit_code":null,'
+                '"build_recovery":"not-applicable","status":"review","ok":true}',
                 encoding="utf-8",
             )
             result = self.run_helper(
@@ -197,6 +243,56 @@ class AutopilotStateTests(unittest.TestCase):
                 "--story-key", "1-1-demo", "--expected-status", "review",
             )
             self.assertTrue(result["ok"])
+
+            receipt.write_text(
+                '{"story_key":"1-1-demo","story_path":"/tmp/1-1-demo.md",'
+                '"phase":"B","file_list":["Embedded/main/main.c"],"test_commands":["idf.py build"],'
+                '"test_exit_codes":[0],"change_kind":"runtime",'
+                '"runtime_behavior_changed":true,"build_attempts":['
+                '{"attempt":1,"log_path":"/tmp/build-1.log","exit_code":127,'
+                '"diagnosis":"idf.py 未在激活 shell 中可见","fix":"重新 source runbook 指定激活脚本"},'
+                '{"attempt":2,"log_path":"/tmp/build-2.log","exit_code":0,'
+                '"diagnosis":"激活后重新构建成功","fix":"无"}],'
+                '"build_exit_codes":[127,0],"build_log_paths":["/tmp/build-1.log","/tmp/build-2.log"],'
+                '"final_build_exit_code":0,"build_recovery":"resolved",'
+                '"status":"review","ok":true}',
+                encoding="utf-8",
+            )
+            result = self.run_helper(
+                "validate-receipt", "--file", receipt, "--phase", "B",
+                "--story-key", "1-1-demo", "--expected-status", "review",
+            )
+            self.assertTrue(result["ok"])
+
+            receipt.write_text(
+                '{"story_key":"1-1-demo","story_path":"/tmp/1-1-demo.md",'
+                '"phase":"B","file_list":["Embedded/main/main.c"],"test_commands":["idf.py build"],'
+                '"test_exit_codes":[0],"change_kind":"runtime",'
+                '"runtime_behavior_changed":true,"build_attempts":[],"build_exit_codes":[],'
+                '"build_log_paths":[],"final_build_exit_code":null,"build_recovery":"not-applicable",'
+                '"status":"review","ok":true}',
+                encoding="utf-8",
+            )
+            result = self.run_helper(
+                "validate-receipt", "--file", receipt, "--phase", "B",
+                "--story-key", "1-1-demo", "--expected-status", "review", check=False,
+            )
+            self.assertEqual(result["reason"], "embedded-build-required")
+
+            receipt.write_text(
+                '{"story_key":"1-1-demo","story_path":"/tmp/1-1-demo.md",'
+                '"phase":"B","file_list":["Embedded/main/main.c"],"test_commands":["idf.py build"],'
+                '"test_exit_codes":[0],"change_kind":"runtime",'
+                '"runtime_behavior_changed":true,"build_attempts":[],"build_exit_codes":[],'
+                '"build_log_paths":[],"final_build_exit_code":127,"build_recovery":"resolved",'
+                '"status":"review","ok":true}',
+                encoding="utf-8",
+            )
+            result = self.run_helper(
+                "validate-receipt", "--file", receipt, "--phase", "B",
+                "--story-key", "1-1-demo", "--expected-status", "review", check=False,
+            )
+            self.assertEqual(result["reason"], "build-not-resolved")
             receipt.write_text('{"story_key":"1-1-demo","phase":"B","ok":true}', encoding="utf-8")
             completed = subprocess.run(
                 [

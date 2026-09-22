@@ -2,7 +2,7 @@
 
 # 经验：后端 REST 信封与微信登录（miaowu → EWF 适配）
 
-> 用途：EWF `cloud/backend`（Spring Boot 3.3.7 + Java 17 + Maven，JSON 零库、单实例单进程）**软件层后端**开工前的迁移经验。本文只写「从 miaowu 后端代码里实际读到的做法/坑位」及其在 EWF 的用法；**模块级实现规格不在此定义**——EWF 前端面 REST 路径、`{code,message,data}` 信封与错误码表应在 `docs/contracts/sync-contract.md` 的后续同步契约阶段冻结（AD-16/17）。
+> 用途：EWF `cloud/backend`（Spring Boot 3.3.7 + Java 17 + Maven，JSON 零库、单实例单进程）**软件层后端**开工前的迁移经验。本文只写「从 miaowu 后端代码里实际读到的做法/坑位」及其在 EWF 的用法；**模块级实现规格不在此定义**——EWF 前端面 `{code,message,data}` 信封、WebSocket 端点派生与**同步域**错误码已由 `docs/contracts/sync-contract.md`（`contract_version` = `SC-1.0.0`）冻结（AD-16/17）；其余 REST 路径与身份入口错误码不在该契约范围内（属 4.4 与各模块 spec），本文只引用、不复制该契约的同步域部分。
 >
 > 阅读对象：后续 backend spec/实现 agent。§①—§⑧ 一律用两列「miaowu 做法 → EWF 怎么用」；§⑨ 是排除表。逐条标注可复制的类/文件，EWF 侧给出**落盘即用或裁剪**的结论。
 
@@ -62,8 +62,8 @@ public class ApiResponse<T> { int code; String message; T data; }
 
 | miaowu 做法 / 坑位 | EWF 怎么用 |
 | --- | --- |
-| 业务抛错统一 `throw new BusinessException(code, msg)`（含 `paramError/unauthorized/notFound/conflict/serverError` 便捷静态），Controller/Service 不返回 null 表示失败。 | 复制 `ErrorCode` + `BusinessException` + `GlobalExceptionHandler`。EWF 的错误码表按自身资源收敛：`40401` 可改指「设备/身份不存在」，去掉 `ROLE_MISMATCH`/`STAR_FROZEN` 等（单身份单设备），但**区间位保留**，避免前后端对「5 位码=HTTP 前缀+序号」的解析规则漂移。最终表在后续同步契约阶段冻结。 |
-| 「业务失败回 HTTP 200 + body 业务码」是信封体系的**关键约定**，前端 request 封装据此统一弹错。 | EWF 沿用同一约定，且要在 `sync-contract.md` / 前端骨架里写明「只看 body.code，HTTP 状态仅在 401/404/429/500 等协议级时使用」。 |
+| 业务抛错统一 `throw new BusinessException(code, msg)`（含 `paramError/unauthorized/notFound/conflict/serverError` 便捷静态），Controller/Service 不返回 null 表示失败。 | 复制 `ErrorCode` + `BusinessException` + `GlobalExceptionHandler`。EWF 的错误码表按自身资源收敛：`40401` 可改指「设备/身份不存在」，去掉 `ROLE_MISMATCH`/`STAR_FROZEN` 等（单身份单设备），但**区间位保留**，避免前后端对「5 位码=HTTP 前缀+序号」的解析规则漂移。同步域错误码已由 `docs/contracts/sync-contract.md` §12 冻结（`SC-1.0.0`），实现层不得重定义其码值；该表只覆盖同步域，身份入口与其余资源的码值不在其内，由 4.4 与各模块 spec 定义，码形与区间位规则照旧。 |
+| 「业务失败回 HTTP 200 + body 业务码」是信封体系的**关键约定**，前端 request 封装据此统一弹错。 | EWF 沿用同一约定；`docs/contracts/sync-contract.md` §12 已冻结「业务错误 HTTP 200 + 业务码、协议错误用对应 HTTP 状态」（`SC-1.0.0`），前端 request 封装按「只看 body.code，HTTP 状态仅在 401/404/429/500 等协议级时使用」实现。 |
 | 校验失败文案由后端拼接自 `jakarta.validation` 注解 message；EWF 的 DTO 校验注解（`@NotBlank/@Size` 等）可直接沿用。 | EWF 登录请求（`code`）与各类上报查询 DTO 加 `@Valid`，异常走同一 400 路径。 |
 
 ---
@@ -126,7 +126,7 @@ try {
 | —（策略 ③ 明确并发上限 + 幂等） | 若担心 map 锁内存，可直接 `synchronized` 整个「登录建号」方法（单进程内全局锁）：EWF 登录是低频操作（设备端固定身份，不是高并发注册），全局锁最简单且可证正确；配合响应/请求幂等键，重复 code 也不会建两条。 |
 | 事务/回滚 | miaowu `@Transactional` 保证建号+tokenVersion 写入同事务。 | EWF 无事务；顺序写多个 JSON 文件时**先写身份再写会话/状态**，任一失败允许「身份已存在但本次登录失败」——幂等建号保证下次登录直接取既有身份，不产生脏账。 |
 
-> 结论一句：EWF 把「DB 唯一索引 + DuplicateKey 回退」翻译成「**身份文件原子创建哨兵 + 进程内按 openid 互斥**」，回退路径照抄 miaowu 的「并发冲突→再查一次返回既有身份」。JSON schema/文件粒度尚未冻结（ASSUMPTION A-2），此处的文件划分到 `sync-contract.md` 收敛时再定稿，但哨兵文件做法与 schema 无关，可先落地。
+> 结论一句：EWF 把「DB 唯一索引 + DuplicateKey 回退」翻译成「**身份文件原子创建哨兵 + 进程内按 openid 互斥**」，回退路径照抄 miaowu 的「并发冲突→再查一次返回既有身份」。JSON schema 与文件粒度已由 `docs/contracts/sync-contract.md` §11 冻结（`SC-1.0.0`，`[ASSUMPTION A-2]` 的文件粒度已收敛）；下文的文件划分按该契约 §11 与 §11.1 的落点执行，哨兵文件做法与 schema 无关。
 
 ---
 

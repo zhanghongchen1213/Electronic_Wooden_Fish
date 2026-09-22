@@ -3,8 +3,7 @@ idf_component_register(
     INCLUDE_DIRS "."
     REQUIRES
         BSP
-        platform
         app_state
+        control_gate
         services
-        ui
 )

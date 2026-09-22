@@ -1,0 +1,24 @@
+{
+  "schema_version": 1,
+  "title": "般若波罗蜜多心经",
+  "scripture_version": "HS-1.0.0",
+  "source_file": "heart-sutra.txt",
+  "source_sha256": "a265c93dbc6011f262f84de2d7528bdb388c1b7f9e016e27ad4e149690bc5ff0",
+  "consumable_digest": "7feee7b6d6427ab7b216132932277af3aeff29a48b1a7673eba4a9e3018432cb",
+  "counts": {
+    "total_chars": 303,
+    "consumable_han": 260,
+    "non_consumable": 43
+  },
+  "non_consumable_chars": [
+    "，"
+  ],
+  "first_consumable": "观",
+  "anchor_26": "观自在菩萨，行深般若波罗蜜多时，照见五蕴皆空，度一切",
+  "provenance": {
+    "edition": "大正新脩大藏經 第8卷 No.251《般若波羅蜜多心經》（唐·三藏法師玄奘譯）",
+    "source": "維基文庫轉錄《大正新修大藏經 第8卷·般若部四》第864頁（SSID-10510986）；https://zh.wikisource.org/zh-hans/般若波羅蜜多心經_(玄奘)",
+    "retrieved": "2026-09-22"
+  },
+  "previous": null
+}

@@ -204,7 +204,9 @@ RECEIPT_FIELDS = {
     "A": {"story_key", "story_path", "status", "phase", "ok"},
     "B": {
         "story_key", "story_path", "phase", "file_list", "test_commands",
-        "test_exit_codes", "change_kind", "runtime_behavior_changed", "status", "ok",
+        "test_exit_codes", "change_kind", "runtime_behavior_changed", "build_attempts",
+        "build_exit_codes", "build_log_paths", "final_build_exit_code", "build_recovery",
+        "status", "ok",
     },
     "C": {
         "story_key", "spec_file", "diff_file", "review_mode", "phase", "review_depth", "risk_reasons", "active_layers",
@@ -213,6 +215,17 @@ RECEIPT_FIELDS = {
         "test_exit_code", "outcome", "failure_reason", "status", "ok",
     },
 }
+
+
+def requires_embedded_build(file_list: list[object]) -> bool:
+    """Return whether the changed production paths require the ESP-IDF build gate."""
+    for item in file_list:
+        if not isinstance(item, str):
+            continue
+        path = item.replace("\\", "/").removeprefix("./").lower()
+        if path.startswith("embedded/"):
+            return True
+    return False
 
 
 def validate_receipt(path: Path, phase: str, story_key: str, expected_status: str | None) -> dict:
@@ -251,6 +264,62 @@ def validate_receipt(path: Path, phase: str, story_key: str, expected_status: st
             return {"ok": False, "reason": "test-exit-codes-invalid"}
         if not isinstance(receipt["runtime_behavior_changed"], bool):
             return {"ok": False, "reason": "runtime-behavior-flag-invalid"}
+        build_attempts = receipt["build_attempts"]
+        build_exit_codes = receipt["build_exit_codes"]
+        build_log_paths = receipt["build_log_paths"]
+        if not isinstance(build_attempts, list) or not isinstance(build_exit_codes, list) or not isinstance(build_log_paths, list):
+            return {"ok": False, "reason": "build-receipt-arrays-invalid"}
+        if len(build_attempts) > 5:
+            return {"ok": False, "reason": "build-attempt-limit-exceeded"}
+        if len(build_attempts) != len(build_exit_codes) or len(build_attempts) != len(build_log_paths):
+            return {"ok": False, "reason": "build-receipt-length-mismatch"}
+        if any(not isinstance(code, int) or isinstance(code, bool) for code in build_exit_codes):
+            return {"ok": False, "reason": "build-exit-codes-invalid"}
+        if any(not isinstance(path, str) or not path.strip() or not Path(path).is_absolute() for path in build_log_paths):
+            return {"ok": False, "reason": "build-log-paths-invalid"}
+        record_codes: list[int] = []
+        record_paths: list[str] = []
+        record_numbers: list[int] = []
+        for record in build_attempts:
+            if not isinstance(record, dict):
+                return {"ok": False, "reason": "build-attempt-invalid"}
+            attempt = record.get("attempt")
+            code = record.get("exit_code")
+            log_path = record.get("log_path")
+            if not isinstance(attempt, int) or isinstance(attempt, bool) or attempt < 1:
+                return {"ok": False, "reason": "build-attempt-number-invalid"}
+            if not isinstance(code, int) or isinstance(code, bool):
+                return {"ok": False, "reason": "build-attempt-exit-code-invalid"}
+            if not isinstance(log_path, str) or not log_path.strip() or not Path(log_path).is_absolute():
+                return {"ok": False, "reason": "build-attempt-log-path-invalid"}
+            if not isinstance(record.get("diagnosis"), str) or not record["diagnosis"].strip():
+                return {"ok": False, "reason": "build-attempt-diagnosis-invalid"}
+            if not isinstance(record.get("fix"), str) or not record["fix"].strip():
+                return {"ok": False, "reason": "build-attempt-fix-invalid"}
+            record_numbers.append(attempt)
+            record_codes.append(code)
+            record_paths.append(log_path)
+        if record_numbers != list(range(1, len(build_attempts) + 1)):
+            return {"ok": False, "reason": "build-attempt-number-sequence-invalid"}
+        if record_codes != build_exit_codes or record_paths != build_log_paths:
+            return {"ok": False, "reason": "build-attempt-summary-mismatch"}
+        final_build_exit_code = receipt["final_build_exit_code"]
+        if final_build_exit_code is not None and (
+            not isinstance(final_build_exit_code, int) or isinstance(final_build_exit_code, bool)
+        ):
+            return {"ok": False, "reason": "final-build-exit-code-invalid"}
+        if receipt["build_recovery"] not in {"resolved", "not-applicable", "blocked"}:
+            return {"ok": False, "reason": "build-recovery-invalid"}
+        if receipt["build_recovery"] == "not-applicable":
+            if build_attempts or build_exit_codes or build_log_paths or final_build_exit_code is not None:
+                return {"ok": False, "reason": "non-applicable-build-receipt-not-empty"}
+        elif receipt["build_recovery"] == "resolved":
+            if not build_attempts or final_build_exit_code != 0 or build_exit_codes[-1] != 0:
+                return {"ok": False, "reason": "build-not-resolved"}
+        else:
+            return {"ok": False, "reason": "build-recovery-blocked"}
+        if requires_embedded_build(receipt["file_list"]) and receipt["build_recovery"] != "resolved":
+            return {"ok": False, "reason": "embedded-build-required"}
     if phase == "C":
         if not isinstance(receipt["spec_file"], str) or not receipt["spec_file"].strip():
             return {"ok": False, "reason": "spec-file-invalid"}
@@ -334,15 +403,21 @@ def unified_diff(before: bytes | None, after: bytes | None, relative: str) -> st
     new = after.decode("utf-8", errors="replace").splitlines(keepends=True)
     fromfile = "/dev/null" if missing_before else f"a/{relative}"
     tofile = "/dev/null" if missing_after else f"b/{relative}"
-    result = "".join(
-        difflib.unified_diff(
-            old,
-            new,
-            fromfile=fromfile,
-            tofile=tofile,
-            lineterm="\n",
-        )
-    )
+    parts: list[str] = []
+    for line in difflib.unified_diff(
+        old,
+        new,
+        fromfile=fromfile,
+        tofile=tofile,
+        lineterm="\n",
+    ):
+        if line.endswith("\n"):
+            parts.append(line)
+        else:
+            # difflib 不标注缺失的行尾换行。不补这个标记，该行就会与随后的 hunk 头或
+            # 下一个文件头粘连，使生成的 diff 不是可应用补丁（git apply 报 corrupt patch）。
+            parts.append(f"{line}\n\\ No newline at end of file\n")
+    result = "".join(parts)
     if not result and (missing_before or missing_after):
         return f"--- {fromfile}\n+++ {tofile}\n"
     return result

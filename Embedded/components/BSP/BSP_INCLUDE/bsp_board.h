@@ -1,7 +1,7 @@
 /**
  * @file     bsp_board.h
  * @brief    板级初始化入口
- * @details  定义 ESPWatch-S3-4G 板级初始化结果结构和统一初始化函数。
+ * @details  定义电子木鱼 EWF 板级初始化结果结构和统一初始化函数。
  * @author   ZHC
  * @date     2026-07-09
  */

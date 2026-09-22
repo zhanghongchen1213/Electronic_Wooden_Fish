@@ -14,5 +14,3 @@ dependencies:
     version: '==1.0.4'
   espressif/esp_codec_dev:
     version: '==1.5.11'
-  espressif/esp-sr:
-    version: '==2.4.7'

@@ -21,7 +21,7 @@
 
 - `handoffs/` — BMAD 阶段与任务交接文档（当前：UI 设计移交后续视觉 agent）。
 - `embedded/` — 设备侧（Embedded/固件）实现与排障文档；多篇从 `legbot_watch/docs` 迁移/适配（详见其 README 的来源与排除表）。
-- `contracts/` — 跨层同步契约 `sync-contract.md`（**待后续 spec/S0 阶段冻结**；本目录当前仅占位说明）。
+- `contracts/` — 跨层契约目录：`sync-contract.md`（**已冻结**，`contract_version` = `SC-1.0.0`）与 `canonical/`（canonical《心经》经文资源）；详见该目录 README。
 - `backend/`、`frontend/` — 后端/小程序**开发经验文档**（自 miaowu 迁移，见各 README）；模块实现规格 `requirements.md` 仍待对应 spec 阶段创建。
 - `hardware/` — 硬件原理图设计基线、机器网络清单和原厂/厂商外围电路资料索引；两份用户提供的 PDF 仅作只读参考，不覆盖原文件。
 

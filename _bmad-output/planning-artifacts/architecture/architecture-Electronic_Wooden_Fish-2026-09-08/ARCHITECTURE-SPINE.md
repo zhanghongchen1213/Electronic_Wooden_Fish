@@ -61,9 +61,9 @@ flowchart TD
 
 #### AD-1 — 统一正式输入源，不存在第二计数路径
 
-- **Binds:** Embedded 输入处理（`physical_pvdf`、`device_touch`）、累计/游标/完成/音频/RGB/同步、backend 增量计算
+- **Binds:** Embedded 输入处理（`physical_pvdf`、`device_touch`、`automatic_tap`）、累计/游标/完成/音频/RGB/同步、backend 增量计算
 - **Prevents:** 实体敲击与设备触摸各建一套计数、计数与动画/统计错位、伪输入源计入、原始波形留存
-- **Rule:** `physical_pvdf`（低功耗比较器唤醒 + ADC 二次确认）与亮屏木鱼页电子木鱼点击 `device_touch` 是仅有的两类正式输入（FR-E-002/003），进入**同一个**有效敲击队列，共享本地累计、经文推进、完成锁定、音频、RGB、持久化与同步语义。除该队列外，任何代码路径不得推进正式累计。充电中、完成遮罩中与故障锁定中直接忽略输入；**熄屏首次触摸只唤醒、不计数**，需亮屏后下一次木鱼页点击才生成 `device_touch`。一次有效敲击推进下一个「可消费」汉字（推进/标点/展示语义见 AD-19）。
+- **Rule:** `physical_pvdf`（低功耗比较器唤醒 + ADC 二次确认）、亮屏木鱼页电子木鱼点击 `device_touch` 与 Embedded 定时器生成的 `automatic_tap` 是仅有的**三类**正式输入（FR-E-002/003；枚举以 `docs/contracts/sync-contract.md` 为准），进入**同一个**有效敲击队列，共享本地累计、经文推进、完成锁定、音频、RGB、持久化与同步语义；`automatic_tap` 不新增独立 cloud 累计字段或同步接口。除该队列外，任何代码路径不得推进正式累计。充电中、完成遮罩中与故障锁定中直接忽略输入；**熄屏首次触摸只唤醒、不计数**，需亮屏后下一次木鱼页点击才生成 `device_touch`。一次有效敲击推进下一个「可消费」汉字（推进/标点/展示语义见 AD-19）。
 
 #### AD-2 — backend 是云端正式进度的唯一权威
 
@@ -83,11 +83,11 @@ flowchart TD
 - **Prevents:** 三端各自誊写导致构建期漂移、版本漂移导致游标错位、端间自动映射异文
 - **Rule:** MVP 固定《般若波罗蜜多心经》唯一 canonical 汉字序列与 `scripture_version`（FR-B-004）。canonical 文本有**单一落盘来源**，三端在构建/打包期从该源嵌入或生成，并校验 `scripture_version` 一致；禁止各端各自誊写文本。运行期版本不一致时停止推进并返回配置错误，不做自动映射、不选经、不导入。设备内置字形仅覆盖该部经文所需（AMOLED 离线显示），不引入通用中文字体库。
 
-#### AD-5 — 命令以单调「已应用修订」高水位收敛，离线进入待设备应用
+#### AD-5 — 命令修订分层：下发修订单调递增，以「已应用修订」高水位收敛
 
 - **Binds:** backend 命令存储、设备应用、frontend 设置镜像与设备页状态
 - **Prevents:** 旧命令覆盖新命令、「待设备应用」冒充「已生效」、因无常开连接导致的 ACK 永不到达
-- **Rule:** 音量/亮度/熄屏等设备命令携带单调递增 `command_revision`，其语义固定为**「设备已应用命令的单调高水位」**（FR-B-007）。backend 只保留并下发最新修订并持久化；设备在**每次活动窗口随同步包携带已应用修订**，backend 以「已应用 ≥ 已下发」幂等将「待设备应用」翻转为「已生效」，**不依赖单次 ACK 到达**。设备离线时 backend 持久化命令、frontend 显示「待设备应用」，backend 确认已应用后才呈现为已生效（FR-F-007/008）。
+- **Rule:** 音量/亮度/熄屏等设备命令携带单调递增 `command_revision`，其语义固定为 **backend 已下发命令的最新修订**（FR-B-007）；设备已应用命令的单调高水位是独立字段 `applied_revision`（单调不减）。backend 只保留并下发最新修订并持久化；设备在**每次活动窗口随同步包回传已应用高水位**，backend 以「`applied_revision` ≥ `command_revision`」幂等将「待设备应用」翻转为「已生效」，**不依赖单次 ACK 到达**。设备离线时 backend 持久化命令、frontend 显示「待设备应用」，backend 确认已应用后才呈现为已生效（FR-F-007/008）。字段分层、取值域与已生效判定以 `docs/contracts/sync-contract.md` 为准。
 
 #### AD-6 — 可信时间门禁
 
@@ -187,7 +187,7 @@ flowchart TD
 
 | 关注点     | 约定                                                                                                                                                                                                                                                                                               |
 | ---------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| 命名       | 同步字段全小写下划线（清单见 §Structural Seed）；事件来源固定 `physical_pvdf`/`device_touch`；固件日志中文、模块 TAG 用 ASCII；新增组件/服务命名对照 legbot 风格                                                                                                                                   |
+| 命名       | 同步字段全小写下划线（清单见 §Structural Seed）；事件来源固定 `physical_pvdf`/`device_touch`/`automatic_tap`；固件日志中文、模块 TAG 用 ASCII；新增组件/服务命名对照 legbot 风格                                                                                                                   |
 | 数据与格式 | 接口信封 `{code,message,data}`、code=0 成功；经文/游标/统计以 backend 为权威；设备不保存绝对敲击时间；JSON 文件写入原子化（tmp+rename）                                                                                                                                                            |
 | 状态与跨切 | 同步状态词表固定：本地已记录/同步中/已同步/待同步/同步失败（累计）；待设备应用（命令，独立维度）；无第二计数路径、无第二套平行云后端                                                                                                                                                               |
 | 环境与交付 | backend 配置固定为 `application.yml`/`application-local.yml`；frontend 固定为 `.env`/`.env.development`；本地 profile=local、端口=9218、产物=`saas.jar`+`.sha256`；`VITE_API_BASE_URL` 含 `/api/v1` REST 前缀；本地脚本无公网隧道；CI 只依赖通用 JDK17/Maven，上传目标为 `/www/wwwroot/woodenfish` |
@@ -250,10 +250,11 @@ flowchart LR
 
 ### 同步字段清单（跨层契约，权威语义下沉 docs/contracts/sync-contract.md）
 
-`device_id` · `local_total` · `acked_total` · `scripture_version` · `round_id` · `round_state` · `round_cursor` · `command_revision` · `battery_percent` · `network_mode` · `audio_config_version` · `firmware_version`。事件来源：`physical_pvdf`、`device_touch`。
+`device_id` · `local_total` · `acked_total` · `scripture_version` · `round_id` · `round_state` · `round_cursor` · `pending_completion` · `command_revision` · `battery_percent` · `network_mode` · `audio_config_version` · `firmware_version` · `snapshot_seq` · `replay_cursor` · `action_id`。事件来源：`physical_pvdf`、`device_touch`、`automatic_tap`。
 
 - `round_id`（单调轮次标识）为本次新增：跨轮归属与「未确认完成的从头开始」以此对齐（AD-3/AD-19）。
-- `command_revision` 语义固定为「设备已应用命令的单调高水位」（AD-5）。
+- `pending_completion` / `snapshot_seq` / `replay_cursor` / `action_id` 为本次补齐：完成未确认门控、快照水位与 WebSocket 续订基准、小程序回放位置与幂等去重键（语义见同步契约）。
+- `command_revision` 为 backend 已下发命令的最新修订，`applied_revision` 为设备已应用高水位（AD-5）；分层与已生效判定以 `docs/contracts/sync-contract.md` 为准。
 
 ### 硬件事实源（不在本 spine 重复）
 
@@ -288,16 +289,16 @@ flowchart LR
 
 | 事项                                                                                              | 为何可等 / 复核条件                                                                                                                                                                                                         |
 | ------------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| 离线「完成→从头开始」跨轮竞态 + `round_id` 对账细节 `[耦合 AD-3/19]`                              | backend 与 Embedded 各自不会凭空发明一致协议；**须在 backend/embedded 模块（epic/lane）spec 拆分前**经 `docs/contracts/sync-contract.md` 冻结：跨轮差值归属、未确认完成的本地重置、确认回传字段                             |
-| JSON 持久化 schema 与文件粒度 `[ASSUMPTION A-2，用户已确认不在 spine 冻结]`                       | 只锁不变量（零库/原子写/单实例/重启可恢复）；schema、日统计与 ack 的非原子写顺序须随上条一并收敛后再冻结                                                                                                                    |
-| WebSocket 帧格式/心跳/断线重连参数 `[通道已确认，原 A-1]`                                         | 已定用 WebSocket；帧/序号/心跳细节下沉 sync-contract 后冻结                                                                                                                                                                 |
+| 离线「完成→从头开始」跨轮竞态 + `round_id` 对账细节 `[耦合 AD-3/19]`                              | backend 与 Embedded 各自不会凭空发明一致协议；**须在 backend/embedded 模块（epic/lane）spec 拆分前**经 `docs/contracts/sync-contract.md` 冻结：跨轮差值归属、未确认完成的本地重置、确认回传字段。**已收敛（2026-09-22，`SC-1.0.0`）**：上述三项已冻结在该契约的「轮次、完成与跨轮竞态」章节                 |
+| JSON 持久化 schema 与文件粒度 `[ASSUMPTION A-2，用户已确认不在 spine 冻结]`                       | 只锁不变量（零库/原子写/单实例/重启可恢复）；schema、日统计与 ack 的非原子写顺序须随上条一并收敛后再冻结。**文件粒度已收敛（2026-09-22，`SC-1.0.0`）**：文件清单、承载事实、`schema_version`、迁移说明、持久化作用域与单事务分组已冻结在该契约的「JSON 持久化文件粒度」章节；**跨文件（日统计与 ack）的非原子写顺序不在该契约冻结范围**，由实现 Story 在契约粒度内定序 |
+| WebSocket 帧格式/心跳/断线重连参数 `[通道已确认，原 A-1]`                                         | 已定用 WebSocket；帧/序号/心跳细节下沉 sync-contract 后冻结。**已收敛（2026-09-22，`SC-1.0.0`）**：帧类型与帧自有字段、心跳/重连参数、关闭码与续订起点规则已冻结在该契约；生产反向代理空闲超时仍属部署阶段 |
 | 嵌入式 IDF 档位：≥5.5.4,<5.6.0 `[ASSUMPTION A-3]`                                                 | 为复用 legbot BSP/managed_components；v5.5 处维护期。升级 v6.0 在固件初版稳定后单独评估迁移                                                                                                                                 |
 | Spring Boot 3.3.7 沿用 miaowu pom `[ASSUMPTION A-4]`                                              | 3.3.x OSS 已于 2025-06 EOL；后端零库持久化更接近 `legbot_watch/cloud`（其运行于 3.5.16）。**升级目标为现行受支持 OSS 线 4.0.x/4.1.x（3.5 亦已 EOL）**，时机 = backend 功能稳定、进入文档化部署前                            |
 | 不升 LVGL9 的知情保留                                                                             | 上游 8.4 支持 2025-03 结束；因复用 legbot 生成 UI/驱动基线暂不升级，固件初版后单独评估                                                                                                                                      |
 | Java 17 发行版 `[ASSUMPTION A-8]`                                                                 | Oracle JDK 17 Premier 2026-09-30 截止；本地采用 Temurin/Corretto 等免费发行版即可                                                                                                                                           |
 | 微信登录→单设备映射细节 `[ASSUMPTION A-5]`                                                        | MVP 单作者单设备，无需复杂账号治理；openid/JWT 实现随 bmad-spec/backend 落定                                                                                                                                                |
 | 生产 API 域名与微信 AppID                                                                         | 本轮只冻结 `application*.yml`、`.env` 与 `.env.development` 的字段和位置，不复制 miaowu 当前值；进入真实部署/微信联调前补齐 EWF 正式值并完成三处 AppID 对齐                                                                 |
-| EWF backend 构建基线                                                                              | 当前 `cloud/backend` 尚无 `pom.xml`/源码；Java 17、Spring Boot 3.3.7、Jar `finalName=saas` 与 SHA-256 sidecar 需在 backend 骨架落地时由实际工程验证，不能把 miaowu 的 pom 视为已构建事实                                    |
+| EWF backend 构建基线                                                                              | 当前 `cloud/backend` 尚无 `pom.xml`/源码；Java 17、Spring Boot 3.3.7、Jar `finalName=saas` 与 SHA-256 sidecar 需在 backend 骨架落地时由实际工程验证，不能把 miaowu 的 pom 视为已构建事实。**骨架已收敛（2026-09-22，Story 4.3）**：`cloud/backend` 的 Maven 工程与 Java 17 + Spring Boot 3.3.7 编译基线已落地，`finalName=saas` 与 SHA-256 sidecar 已由实际工程构建验证——`cloud/env-scripts/build-prod-backend.sh` 退出码 0，产出 `cloud/backend/target/saas.jar` 与 `saas.jar.sha256`；打包期 canonical 经文版本门禁在该工程就位后可达，且实测在版本不一致时以退出码 1 停止打包。**仍开放**：框架升级时机（见本表「Spring Boot 3.3.7 沿用 miaowu pom `[ASSUMPTION A-4]`」行）与 CI 流水线接入 |
 | 明文应用密钥与 SSH 密码                                                                           | 当前个人原型按用户要求固定写入 application 配置和上传脚本；在仓库公开、多人协作或正式生产前必须迁移到受控密钥管理并重新审查日志/备份暴露面                                                                                  |
 | 运行期公网形态 `[ASSUMPTION A-7]`                                                                 | 小程序合法 HTTPS/wss 域名 + 备案 + backend 主机由作者以开发者/体验版自备；本地脚本不负责公网隧道。进入真机预览/正式部署前落实                                                                                               |
 | Huawei Cloud 流水线编排                                                                           | 构建脚本已固定为通用 Linux + JDK17 + Maven 契约；CodeArts/其他流水线的触发、凭据注入、进程重启和回滚策略留待部署阶段确认                                                                                                    |

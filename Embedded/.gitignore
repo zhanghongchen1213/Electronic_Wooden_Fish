@@ -7,7 +7,6 @@ docs/hardware/datasheets/
 
 .agents
 .claude
-tests
 
 # Python 本地缓存与字节码
 __pycache__/

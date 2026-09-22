@@ -13,6 +13,7 @@
 - [ ] 阶段 B 后，grep 验证该 story → `review`。
 - [ ] 阶段 C 后，grep 验证该 story → `done`。
 - [ ] 每次验证都是**重读 sprint-status.yaml 实际行**得出，未轻信子 Agent 自述。
+- [ ] 涉及 ESP-IDF 的 B receipt 记录每次构建日志、退出码、最早错误/环境诊断、修复和最终退出码；`127` 已先重新激活并重建成功，未把环境错误直接当作终止。
 - [ ] 每次阶段都有机器 receipt；C 的 receipt 明确记录 `review_depth`、mandatory layers、failed layers、findings、测试退出码和 outcome。
 - [ ] C 之前已持久化风险分类 JSON；receipt 经过 helper 结构校验，深度只能保持或向 `deep` 升级。
 - [ ] `done` 只在 mandatory reviewer 全部成功、无 unresolved HIGH/MEDIUM、patch 后测试通过且 receipt 完整时写入。

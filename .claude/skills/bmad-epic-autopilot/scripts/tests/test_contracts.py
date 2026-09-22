@@ -12,12 +12,18 @@ class ContractTests(unittest.TestCase):
     def test_autopilot_contract_has_single_pass_and_receipts(self):
         text = self.read("SKILL.md")
         step = self.read("steps/step-02-run-one-story.md")
+        phase_b = self.read("subagent-prompts/phase-b-dev-story.md")
         prompt = self.read("subagent-prompts/phase-c-code-review.md")
         self.assertIn("review_depth", text)
         self.assertIn("单阶段最多 2 次尝试", text)
         self.assertIn("story-local", step)
         self.assertIn("receipt", step)
         self.assertIn("classify-risk", step)
+        self.assertIn("build_recovery", step)
+        self.assertIn("macos_esp_idf_hardware_test_runbook.md", phase_b)
+        self.assertIn("退出码 `127`", phase_b)
+        self.assertIn("最多允许 5 次尝试", phase_b)
+        self.assertIn("command -v idf.py", phase_b)
         for field in ("story_key", "spec_file", "diff_file", "review_mode", "receipt_file", "test_command", "sprint_status"):
             self.assertIn(field, step)
         self.assertIn("不得内部 review→fix 循环", prompt)

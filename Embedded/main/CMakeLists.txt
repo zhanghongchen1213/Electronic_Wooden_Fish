@@ -1,5 +1,4 @@
 idf_component_register(SRCS "app_main.c"
-                            "cloud_provision.c"
                        PRIV_REQUIRES
                             spi_flash
                             esp_psram
@@ -8,6 +7,7 @@ idf_component_register(SRCS "app_main.c"
                             esp_hw_support
                             heap
                             nvs_flash
+                            spiffs
                             BSP
                             platform
                             app_state

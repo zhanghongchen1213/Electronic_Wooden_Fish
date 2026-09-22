@@ -1,12 +1,10 @@
 idf_component_register(
     SRCS
         "i2c_manager/i2c_manager.c"
-        "at_core/at_core.c"
         "event_bus/event_bus.c"
         "config_service/config_service.c"
     INCLUDE_DIRS
         "i2c_manager"
-        "at_core"
         "event_bus"
         "config_service"
     REQUIRES

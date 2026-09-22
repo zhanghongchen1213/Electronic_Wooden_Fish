@@ -1,71 +1,27 @@
+# Story 1.1：services 组件只纳管 EWF 启动图中的服务。
+# BLE/GPS/ML307R/cloud/voice/audio/ui_service/time/maintenance/radio_power 旧实现
+# 已从默认启动图移除（目录一并清除），避免通过“保留但不编译”掩盖未审计代码。
 idf_component_register(
     SRCS
         "legbot_services.c"
-        "audio_service/audio_service.c"
-        "ble_service/ble_service.c"
-        "ble_service/ble_control_packet.c"
-        "ble_service/ble_recovery_policy.c"
-        "ble_service/ble_status_frame.c"
-        "ble_service/ble_unlock.c"
-        "cloud_service/cloud_payment_schedule.c"
-        "cloud_service/cloud_service.c"
-        "gps_service/gps_acquisition_policy.c"
-        "gps_service/gps_service.c"
-        "maintenance_service/maintenance_service.c"
-        "modem_service/modem_service.c"
-        "modem_service/modem_recovery_policy.c"
-        "modem_service/ml307r_https_transport.c"
-        "power_service/power_interaction_policy.c"
+        "power_service/power_boot_policy.c"
         "power_service/power_service.c"
-        "power_service/wrist_raise_policy.c"
-        "radio_power_arbiter.c"
+        "pvdf_input_service/pvdf_confirm_policy.c"
+        "pvdf_input_service/pvdf_input_service.c"
         "selftest_service/selftest_service.c"
         "state_service/state_service.c"
-        "time_service/time_service.c"
-        "ui_service/ui_display_flush_guard.c"
-        "ui_service/ui_payment_correlation.c"
-        "ui_service/ui_performance_metrics.c"
-        "ui_service/ui_service.c"
-        "voice_service/voice_control_policy.c"
-        "voice_service/voice_service.c"
     INCLUDE_DIRS
         "."
-        "audio_service"
-        "ble_service"
-        "cloud_service"
-        "gps_service"
-        "log_service"
-        "maintenance_service"
-        "modem_service"
         "power_service"
+        "pvdf_input_service"
         "selftest_service"
         "state_service"
-        "time_service"
-        "ui_service"
-        "voice_service"
     REQUIRES
         BSP
         app_state
-        bt
-        control_gate
-        esp_app_format
-        esp_pm
-        esp-sr
-        json
-        platform
+        esp_driver_gpio
         esp_timer
         freertos
         heap
-        lvgl
-        spiffs
-        ui
+        platform
 )
-
-if(CONFIG_UNITY_ENABLE_IDF_TEST_RUNNER)
-    target_compile_definitions(
-        ${COMPONENT_LIB}
-        PRIVATE
-            CLOUD_SERVICE_TEST=1
-            ML307R_HTTPS_TRANSPORT_TEST=1
-    )
-endif()
