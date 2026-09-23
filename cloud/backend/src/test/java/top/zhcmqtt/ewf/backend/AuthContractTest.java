@@ -36,6 +36,8 @@ import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 
 import top.zhcmqtt.ewf.backend.client.WechatMiniClient;
+import top.zhcmqtt.ewf.backend.common.config.JwtProperties;
+import top.zhcmqtt.ewf.backend.common.security.JwtTokenProvider;
 import top.zhcmqtt.ewf.backend.common.security.UserContext;
 
 @SpringBootTest
@@ -44,6 +46,11 @@ import top.zhcmqtt.ewf.backend.common.security.UserContext;
 class AuthContractTest {
 
     private static final Path DATA_DIR;
+
+    private static final String TEST_SECRET =
+            "0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef";
+
+    private static final long TEST_ACCESS_EXPIRATION = 7200000L;
 
     static {
         try {
@@ -56,8 +63,8 @@ class AuthContractTest {
     @DynamicPropertySource
     static void properties(DynamicPropertyRegistry registry) {
         registry.add("app.data-dir", () -> DATA_DIR.toString());
-        registry.add("jwt.secret", () -> "0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef");
-        registry.add("jwt.access-token-expiration", () -> "7200000");
+        registry.add("jwt.secret", () -> TEST_SECRET);
+        registry.add("jwt.access-token-expiration", () -> String.valueOf(TEST_ACCESS_EXPIRATION));
         registry.add("jwt.refresh-token-expiration", () -> "2592000000");
     }
 
@@ -106,6 +113,8 @@ class AuthContractTest {
         assertFalse(first.toString().contains("session_key"));
         assertFalse(access.isBlank());
         assertFalse(refresh.isBlank());
+        assertEquals(TEST_ACCESS_EXPIRATION / 1000, first.path("data").path("expiresIn").asLong(),
+                "expiresIn 必须是配置的 access 生命周期秒数；前端据此计算本地过期时间");
 
         JsonNode repeated = login("code-a");
         assertEquals(deviceId, repeated.path("data").path("deviceId").asText());
@@ -115,6 +124,8 @@ class AuthContractTest {
                 .content(objectMapper.writeValueAsString(java.util.Map.of("refreshToken", refresh))))
                 .andExpect(status().isOk()).andReturn());
         assertEquals(deviceId, refreshed.path("data").path("deviceId").asText());
+        assertEquals(TEST_ACCESS_EXPIRATION / 1000, refreshed.path("data").path("expiresIn").asLong(),
+                "refresh 响应同样必须携带 expiresIn");
         org.mockito.Mockito.verify(wechatMiniClient, org.mockito.Mockito.times(2)).exchangeCode("code-a");
         try (var files = Files.list(DATA_DIR)) {
             assertEquals(1, files.filter(path -> path.getFileName().toString().equals("identity.json")).count());
@@ -180,6 +191,67 @@ class AuthContractTest {
                 .header("Authorization", "Bearer " + refresh))
                 .andExpect(status().isUnauthorized()).andReturn());
         assertEquals(40102, refreshAsAccess.path("code").asInt());
+    }
+
+    @Test
+    @DisplayName("过期与签名被篡改的 access token 分别返回 401 + 40101 / 40102")
+    void expiredAndTamperedAccessTokenRejected() throws Exception {
+        String deviceId = login("code-a").path("data").path("deviceId").asText();
+        JwtProperties shortLived = new JwtProperties();
+        shortLived.setSecret(TEST_SECRET);
+        shortLived.setAccessTokenExpiration(1);
+        shortLived.setRefreshTokenExpiration(1);
+        String expired = new JwtTokenProvider(shortLived).issueTokenPair(deviceId).accessToken();
+        Thread.sleep(20);
+
+        JsonNode expiredBody = json(mockMvc.perform(get("/api/v1/__probe/identity")
+                .header("Authorization", "Bearer " + expired))
+                .andExpect(status().isUnauthorized()).andReturn());
+        assertEquals(40101, expiredBody.path("code").asInt(), "过期 access token 应回冻结 40101");
+        assertNull(UserContext.current(), "认证失败后 ThreadLocal 也必须清理");
+
+        String valid = login("code-a").path("data").path("accessToken").asText();
+        String tampered = valid.substring(0, valid.lastIndexOf('.') + 1) + "AAAA";
+        JsonNode tamperedBody = json(mockMvc.perform(get("/api/v1/__probe/identity")
+                .header("Authorization", "Bearer " + tampered))
+                .andExpect(status().isUnauthorized()).andReturn());
+        assertEquals(40102, tamperedBody.path("code").asInt(),
+                "结构合法但签名被篡改的令牌必须回 40102，而不是被接受");
+    }
+
+    @Test
+    @DisplayName("身份 A 的合法 access token 在落盘身份为 B 时访问受保护资源返回 403 + 40300")
+    void protectedResourceRejectsForeignIdentity() throws Exception {
+        String accessOfA = login("code-a").path("data").path("accessToken").asText();
+        Files.deleteIfExists(DATA_DIR.resolve("identity.json"));
+        String deviceB = login("code-b").path("data").path("deviceId").asText();
+
+        JsonNode denied = json(mockMvc.perform(get("/api/v1/__probe/identity")
+                .header("Authorization", "Bearer " + accessOfA))
+                .andExpect(status().isForbidden()).andReturn());
+        assertEquals(40300, denied.path("code").asInt(), "令牌身份与落盘设备不匹配应回 40300");
+        assertFalse(denied.path("message").asText().isBlank());
+        assertEquals(deviceB, objectMapper.readTree(Files.readString(DATA_DIR.resolve("identity.json")))
+                .path("device_id").asText(), "拒绝受保护资源不得改写既有身份文件");
+        assertNull(UserContext.current(), "身份不匹配被拒后 ThreadLocal 必须清理");
+    }
+
+    @Test
+    @DisplayName("身份 A 的 refresh token 在落盘身份为 B 时返回 403 + 40300 且不签发新令牌")
+    void refreshRejectsForeignIdentity() throws Exception {
+        String refreshOfA = login("code-a").path("data").path("refreshToken").asText();
+        Files.deleteIfExists(DATA_DIR.resolve("identity.json"));
+        String deviceB = login("code-b").path("data").path("deviceId").asText();
+
+        MvcResult denied = mockMvc.perform(post("/api/v1/auth/refresh")
+                .contentType("application/json")
+                .content(objectMapper.writeValueAsString(java.util.Map.of("refreshToken", refreshOfA))))
+                .andExpect(status().isForbidden()).andReturn();
+        JsonNode body = json(denied);
+        assertEquals(40300, body.path("code").asInt(), "跨设备 refresh 应回 40300");
+        assertTrue(body.path("data").isMissingNode(), "被拒绝的 refresh 不得签发新令牌对");
+        assertEquals(deviceB, objectMapper.readTree(Files.readString(DATA_DIR.resolve("identity.json")))
+                .path("device_id").asText());
     }
 
     private JsonNode login(String code) throws Exception {

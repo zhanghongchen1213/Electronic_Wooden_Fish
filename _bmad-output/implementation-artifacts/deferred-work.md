@@ -122,3 +122,66 @@
 - 统一 tap service 的 1–20 次突发且无消费者的运行时背压没有覆盖；现有用例每次提交后立即消费，需补充第 17–20 次输入的稳定 `queue_full` 与顺序证据。
 - `tap_input_service_submit()` 未初始化分支未填充稳定 typed 原因；该问题不在本次 story-local diff 改动面，后续与服务生命周期契约一并收敛。
 - 首次 TAP_GATE 更新前的启动窗口语义未冻结；需裁定是否要求首个 owner 快照确认后才允许正式输入。
+
+## Deferred from: code review of 4-4-实现微信登录与单设备身份.md (attempt-4, 2026-09-23)
+
+本轮 story-local diff 与 attempt-3 相同（repair 未产生代码改动），历次累积的验证缺口由 autofix 实际补齐（17 项 patch），以下为仍开放项。
+
+- 跨进程并发下 `Files.move(..., ATOMIC_MOVE)` 会静默替换既有 `identity.json`，`FileAlreadyExistsException` 分支在单实例内不可达；需在确定部署形态后改用 `FileChannel.tryLock` 或 move 后回读校验。
+- 数据目录（父目录）未 fsync，掉电后已应答给客户端的 `deviceId` 可能丢失；AC2 只要求文件级 force + 原子 rename。
+- 过滤器以「`/api/` 前缀之外一律放行」而非「默认拒绝」；改为显式白名单需先重设计 4.3 的非 `/api` 探针测试面。
+- 过滤器用未解码的 `request.getRequestURI()` 判断前缀，容器按解码后路径映射，百分号编码路径可能绕过；当前生产无受保护端点，需与路径解析策略一并裁定。
+- HEAD/OPTIONS 未进入公开白名单；本 Story 未建立 CORS/预检策略，需由 frontend/API 部署契约裁定。
+- 401 响应缺 RFC 9110 `WWW-Authenticate` 质询头；AC4 只定义 HTTP 状态与业务码，新增响应头属契约扩展。
+- `jwt.secret` 仍为占位值时构造期无日志线索，表现为 fail closed 的 40102/50200；可观测性改进需与运维日志基线一起定。
+- refresh token 无 `jti`/单次使用标记，泄露后 30 天内可无限换发；Story 明确不实现 tokenVersion，需先扩展同步契约与身份 schema。
+- AC6 要求的四条 RED→GREEN 证据仍未记录命令、首个失败断言与恢复结论；「取消同 openid 互斥」这条负例因同 openid 派生同一 device_id 而恒真不可失败，需改用不同写入者可见的观测量。
+- 敏感日志窄扫描范围仍小于 Task 5.4 枚举（Authorization/JWT 明文/AppSecret/响应原文未扫）；本轮已修复恒真断言并补脱敏断言。
+- 受保护探针抛异常后的 ThreadLocal 清理无覆盖；本轮已覆盖认证失败与成功路径，controller 异常路径需新增抛异常探针。
+- 「重启后 identity 映射保持」无 API 级覆盖；现有断言以重建 `IdentityStore` 实例模拟重启。
+- `POST /api/v1/health` 由 405/40500 变为 401/40103，与 Dev Notes「不改变 health 的 HTTP 语义」有张力；这是 AC3 方法级白名单的必然结果，语义归属需在契约层裁决。
+- `JwtTokenProvider.parse` 每次重建 parser，未按 Dev Notes 预构建线程安全实例；属性能优化。
+- Completion Notes 未说明同 openid 互斥的实现选型（实现为方法级 `synchronized` 全局写锁）。
+
+## Deferred from: code review of 4-5-建立-json-原子持久化基线.md (2026-09-23)
+
+- 契约 §11 的加法迁移规则与严格字段集合相等冲突：`sync-contract.md` §11 / 注册表 `persistence_files[0].migration` 允许「新增字段省略读取并取默认值」，而 `VersionedJsonFile` 执行精确集合相等（AC2 亦如此要求）。需契约层裁定优先规则后再改实现。
+- `AtomicJsonFile` 把 `FileAlreadyExistsException` 发布为可用并发哨兵，但 `ATOMIC_MOVE` 走 rename 语义、目标存在时静默替换，该哨兵在单实例内不可达（4.4 attempt-4 已登记同一事实）。该不可达保证现已从 `IdentityStore` 扩散为基元的对外契约；修法属跨进程语义，AD-16 不做。
+- 四个 Store 各复制一份信封写路径（字段校验 → 补 `schema_version` → 序列化 + 尾换行 → 原子写 → 两个 catch 映射 50000），无断言钉住序列化形态；任一份副本漂移不会被门禁发现。收敛需在基元中定义信封写入入口。
+- Spring 解析出的 `app.data-dir` 是否到达 `PersistenceRecovery` 与四个新 Store 无任何断言（测试均自行传路径，`dataDirectory()` 无调用方）；实测改坏恢复流程的属性键后 66 条门禁仍全绿，自定义数据目录部署下启动恢复会审计 `./data`。修法：在已有 `@DynamicPropertySource` 的全上下文测试中 `@Autowired PersistenceRecovery` 并断言 `dataDirectory()`。
+- 严格读取面只校验字段名集合、不校验值类型：`{"schema_version":1,"device_id":42}` 被判「正常」而实际读取一律 50000；`acked_total` 类型错误时 `asInt()` 静默给出 0（AC3 禁止的默认高水位）。修法需冻结逐字段值类型，属契约层议题。
+- `IdentityStore` 的 `50000` 文案变更与 AC1「对外行为保持不变」有张力（文案经 `GlobalExceptionHandler` 透出）。保留旧文案需给基元加消息覆写参数（新增公共面），无测试或契约依赖该文案。
+- 负例 #4 实际变异落在 `ProgressStore.read()` 而非规格要求的恢复侧通配扫描：因恢复报告不暴露读到的数值，即便恢复真按通配读取孤儿 `.tmp` 也不会被现有断言证伪，AC3 在恢复侧缺少可失败的失败面。
+- AC5 证据记录与实测不符：`/tmp/ewf45-mutation/` 缺 `green-5.log`（Completion Notes 称 `green-{1..5}.log`）；5 条负例未记录命令；日志仅在 `/tmp` 不可长期复现；同节日志描述自相矛盾；「对外可观测行为变化（唯一一处）」计数与字节上限说明不一致。
+- `AtomicJsonFile` 失败路径 `finally` 中的 `Files.deleteIfExists(temporary)` 若抛 `IOException` 会掩盖正在传播的原始异常（含 `FileAlreadyExistsException` 哨兵）。该写法逐字继承自 4.4 内联实现；触发需「刚创建的临时文件删除失败」，日常不可达。
+
+## Deferred from: create-story of 4-6-提供状态快照与恢复基准 (2026-09-23)
+
+本 Story（4.6）的 Dev Notes「契约缺口登记」四条，以及两条实现时新增的登记项。本 Story **不修改契约**（`docs/contracts/**` 一个字节都不改），以下均需契约层先裁定。
+
+- **缺口 1：REST 查询路径未被契约冻结（裁决 B）。** §12 只冻结 `/api/v1` 前缀与 `{code,message,data}` 信封；§10.2 与注册表 `endpoint`（`rest_base_env`/`rest_base_contains`/`scheme_map`/`path_suffix`/`token_transport`/`token_query_field`）只描述 WebSocket。本 Story 取 `GET /api/v1/sync/snapshot`，并把请求面限制为契约已冻结的基线操作数 `acked_total`（§6.2 差量操作数）与 `snapshot_seq`（§8 续订基准）。→ 需 Epic 5 对齐：§6.2 的上报响应与 Epic 5 的查询/补齐路径必须复用同一个响应 DTO 与同一路径族，否则会出现两套查询形状。
+- **缺口 2：`snapshot_seq` 的单调性措辞与 `acked_total` 不一致（裁决 A）。** §2 对 `snapshot_seq` 写「单调递增」，对 `acked_total` 写「单调不减」。§11.1 把 `snapshot_seq` 的持久化作用域冻结为 `frontend`，backend 无法落盘它（第六个状态文件被 `PersistenceFileContractTest` 拒绝，`progress.json` 字段列被契约冻结），因此 backend 只能从 `acked_total` 导出，**只能保证不后退**。→ 需契约层裁定：把 `snapshot_seq` 改为「单调不减」，或为「严格递增」引入可持久化的序号来源（会同时触及 §11.1 与 §11 文件表）。
+- **缺口 3：WebSocket 帧 `seq` 空间与 `snapshot_seq` 的对齐未冻结（裁决 A 交接）。** §2 只说「只消费 `seq` 大于快照水位的帧」，未冻结 `seq` 的取值来源，也未说明它与 `snapshot_seq` 是否同一计数器。本 Story 把导出值定在「已确认敲击」序号空间，并据此要求 Story 5.5 的帧 `seq` 与之对齐。→ 属 Epic 5 的契约议题。
+- **缺口 4：§12 未为「客户端声明高于已确认水位」单列拒绝条件（裁决 D）。** 本 Story 把它归入 `20002 BASELINE_HIGH_WATER_MISSING`——该声明从未被确认，故不构成有效基准（与「缺少基准高水位」同码）。→ 需契约层确认是否单独设码，或明确写成本 Story 的归并口径。
+- **缺口 5（实现新增）：§12 未为「请求无法归入当前已确认轮次」（`20001`）冻结判定输入。** 本 Story 取唯一判据：权威 `progress.json` 的**轮次相关字段**落在契约取值域外（`round_id` 非 `integer ≥ 1`、`round_cursor` 非 `integer ≥ 0`、或 `round_state` 不在 `{in_progress, completed}`）。次要点：本 Story 的请求面不含 `round_id`（裁决 B 不允许新增契约未授权字段），因此无法按请求携带的轮次直接判定归属。→ 需契约层裁定判定输入（例如是否要求写路径的请求必须携带 `round_id`，以及查询路径是否也应携带）。
+- **缺口 6（实现新增）：契约未为设备状态镜像的「未上报」表达保留取值。** `network_mode` 的取值域只有 `connected|no_signal|disabled`，没有 `unknown`。本 Story 在 `device_state.json` 缺失时取 `no_signal`（明确不取 `connected`，避免伪造在线），`battery_percent` 取 0、`audio_config_version` 取 0、`firmware_version` 取空串。→ 需契约层裁定未上报时的表达（增设 `unknown` 需递增 `contract_version`）。
+
+## Deferred from: code review of 4-6-提供状态快照与恢复基准.md (2026-09-23)
+
+本轮 `bmad-code-review`（review_depth=deep、四层全开：blind-hunter / edge-case-hunter / verification-gap / acceptance-auditor）的 defer 条目。前六条是**契约层裁定**项（本 Story 与本次 review 均不改契约）；后三条是低风险工程项。
+
+- **落后基准被判 `20003`，与 §12/§6.3 明文相反，且 §8 的判定输入不是本端点的参数。** `StateSnapshotService.decisionCode` 把「客户端声明低于已确认水位」映射为 `DEVICE_RESET_CONFLICT`，而契约 §12「同值或更低高水位是幂等 no-op，不是错误」、§6.3 同款措辞；§8 的「设备重置（`local_total` 低于 cloud 基准）」判定输入是 `local_total`，本端点请求面（裁决 B）只有 `acked_total`/`snapshot_seq`。可达后果：权威水位在两次查询之间前进一次后，客户端带上一次响应里的 `acked_total` 再查就会被判「设备重置冲突、请按云端基准重建」，而契约把同一提交定义为 no-op。spec 的裁决 D 已定此口径，故本轮不自动改写；需契约层确认「越前/落后/未携带」三者的码值与判定输入。
+- **查询端点把 `snapshot_seq` 与 `acked_total` 跨计数器比较。** 注册表自带样例 `ws_snapshot` 是 `seq: 512` 与 `snapshot_seq: 512` 而同帧 `acked_total: 128`，`ws_delta` 是 `seq: 513`/`acked_total: 129`——帧 `seq` 与 `acked_total` 之间存在常量偏移，与裁决 A 的「同处一个已确认敲击序号空间」论证相反。按 §8「从 `snapshot_seq + 1` 续订」携带 WS 帧水位的合法客户端会被判 `20002`，永久无法续订或重建基准（现无 WS 实现，故今日不可达，属 Epic 5 的对齐面）。spec 的缺口 3 只登记了「`seq` 取值来源未冻结」，未登记该查询侧后果；需契约层先冻结 `snapshot_seq` 的空间归属。
+- **响应回传 7 个未在 §2 声明 `https-response` 通道的字段。** `device_id`、`local_total`、`applied_revision`、`battery_percent`、`network_mode`、`audio_config_version`、`firmware_version` 的 §2 承载通道集合均为「HTTPS 上报、WS 帧、持久化文件」，不含「HTTPS 响应」；§6.2 还明确写「已生效判定所需的设备已应用高水位由请求携带，不在响应必填内」。它们进入响应的唯一理由是 AC1 要求把 `ws_frames[snapshot].payload_fields` 并进 17 字段闭包。§13 的门禁只检查「§6.2 响应必填须声明对应通道」这一方向，故该冲突恒绿且此前未登记。修法只有「为 REST 查询新增一个通道并递增 `contract_version`」或「收敛响应面」两条，均在现有 6 条缺口之外。
+- **`NO_CONFIRMED_ROUND_ID = 1` 哨兵与真实第 1 轮在 wire 上同形。** 未初始化（`progress.json` 缺失）时下发 `round_id=1`、`round_cursor=0`、`round_state=in_progress`、`pending_completion=false`，与一个真实存在的第 1 轮在首字被确认前上报的四元组完全一致；`StateSnapshotResponse` javadoc 的「不可能被误读为一个真实轮次」不成立，客户端按 §8/AC5 的 `round_id` 路由时无法区分「尚无已确认轮次」与「轮次 1 进行中」。契约把 `round_id` 冻结为 `integer ≥ 1`，域内无可用哨兵，修法（增设 `unknown` 需递增 `contract_version`）属契约层。
+- **`20001` 分支顶替轮次标识却仍原样下发累计水位。** `AuthoritativeState.toResponse` 在不可归属时把 `round_id`/`round_state`/`round_cursor` 换成常量（**即使权威 `round_id` 与 `round_cursor` 本身在域内**，例如仅 `round_state` 越域），却不改写 `acked_total` 与 `local_total`，客户端可能把 `local_total − acked_total` 的差量归入一个不存在的第 1 轮。同一份不合法文件存在双口径：类型越域走 fail closed `50000`，取值越域却降级为 `20001` + 顶替值。AC5「轮次相关字段只取自 `progress.json`」与 裁决 E「不给可归属的模糊水位」在此分支冲突，需规格层/契约层裁定。
+- **读取面不校验取值域（含负水位导致的永久拒绝）。** `intField`/`textField`/`booleanField` 只校验字段类型；`progress.json` 的 `acked_total`/`local_total` 为负时被放行，`snapshot_seq` 以负数上线，而请求面由 `@Min(0)` 保证声明非负，于是 `declared > confirmed` 恒成立、该端点对一切客户端**永久回 20002**；`commands.json` 的 `brightness`/`timeout`/`volume` 与 `device_state.json` 的 `network_mode`/`battery_percent` 越域值亦原样下发。契约未冻结逐字段值域校验（4.5 已登记同一缺口），需契约层先裁定。
+- 越域基准参数的实际 `400` 文案会把内部 Java 参数路径透出到客户端：实测 body 为 `{"code":40000,"message":"snapshot.ackedTotal: acked_total 不可为负"}`（`GlobalExceptionHandler.handleConstraintViolation` 直接拼接 `violation.getMessage()`）。该分支此前在生产路径不可达，是本端点让它第一次可达。修法需去掉类级 `@Validated`（本次受审 spec 明确要求 `@Validated`）或改共享异常处理器的文案拼装（影响其他端点），属决策项。
+- `StateSnapshotService.commandApplied` 与 `assemble` 在生产路径无调用方（仅测试引用；控制器只用 `resolve`），故 §9 的已生效判定没有任何已交付出口，客户端只能自行派生；`StateSnapshotContractTest`/`StateSnapshotServiceTest` 之外无第二处引用。删除会与本次受审 spec 的 Task 2.1/2.4 冲突，故记债务而不自动改。
+- `deferred-work.md` 的 4-3 条目「错误信封无法携带 `data`……归 Epic 5」已被本 Story 的 `ApiResponse.error(int, String, T)` 部分收敛，但本 Story 的登记节没有按该文件既有惯例补「收敛登记」行（残留：异常层路径仍只产出两键信封，本 Story 刻意未改）。Epic 5 若照旧条目理解会重复改造信封 API 或另造携带形状。
+
+### 本轮 review 的自动修复（已应用并实测通过）
+
+- `StateSnapshotContractTest.非法基准参数回参数错误`（新增）：断言 `acked_total=-1` 与非数值 `snapshot_seq` 回 `400` + `40000`。此前该 400 的唯一护栏是一对 `@Min(0)`，去掉后 `-1` 会静默流进选码分支变成 `200` + `20003`，而 85 条门禁无一失败。
+- `StateSnapshotServiceTest` 的 `字段类型不符不静默回退`（扩写）：在原有 `intField`（`acked_total`）用例之外补 `round_state` 写数字与 `pending_completion` 写字符串两例。此前 `textField`/`booleanField` 的 fail-closed 护栏无任何测试，退化后会把「文件损坏」变成貌似合理的 `20001` 业务拒绝。
+- `StateSnapshotService.exportSnapshotSeq` 的 javadoc 更正：原文称「缺失（未初始化）或该字段不是整数时取 `NO_COUNT`」，与实现（文件存在而字段非法即 fail closed 抛 `50000`）相反，会误导读者以为存在 AC3 明令禁止的静默回退。

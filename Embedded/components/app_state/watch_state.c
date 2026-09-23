@@ -476,6 +476,42 @@ esp_err_t watch_state_apply_tap_gate_update(
     s_state.tap_gate_update_sequence = update->update_sequence;
     s_state.tap_completed = update->completed;
     s_state.tap_fault_locked = update->fault_locked;
+    s_state.tap_queue_full = update->queue_full;
+    xSemaphoreGive(s_state_mutex);
+    return ESP_OK;
+}
+
+esp_err_t watch_state_apply_tap_progress_update(
+    const watch_tap_progress_update_t *update,
+    TickType_t timeout_ticks)
+{
+    if (s_state_mutex == NULL)
+    {
+        return ESP_ERR_INVALID_STATE;
+    }
+    if (update == NULL || update->update_sequence == 0U)
+    {
+        return ESP_ERR_INVALID_ARG;
+    }
+    if (xSemaphoreTake(s_state_mutex, timeout_ticks) != pdTRUE)
+    {
+        return ESP_ERR_TIMEOUT;
+    }
+    if (s_state.tap_progress_update_sequence != 0U &&
+        update->update_sequence <= s_state.tap_progress_update_sequence)
+    {
+        xSemaphoreGive(s_state_mutex);
+        return ESP_ERR_INVALID_STATE;
+    }
+    s_state.tap_progress_update_sequence = update->update_sequence;
+    s_state.tap_local_total = update->local_total;
+    s_state.tap_acked_total = update->acked_total;
+    s_state.tap_round_id = update->round_id;
+    s_state.tap_round_cursor = update->round_cursor;
+    s_state.tap_round_state = update->round_state;
+    s_state.tap_pending_completion = update->pending_completion;
+    s_state.tap_backlog_count = update->backlog_count;
+    s_state.tap_persist_error = update->persist_error;
     xSemaphoreGive(s_state_mutex);
     return ESP_OK;
 }

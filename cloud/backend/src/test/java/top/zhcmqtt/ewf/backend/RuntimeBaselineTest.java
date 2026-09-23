@@ -27,6 +27,7 @@ import org.springframework.context.ConfigurableApplicationContext;
 import org.springframework.core.env.Environment;
 import org.yaml.snakeyaml.Yaml;
 
+import top.zhcmqtt.ewf.backend.common.config.WechatProperties;
 import top.zhcmqtt.ewf.backend.support.TestWorkspace;
 
 /**
@@ -98,6 +99,21 @@ class RuntimeBaselineTest {
                 "jwt.access-token-expiration", "jwt.refresh-token-expiration")) {
             assertNotNull(env.getProperty(key), "缺配置键 " + key + "（本 Story 只校验存在，不实现其语义）");
         }
+    }
+
+    @Test
+    @DisplayName("wechat.mini.* 必须绑定进 WechatProperties bean，绑定失效不得静默")
+    void wechat配置绑定生效() {
+        WechatProperties production = defaultContext.getBean(WechatProperties.class);
+        assertEquals(PRODUCTION_APP_ID, production.getAppId(),
+                "生产上下文必须把 wechat.mini.app-id 绑进 bean；只断言 Environment 会让绑定失效静默通过");
+        assertEquals("replace-with-ewf-wechat-app-secret", production.getAppSecret(),
+                "wechat.mini.app-secret 必须绑进 bean");
+        assertEquals("https://api.weixin.qq.com/sns/jscode2session", production.getEndpoint(),
+                "application.yml 未配置 endpoint 时必须落到官方默认值");
+
+        WechatProperties local = localContext.getBean(WechatProperties.class);
+        assertEquals(LOCAL_APP_ID, local.getAppId(), "local 上下文必须把 wechat.mini.app-id 绑进 bean");
     }
 
     @Test

@@ -359,13 +359,16 @@ static bool load_gate_state(ewf_tap_gate_state_t *state)
     bool service_ready = false;
     bool completed = false;
     bool fault_locked = false;
+    bool queue_full = false;
     const esp_err_t error = state_service_read_tap_gate(&service_ready,
                                                         &completed,
-                                                        &fault_locked);
+                                                        &fault_locked,
+                                                        &queue_full);
     state->service_ready = error == ESP_OK && service_ready;
     state->completed = completed;
     state->fault_locked = fault_locked;
-    state->queue_full = false;
+    /* queue_full 是离线积压 owner 发布的持久化事实，输入侧只读不私判。 */
+    state->queue_full = queue_full;
     return error == ESP_OK;
 }
 

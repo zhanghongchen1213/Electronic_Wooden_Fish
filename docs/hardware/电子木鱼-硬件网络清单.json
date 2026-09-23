@@ -544,8 +544,8 @@
         "pwr_state_pullup": "100kohm_to_VSYS_required_single_group",
         "pwr_int_sense": "PWR_INT_to_IO8_edge_interrupt_measure_low_duration",
         "pwr_button_domain": "VSYS_PB_button_only",
-        "button_mpn": "TSW063G43-250K",
-        "button_lcsc": "C722964",
+        "button_mpn": "TS-1093B-A13B3-D2",
+        "button_lcsc": "C730313",
         "button_quantity": 2,
         "button_inventory_available_snapshot": 16,
         "button_inventory_snapshot_date": "2026-09-13",
@@ -781,7 +781,7 @@
     {
       "type": "USB-C_receptacle",
       "mpn": "TYPEC-304-ACP16",
-      "lcsc": "C165948",
+      "lcsc": "C2982555",
       "critical": true,
       "status": "confirmed",
       "pins": [
@@ -1697,8 +1697,8 @@
     },
     {
       "reference": "SW_BOOT_NO",
-      "part": "TSW063G43-250K",
-      "lcsc": "C722964",
+      "part": "TS-1093B-A13B3-D2",
+      "lcsc": "C730313",
       "role": "BOOT0_manual_download_button",
       "status": "confirmed_design_locked_inventory_available",
       "package": "SMD_6.1x6.1x4.3mm_SPST",
@@ -1710,8 +1710,8 @@
     },
     {
       "reference": "SW_PWR_NO",
-      "part": "TSW063G43-250K",
-      "lcsc": "C722964",
+      "part": "TS-1093B-A13B3-D2",
+      "lcsc": "C730313",
       "role": "LTC2954_PB_power_button",
       "status": "confirmed_design_locked_inventory_available",
       "package": "SMD_6.1x6.1x4.3mm_SPST",
@@ -1860,7 +1860,7 @@
     },
     {
       "part": "TYPEC-304-ACP16",
-      "lcsc": "C165948",
+      "lcsc": "C2982555",
       "role": "USB-C_16P_receptacle",
       "status": "recommended_initial"
     },

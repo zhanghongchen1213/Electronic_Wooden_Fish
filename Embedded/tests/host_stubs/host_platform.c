@@ -127,10 +127,23 @@ esp_err_t event_bus_publish(const legbot_event_t *event, TickType_t timeout)
     s_published_sequences[s_published_count++] = event->value;
     return ESP_OK;
 }
+
+static QueueHandle_t s_event_bus_queue;
+bool event_bus_is_initialized(void) { return true; }
+QueueHandle_t event_bus_queue(void)
+{
+    if (s_event_bus_queue == NULL)
+    {
+        s_event_bus_queue = xQueueCreate(16U, sizeof(legbot_event_t));
+    }
+    return s_event_bus_queue;
+}
 void host_platform_init(void)
 {
     if (s_state_queue == NULL) { s_state_queue = xQueueCreate(8U, sizeof(state_service_update_t)); }
     xQueueReset(s_state_queue);
+    if (s_event_bus_queue == NULL) { event_bus_queue(); }
+    xQueueReset(s_event_bus_queue);
     s_publish_error = ESP_OK;
     s_published_count = 0U;
 }

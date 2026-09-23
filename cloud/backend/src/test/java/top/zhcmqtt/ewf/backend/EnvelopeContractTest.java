@@ -126,30 +126,52 @@ class EnvelopeContractTest {
     }
 
     @Test
-    @DisplayName("受保护 API 缺少令牌时优先回统一 401 信封")
+    @DisplayName("协议级客户端错误回对应 HTTP 状态与 405 Allow 头，且不记 ERROR 全栈日志")
     void 协议级客户端错误回对应HTTP状态() throws Exception {
-        JsonNode methodNotAllowed = jsonOf(post("/api/v1/health"), 401);
-        assertEquals(40103, methodNotAllowed.get("code").asInt(), "受保护 API 缺少令牌应回 40103");
+        Logger handlerLogger = (Logger) LoggerFactory.getLogger(GlobalExceptionHandler.class);
+        ListAppender<ILoggingEvent> appender = new ListAppender<>();
+        appender.start();
+        handlerLogger.addAppender(appender);
+        try {
+            JsonNode methodNotAllowed = jsonOf(post("/api/v1/health"), 401);
+            assertEquals(40103, methodNotAllowed.get("code").asInt(), "受保护 API 缺少令牌应回 40103");
 
-        JsonNode unsupportedMediaType = jsonOf(post("/__probe/echo")
-                .contentType(MediaType.TEXT_PLAIN)
-                .content("plain"), 415);
-        assertEquals(41500, unsupportedMediaType.get("code").asInt(), "请求体媒体类型不支持应回 41500");
+            MvcResult wrongMethod = responseOf(get("/__probe/echo"), 405);
+            assertEquals(40500, bodyOf(wrongMethod).get("code").asInt(), "方法不支持应回 40500");
+            String allow = wrongMethod.getResponse().getHeader("Allow");
+            assertNotNull(allow, "405 必须按 RFC 9110 回 Allow 头");
+            assertTrue(allow.contains("POST"), "Allow 头应含 POST，实际为 " + allow);
 
-        MvcResult notAcceptable = responseOf(get("/api/v1/health").accept(MediaType.APPLICATION_XML), 406);
-        assertEquals("", notAcceptable.getResponse().getContentAsString(StandardCharsets.UTF_8),
-                "客户端声明不接受 JSON 时信封在协议上不可投递，406 只回状态与空 body");
+            JsonNode unsupportedMediaType = jsonOf(post("/__probe/echo")
+                    .contentType(MediaType.TEXT_PLAIN)
+                    .content("plain"), 415);
+            assertEquals(41500, unsupportedMediaType.get("code").asInt(), "请求体媒体类型不支持应回 41500");
 
-        JsonNode missingParam = jsonOf(get("/__probe/requires-name"), 400);
-        assertEquals(40000, missingParam.get("code").asInt(), "缺少必需的请求参数应回 40000");
+            MvcResult notAcceptable = responseOf(get("/api/v1/health").accept(MediaType.APPLICATION_XML), 406);
+            assertEquals("", notAcceptable.getResponse().getContentAsString(StandardCharsets.UTF_8),
+                    "客户端声明不接受 JSON 时信封在协议上不可投递，406 只回状态与空 body");
+
+            JsonNode missingParam = jsonOf(get("/__probe/requires-name"), 400);
+            assertEquals(40000, missingParam.get("code").asInt(), "缺少必需的请求参数应回 40000");
+
+            List<ILoggingEvent> errors = appender.list.stream()
+                    .filter(event -> event.getLevel() == Level.ERROR)
+                    .toList();
+            assertEquals(List.of(), errors.stream().map(ILoggingEvent::getFormattedMessage).toList(),
+                    "协议级客户端错误不得记 ERROR 全栈日志");
+        } finally {
+            handlerLogger.detachAppender(appender);
+        }
     }
 
     @Test
-    @DisplayName("未匹配的受保护 API 缺少令牌时回 HTTP 401 + 40103")
+    @DisplayName("未匹配路径回 HTTP 404 + 40400，受保护 API 缺令牌优先回 40103")
     void 未匹配路径回404而非500() throws Exception {
-        JsonNode body = jsonOf(get("/api/v1/not-a-real-endpoint"), 401);
+        JsonNode protectedMissing = jsonOf(get("/api/v1/not-a-real-endpoint"), 401);
+        assertEquals(40103, protectedMissing.get("code").asInt(), "未匹配的受保护 API 应先回 40103");
 
-        assertEquals(40103, body.get("code").asInt(), "未匹配的受保护 API 应先回 40103");
+        JsonNode notFound = jsonOf(get("/not-a-real-endpoint"), 404);
+        assertEquals(40400, notFound.get("code").asInt(), "未匹配路径应回 40400，不得落兜底 500");
     }
 
     @Test

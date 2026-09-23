@@ -38,7 +38,8 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
             String authorization = request.getHeader("Authorization");
             if (authorization == null || !authorization.startsWith("Bearer ")
                     || authorization.substring("Bearer ".length()).isBlank()) {
-                failureWriter.write(response, 40103, "缺少登录令牌，请重新登录");
+                BusinessException missingToken = BusinessException.tokenMissing("缺少登录令牌，请重新登录");
+                failureWriter.write(response, missingToken.getCode(), missingToken.getMessage());
                 return;
             }
             try {
@@ -47,10 +48,11 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
                     throw BusinessException.identityMismatch("令牌身份与设备不匹配，请重新登录");
                 }
                 UserContext.set(claims.getSubject());
-                filterChain.doFilter(request, response);
             } catch (BusinessException ex) {
                 failureWriter.write(response, ex.getCode(), ex.getMessage());
+                return;
             }
+            filterChain.doFilter(request, response);
         } finally {
             UserContext.clear();
         }

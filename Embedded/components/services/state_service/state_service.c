@@ -43,6 +43,8 @@ static const char *TAG = "SVC_STATE";
 static atomic_uint s_next_apply_ack_id;
 /** 统一敲击 gate owner 的单调发布序号。 */
 static atomic_uint s_next_tap_gate_update_sequence;
+/** 高水位/轮次 owner 的单调发布序号。 */
+static atomic_uint s_next_tap_progress_update_sequence;
 /** 当前 state_task 句柄，仅供发布成功后直接唤醒 owner。 */
 static _Atomic(TaskHandle_t) s_owner_task;
 /** 保护 BLE latest-value mailbox 按值副本的短临界区。 */
@@ -620,7 +622,7 @@ esp_err_t state_service_publish_tap_gate(
 }
 
 esp_err_t state_service_update_tap_gate_owner(bool completed,
-                                              bool fault_locked,
+                                              bool queue_full,
                                               TickType_t timeout_ticks)
 {
     uint32_t sequence = atomic_fetch_add(&s_next_tap_gate_update_sequence, 1U) + 1U;
@@ -631,16 +633,19 @@ esp_err_t state_service_update_tap_gate_owner(bool completed,
     const watch_tap_gate_update_t update = {
         .update_sequence = sequence,
         .completed = completed,
-        .fault_locked = fault_locked,
+        .fault_locked = false,
+        .queue_full = queue_full,
     };
     return state_service_publish_tap_gate(&update, timeout_ticks);
 }
 
 esp_err_t state_service_read_tap_gate(bool *service_ready,
                                       bool *completed,
-                                      bool *fault_locked)
+                                      bool *fault_locked,
+                                      bool *queue_full)
 {
-    if (service_ready == NULL || completed == NULL || fault_locked == NULL)
+    if (service_ready == NULL || completed == NULL || fault_locked == NULL ||
+        queue_full == NULL)
     {
         return ESP_ERR_INVALID_ARG;
     }
@@ -648,6 +653,7 @@ esp_err_t state_service_read_tap_gate(bool *service_ready,
     *service_ready = false;
     *completed = false;
     *fault_locked = false;
+    *queue_full = false;
 
     /* state_task 是敲击 gate 的唯一事实源入口；调用方不得传入可伪造的状态。 */
     if (atomic_load(&s_owner_task) == NULL)
@@ -664,8 +670,47 @@ esp_err_t state_service_read_tap_gate(bool *service_ready,
 
     *completed = snapshot.tap_completed;
     *fault_locked = snapshot.tap_fault_locked;
+    *queue_full = snapshot.tap_queue_full;
     *service_ready = true;
     return ESP_OK;
+}
+
+esp_err_t state_service_publish_tap_progress(
+    const watch_tap_progress_update_t *update,
+    TickType_t timeout_ticks)
+{
+    if (update == NULL || update->update_sequence == 0U)
+    {
+        return ESP_ERR_INVALID_ARG;
+    }
+    QueueHandle_t queue = legbot_state_service_queue();
+    if (queue == NULL)
+    {
+        return ESP_ERR_INVALID_STATE;
+    }
+    const state_service_update_t message = {
+        .type = STATE_SERVICE_UPDATE_TAP_PROGRESS,
+        .payload.tap_progress = *update,
+    };
+    return publish_queue_update(queue, &message, timeout_ticks);
+}
+
+esp_err_t state_service_update_tap_progress_owner(
+    const watch_tap_progress_update_t *facts,
+    TickType_t timeout_ticks)
+{
+    if (facts == NULL)
+    {
+        return ESP_ERR_INVALID_ARG;
+    }
+    uint32_t sequence = atomic_fetch_add(&s_next_tap_progress_update_sequence, 1U) + 1U;
+    if (sequence == 0U)
+    {
+        sequence = atomic_fetch_add(&s_next_tap_progress_update_sequence, 1U) + 1U;
+    }
+    watch_tap_progress_update_t update = *facts;
+    update.update_sequence = sequence;
+    return state_service_publish_tap_progress(&update, timeout_ticks);
 }
 
 void state_service_run(void)
@@ -1013,6 +1058,12 @@ static esp_err_t apply_update(const state_service_update_t *update)
     {
         return watch_state_apply_tap_gate_update(
             &update->payload.tap_gate,
+            pdMS_TO_TICKS(STATE_SERVICE_APPLY_TIMEOUT_MS));
+    }
+    if (update->type == STATE_SERVICE_UPDATE_TAP_PROGRESS)
+    {
+        return watch_state_apply_tap_progress_update(
+            &update->payload.tap_progress,
             pdMS_TO_TICKS(STATE_SERVICE_APPLY_TIMEOUT_MS));
     }
     return ESP_ERR_INVALID_ARG;

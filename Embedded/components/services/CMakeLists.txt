@@ -6,6 +6,9 @@ idf_component_register(
         "legbot_services.c"
         "power_service/power_boot_policy.c"
         "power_service/power_service.c"
+        "progress_service/progress_transaction.c"
+        "progress_service/progress_store_nvs.c"
+        "progress_service/progress_service.c"
         "pvdf_input_service/pvdf_confirm_policy.c"
         "pvdf_input_service/pvdf_input_service.c"
         "tap_input_service/tap_input_policy.c"
@@ -15,6 +18,7 @@ idf_component_register(
     INCLUDE_DIRS
         "."
         "power_service"
+        "progress_service"
         "pvdf_input_service"
         "tap_input_service"
         "selftest_service"
@@ -26,5 +30,12 @@ idf_component_register(
         esp_timer
         freertos
         heap
+        nvs_flash
         platform
+)
+
+# canonical 生成头（ewf_scripture_canonical.h）位于仓库 docs 契约目录；
+# 只读包含不复制，保证 scripture 版本与可消费总数的单一真源。
+target_include_directories(${COMPONENT_LIB} PRIVATE
+    "${CMAKE_CURRENT_LIST_DIR}/../../../docs/contracts/canonical/generated"
 )

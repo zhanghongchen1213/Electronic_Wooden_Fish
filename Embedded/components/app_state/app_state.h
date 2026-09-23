@@ -210,15 +210,34 @@ extern "C"
 
     /**
      * @brief 统一敲击 gate 的状态 owner 更新
-     * @details 完成遮罩与故障锁定只允许由 state_service 通过单调序号发布，
+     * @details 完成遮罩、队列已满与故障锁定只允许由 state_service 通过单调序号发布，
      *          tap_input_service 只能从不可变快照读取，不能传入自造状态。
      */
     typedef struct
     {
         uint32_t update_sequence; /**< owner 单调更新序号，必须从 1 开始递增。 */
-        bool completed;            /**< 是否处于完成遮罩。 */
+        bool completed;            /**< 是否处于本地完成锁定遮罩。 */
         bool fault_locked;         /**< 是否处于故障锁定。 */
+        bool queue_full;           /**< 离线积压达到上限的队列已满事实。 */
     } watch_tap_gate_update_t;
+
+    /**
+     * @brief 本地高水位/轮次 owner 的 typed 快照更新
+     * @details 字段值域由 progress owner（progress_service）维护；round_state
+     *          取值域为契约 in_progress=0/completed=1。消费者只读不可变快照。
+     */
+    typedef struct
+    {
+        uint32_t update_sequence;  /**< owner 单调更新序号，必须从 1 开始递增。 */
+        uint32_t local_total;      /**< 本地累计高水位。 */
+        uint32_t acked_total;      /**< 已被云端确认的累计高水位。 */
+        uint32_t round_id;         /**< 当前轮次 ID。 */
+        uint32_t round_cursor;     /**< 当前轮次可消费汉字游标。 */
+        uint32_t round_state;      /**< 轮次状态闭集（in_progress=0/completed=1）。 */
+        bool pending_completion;   /**< 本地末字完成锁定置位。 */
+        uint32_t backlog_count;    /**< 离线积压差值 local_total - acked_total。 */
+        bool persist_error;        /**< 最近一次事务落盘是否失败（busy/error typed 原因）。 */
+    } watch_tap_progress_update_t;
 
     typedef enum
     {
@@ -816,8 +835,18 @@ extern "C"
         TickType_t audio_updated_at_ticks;                               /**< 最近音频状态更新时间。 */
         uint32_t audio_update_sequence;                                  /**< 每次成功 apply 后递增的音频状态序号。 */
         uint32_t tap_gate_update_sequence;                               /**< 统一敲击 gate owner 最近更新序号。 */
-        bool tap_completed;                                               /**< 完成遮罩事实，由 state_service owner 更新。 */
-        bool tap_fault_locked;                                            /**< 故障锁定事实，由 state_service owner 更新。 */
+        bool tap_completed;                                               /**< 本地完成锁定遮罩事实，由 progress owner 更新。 */
+        bool tap_fault_locked;                                            /**< 故障锁定事实，生产者属故障反馈 Story。 */
+        bool tap_queue_full;                                              /**< 离线积压队列已满事实，由 progress owner 更新。 */
+        uint32_t tap_progress_update_sequence;                            /**< 高水位/轮次 owner 最近更新序号。 */
+        uint32_t tap_local_total;                                         /**< 本地累计高水位快照。 */
+        uint32_t tap_acked_total;                                         /**< 已确认累计高水位快照。 */
+        uint32_t tap_round_id;                                            /**< 当前轮次 ID 快照。 */
+        uint32_t tap_round_cursor;                                        /**< 当前轮次可消费汉字游标快照。 */
+        uint32_t tap_round_state;                                         /**< 轮次状态闭集快照。 */
+        bool tap_pending_completion;                                      /**< 本地末字完成锁定置位快照。 */
+        uint32_t tap_backlog_count;                                       /**< 离线积压差值快照。 */
+        bool tap_persist_error;                                           /**< 最近一次进度事务落盘失败事实。 */
         watch_selftest_summary_t selftest;                               /**< 当前启动周期的最近一次自检摘要。 */
     } watch_state_snapshot_t;
 
@@ -841,12 +870,22 @@ extern "C"
 
     /**
      * @brief 原子应用统一敲击 gate owner 更新
-     * @param update 完成遮罩与故障锁定的类型化更新
+     * @param update 完成遮罩、队列已满与故障锁定的类型化更新
      * @param timeout_ticks 等待状态互斥锁的超时时间
      * @return ESP_OK 成功；ESP_ERR_INVALID_STATE/ARG；ESP_ERR_TIMEOUT
      */
     esp_err_t watch_state_apply_tap_gate_update(
         const watch_tap_gate_update_t *update,
+        TickType_t timeout_ticks);
+
+    /**
+     * @brief 原子应用本地高水位/轮次 owner 的类型化更新
+     * @param update 高水位、轮次、游标、完成置位与积压差值更新
+     * @param timeout_ticks 等待状态互斥锁的超时时间
+     * @return ESP_OK 成功；ESP_ERR_INVALID_STATE/ARG；ESP_ERR_TIMEOUT
+     */
+    esp_err_t watch_state_apply_tap_progress_update(
+        const watch_tap_progress_update_t *update,
         TickType_t timeout_ticks);
 
     /**

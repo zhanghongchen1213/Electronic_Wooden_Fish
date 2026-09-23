@@ -134,8 +134,9 @@ _Static_assert(LEGBOT_BSP_RESOURCE_COUNT == 15,
                "BSP resource table must cover the authoritative EWF board resources.");
 _Static_assert(LEGBOT_BSP_STAGE_COUNT == 6,
                "Story 1.1 fixes six serial initialization stages.");
-_Static_assert(LEGBOT_SERVICE_COUNT == 5,
-               "The EWF startup graph adds the unified tap input service to the input boundary.");
+_Static_assert(LEGBOT_SERVICE_COUNT == 6,
+               "The EWF startup graph adds the unified tap input service and the "
+               "progress owner to the input boundary.");
 _Static_assert(LEGBOT_SELFTEST_SERVICE_ID == LEGBOT_SERVICE_SELFTEST,
                "Self-test must own its fixed service slot.");
 _Static_assert(SELFTEST_ITEM_COUNT == 7,

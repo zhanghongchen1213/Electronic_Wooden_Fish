@@ -45,7 +45,8 @@ typedef enum
     STATE_SERVICE_UPDATE_SELFTEST_FINISH, /**< 固化自检完成或取消终态。 */
     STATE_SERVICE_UPDATE_SELFTEST_RETRY_BEGIN,  /**< 标记一个既有失败项进入重试。 */
     STATE_SERVICE_UPDATE_SELFTEST_RETRY_FINISH, /**< 覆盖被重试项的最新终态。 */
-    STATE_SERVICE_UPDATE_TAP_GATE,         /**< 统一敲击完成/故障 gate owner 更新。 */
+    STATE_SERVICE_UPDATE_TAP_GATE,         /**< 统一敲击完成/积压/故障 gate owner 更新。 */
+    STATE_SERVICE_UPDATE_TAP_PROGRESS,     /**< 高水位/轮次 owner 的 typed 快照更新。 */
 } state_service_update_type_t;
 
 typedef struct
@@ -70,6 +71,7 @@ typedef struct
         watch_selftest_retry_begin_update_t selftest_retry_begin;   /**< 自检重试 begin 小载荷。 */
         watch_selftest_retry_finish_update_t selftest_retry_finish; /**< 自检重试 finish 小载荷。 */
         watch_tap_gate_update_t tap_gate;             /**< 统一敲击 gate owner 小载荷。 */
+        watch_tap_progress_update_t tap_progress;     /**< 高水位/轮次 owner 小载荷。 */
     } payload;                                          /**< 按 type 解释的更新载荷。 */
     TaskHandle_t apply_ack_task;                        /**< 需要确认时的稳定任务目标，其他更新为 NULL。 */
     uint32_t apply_ack_id;                              /**< apply 确认序号，不需确认时为 0。 */
@@ -261,9 +263,9 @@ esp_err_t state_service_publish_selftest_retry_finish(
 esp_err_t state_service_request_stop(TickType_t timeout_ticks);
 
 /**
- * @brief 发布统一敲击 gate owner 的完成/故障状态
+ * @brief 发布统一敲击 gate owner 的完成/积压/故障状态
  * @details 由 state_task 串行应用到不可变状态快照；敲击服务不得自行伪造 gate 状态。
- * @param update 单调序号、完成遮罩与故障锁定事实
+ * @param update 单调序号、完成遮罩、队列已满与故障锁定事实
  * @param timeout_ticks 等待状态队列空间的有界 tick 数
  * @return ESP_OK 已入队，其他值表示参数、状态或队列超时
  */
@@ -272,11 +274,12 @@ esp_err_t state_service_publish_tap_gate(
     TickType_t timeout_ticks);
 
 /**
- * @brief 由完成/故障状态 owner 发布最新敲击 gate 事实
+ * @brief 由高水位/轮次事实 owner 发布最新敲击 gate 事实
  * @details owner 不直接写 watch_state；该入口分配单调序号并通过 state_task 应用。
+ *          fault_locked 当前无生产 owner，恒为 false（生产者属 Story 2.3/2.7）。
  */
 esp_err_t state_service_update_tap_gate_owner(bool completed,
-                                              bool fault_locked,
+                                              bool queue_full,
                                               TickType_t timeout_ticks);
 
 /**
@@ -285,12 +288,35 @@ esp_err_t state_service_update_tap_gate_owner(bool completed,
  * @param service_ready 输出 state_task 与状态快照是否可用
  * @param completed 输出完成遮罩事实
  * @param fault_locked 输出故障锁定事实
+ * @param queue_full 输出离线积压队列已满事实
  * @return ESP_OK 成功，ESP_ERR_INVALID_ARG 参数非法，ESP_ERR_INVALID_STATE 状态服务未运行，
  *         ESP_ERR_TIMEOUT 快照互斥锁繁忙
  */
 esp_err_t state_service_read_tap_gate(bool *service_ready,
                                       bool *completed,
-                                      bool *fault_locked);
+                                      bool *fault_locked,
+                                      bool *queue_full);
+
+/**
+ * @brief 向 state_task 发布高水位/轮次 owner 的 typed 快照更新
+ * @param update 单调序号与高水位、轮次、游标、完成置位、积压差值事实
+ * @param timeout_ticks 等待状态队列空间的有界 tick 数
+ * @return ESP_OK 已入队，其他值表示参数、状态或队列超时
+ */
+esp_err_t state_service_publish_tap_progress(
+    const watch_tap_progress_update_t *update,
+    TickType_t timeout_ticks);
+
+/**
+ * @brief 由高水位/轮次事实 owner 发布最新进度事实
+ * @details owner 不直接写 watch_state；该入口分配单调序号并通过 state_task 应用。
+ * @param facts 不含有效序号的进度事实载荷
+ * @param timeout_ticks 等待状态队列空间的有界 tick 数
+ * @return ESP_OK 已入队，其他值表示参数、状态或队列超时
+ */
+esp_err_t state_service_update_tap_progress_owner(
+    const watch_tap_progress_update_t *facts,
+    TickType_t timeout_ticks);
 
 /**
  * @brief 进入固定 state_task 的类型化更新循环

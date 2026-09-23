@@ -69,12 +69,12 @@ static void consume(void)
 static void test_state_owner_and_producer_gates(void)
 {
     reset_services();
-    bool ready = false, completed = false, fault = false;
-    assert(state_service_read_tap_gate(&ready, &completed, &fault) == ESP_OK);
-    assert(ready && !completed && !fault);
+    bool ready = false, completed = false, fault = false, queue_full = false;
+    assert(state_service_read_tap_gate(&ready, &completed, &fault, &queue_full) == ESP_OK);
+    assert(ready && !completed && !fault && !queue_full);
     update_gate(true, false);
-    assert(state_service_read_tap_gate(&ready, &completed, &fault) == ESP_OK);
-    assert(ready && completed && !fault);
+    assert(state_service_read_tap_gate(&ready, &completed, &fault, &queue_full) == ESP_OK);
+    assert(ready && completed && !fault && !queue_full);
     for (unsigned source = 0U; source < EWF_TAP_SOURCE_COUNT; ++source)
     {
         ewf_tap_event_t event = tap((ewf_tap_source_t)source, source + 1U);
@@ -83,8 +83,8 @@ static void test_state_owner_and_producer_gates(void)
         assert(decision.reason == EWF_TAP_REASON_COMPLETED);
     }
     update_gate(false, true);
-    assert(state_service_read_tap_gate(&ready, &completed, &fault) == ESP_OK);
-    assert(ready && !completed && fault);
+    assert(state_service_read_tap_gate(&ready, &completed, &fault, &queue_full) == ESP_OK);
+    assert(ready && !completed && fault && !queue_full);
     for (unsigned source = 0U; source < EWF_TAP_SOURCE_COUNT; ++source)
     {
         ewf_tap_event_t event = tap((ewf_tap_source_t)source, source + 1U);
@@ -97,7 +97,7 @@ static void test_state_owner_and_producer_gates(void)
     assert(host_state_apply_one() == ESP_ERR_INVALID_STATE);
     assert(snapshot().queue_depth == 0U && host_published_count() == 0U);
     host_state_owner_stop();
-    assert(state_service_read_tap_gate(&ready, &completed, &fault) == ESP_ERR_INVALID_STATE);
+    assert(state_service_read_tap_gate(&ready, &completed, &fault, &queue_full) == ESP_ERR_INVALID_STATE);
     assert(!ready);
 }
 static void test_consumer_second_gate(void)
