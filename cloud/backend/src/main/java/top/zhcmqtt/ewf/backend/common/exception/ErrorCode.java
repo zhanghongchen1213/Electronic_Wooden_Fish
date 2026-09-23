@@ -10,6 +10,9 @@ package top.zhcmqtt.ewf.backend.common.exception;
  * {@code sync-contract.schema.json#business_codes} 逐值一致，实现层不得重定义或改义。
  * 第二组是异常层兜底码，不是契约冻结值，后续模块可扩但不得改义；其中协议级客户端错误
  * （{@code 405xx}/{@code 415xx}）按码形规则取值，使 HTTP 状态与码形自洽。
+ *
+ * <p><b>Story 5.6 裁决（B/G）：</b>本集合冻结——不得新增或改义；客户端动作码表不入库、不进 wire。
+ * {@code 20002} 若写路径仍稀缺，保持登记但不强行发明触发条件。禁止 Problem Details 第二套错误体。
  */
 public final class ErrorCode {
 

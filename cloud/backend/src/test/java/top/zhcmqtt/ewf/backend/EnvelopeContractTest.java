@@ -180,7 +180,7 @@ class EnvelopeContractTest {
         JsonNode body = jsonOf(get("/__probe/boom"), 500);
 
         assertEquals(50000, body.get("code").asInt());
-        assertEquals("服务器内部错误", body.get("message").asText(), "兜底 message 必须是固定文案");
+        assertEquals("服务器内部错误，请稍后重试", body.get("message").asText(), "兜底 message 必须是固定文案");
 
         String raw = body.toString();
         assertFalse(raw.contains("IllegalStateException"), "兜底响应不得外泄异常类名");

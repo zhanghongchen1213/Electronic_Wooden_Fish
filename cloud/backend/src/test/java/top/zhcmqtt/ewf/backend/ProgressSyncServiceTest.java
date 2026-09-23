@@ -33,6 +33,7 @@ import top.zhcmqtt.ewf.backend.service.HistoryStatsService;
 import top.zhcmqtt.ewf.backend.service.ProgressStore;
 import top.zhcmqtt.ewf.backend.service.ProgressSyncService;
 import top.zhcmqtt.ewf.backend.service.StateSnapshotService;
+import top.zhcmqtt.ewf.backend.ws.RealtimePushPort;
 
 /**
  * 高水位幂等推进的单元覆盖（{@code @TempDir} + 既有 Store 直接构造，不启 Spring）。
@@ -186,7 +187,7 @@ class ProgressSyncServiceTest {
         DeviceStateStore deviceState = new DeviceStateStore(MAPPER, dataDir.toString());
         StateSnapshotService snapshot = new StateSnapshotService(progress, commands, deviceState);
         ProgressSyncService service = new ProgressSyncService(progress, commands, deviceState, snapshot, MAPPER,
-                history(progress));
+                history(progress), RealtimePushPort.NOOP);
 
         commands.failNextWrite = true;
         ProgressSyncService.SyncOutcome first = service.report(DEVICE_ID,
@@ -497,7 +498,7 @@ class ProgressSyncServiceTest {
                 Clock.system(ClockConfig.ZONE));
         StateSnapshotService snapshot = new StateSnapshotService(progress, commands, deviceState);
         ProgressSyncService failing = new ProgressSyncService(progress, commands, deviceState, snapshot, MAPPER,
-                history);
+                history, RealtimePushPort.NOOP);
 
         daily.failNextWrite = true;
         ProgressSyncService.SyncOutcome advance = failing.report(DEVICE_ID,
@@ -621,7 +622,7 @@ class ProgressSyncServiceTest {
     }
 
     @Test
-    @DisplayName("base_revision 过期 → 20006 不写盘；null 跳过 CAS")
+    @DisplayName("base_revision 过期 → 20006 不写盘；null 跳过 CAS；同键+过期基线仍幂等成功")
     void 设置命令Cas拒绝() {
         seedCloud(50, 50, 2, 10, false, "prog-1");
         ProgressSyncService service = service();
@@ -632,6 +633,14 @@ class ProgressSyncServiceTest {
                 settings(80, "low", 5, "cmd-2", 4));
         assertEquals(ErrorCode.COMMAND_STALE_REVISION, stale.code());
         assertEquals(5, stale.snapshot().commandRevision());
+        assertEquals(before, readCommands());
+
+        // 丢失响应重试：同 action_id + 首次提交时的过期 base_revision → 幂等成功，非 20006
+        ProgressSyncService.SyncOutcome sameKeyRetry = service.submitSettings(DEVICE_ID,
+                settings(99, "low", 5, "cmd-fresh", 4));
+        assertEquals(ApiResponse.SUCCESS_CODE, sameKeyRetry.code());
+        assertEquals(5, sameKeyRetry.snapshot().commandRevision());
+        assertEquals(60, sameKeyRetry.snapshot().volume());
         assertEquals(before, readCommands());
 
         ProgressSyncService.SyncOutcome ok = service.submitSettings(DEVICE_ID,
@@ -727,7 +736,8 @@ class ProgressSyncServiceTest {
         CommandsStore commands = new CommandsStore(MAPPER, directory.toString());
         DeviceStateStore deviceState = new DeviceStateStore(MAPPER, directory.toString());
         StateSnapshotService snapshot = new StateSnapshotService(progress, commands, deviceState);
-        return new ProgressSyncService(progress, commands, deviceState, snapshot, MAPPER, history(progress));
+        return new ProgressSyncService(progress, commands, deviceState, snapshot, MAPPER, history(progress),
+                RealtimePushPort.NOOP);
     }
 
     private HistoryStatsService history(ProgressStore progress) {

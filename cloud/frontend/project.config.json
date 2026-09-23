@@ -1,0 +1,20 @@
+{
+  "description": "电子木鱼微信小程序（MINI-06 壳层）",
+  "packOptions": {
+    "ignore": [],
+    "include": []
+  },
+  "setting": {
+    "urlCheck": false,
+    "es6": true,
+    "postcss": true,
+    "minified": true
+  },
+  "compileType": "miniprogram",
+  "libVersion": "3.5.5",
+  "appid": "touristappid",
+  "projectname": "electronic-wooden-fish",
+  "condition": {},
+  "miniprogramRoot": "dist/build/mp-weixin/",
+  "srcMiniprogramRoot": "dist/build/mp-weixin/"
+}

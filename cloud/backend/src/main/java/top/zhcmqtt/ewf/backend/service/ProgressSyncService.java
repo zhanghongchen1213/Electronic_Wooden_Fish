@@ -20,6 +20,7 @@ import top.zhcmqtt.ewf.backend.dto.sync.RoundActionRequest;
 import top.zhcmqtt.ewf.backend.dto.sync.SettingsCommandRequest;
 import top.zhcmqtt.ewf.backend.dto.sync.StateSnapshotResponse;
 import top.zhcmqtt.ewf.backend.dto.sync.SyncReportRequest;
+import top.zhcmqtt.ewf.backend.ws.RealtimePushPort;
 
 /**
  * 高水位幂等同步与轮次完成/跨轮动作的唯一写路径入口。
@@ -45,7 +46,7 @@ import top.zhcmqtt.ewf.backend.dto.sync.SyncReportRequest;
  * ——则权威写入 {@code round_state=completed}、{@code pending_completion=false}。
  * <b>理由：</b>完成反馈只由 backend 确认触发（FR-C-016 / AD-19），禁止仅凭末字盲推完成态。
  * <b>约束：</b>未达末字却报 {@code completed}/{@code pending_completion=true} → {@code 20001}；
- * 确认成功后响应可读完成态；不推 WebSocket。
+ * 确认成功后响应可读完成态；Story 5.5 在写锁外经 {@link RealtimePushPort} 推送已确认帧。
  *
  * <h2>裁决 B（Story 5.2）：完成锁定与高水位</h2>
  * <p><b>选择：</b>{@code round_state==completed} 时冻结轮次四字段；同步上报若试图修改
@@ -104,12 +105,23 @@ import top.zhcmqtt.ewf.backend.dto.sync.SyncReportRequest;
  * <p><b>选择 D（{@code 20006}）：</b>（1）{@code base_revision != null && base_revision != current}；
  * （2）任何将写入的 {@code command_revision} 严格小于磁盘当前值。拒绝时不改盘，HTTP 200 + 完整快照。
  * 同值高水位 report、同 action_id 重放 <b>不是</b> {@code 20006}。
+ * 判定顺序：先同键幂等，再 CAS——丢失响应后的同 {@code action_id}+过期 {@code base_revision}
+ * 重试必须成功返回权威快照，不得误拒。
  *
  * <p><b>选择 E（与 report 收敛）：</b>不新增 ACK 端点；收敛唯一输入仍是 report 的
  * {@code applied_revision}（5.1 单调不减镜像）。本 Story 补「先抬 command_revision，再等 applied 追上」。
  *
- * <p><b>本 Story（5.4）交付：</b>设置命令修订递增、{@code 20006} CAS、与 report 收敛为已生效。
- * <b>仍不做：</b>WebSocket {@code command_state} 帧、「立即同步」、改契约字节、新增 {@code ErrorCode}。
+ * <p><b>Story 5.4 交付：</b>设置命令修订递增、{@code 20006} CAS、与 report 收敛为已生效。
+ *
+ * <h2>裁决 A–G（Story 5.5）：WebSocket 差量推送钩子</h2>
+ * <p><b>选择 A（传输栈）：</b>原生 WebSocket 文本帧，见 {@code WebSocketConfig} / {@code SyncWebSocketHandler}。
+ * <b>选择 B（序号）：</b>{@code delta.seq :=} 确认后 {@code acked_total}（= {@link StateSnapshotService#exportSnapshotSeq}）。
+ * <b>选择 C（粒度）：</b>每次 acked 前进推送 1 帧 {@code delta}（合并水位，不拆物理敲击）。
+ * <b>选择 D（鉴权）：</b>握手 query {@code token}，本类不参与。
+ * <b>选择 E（时机）：</b>权威落盘成功且快照可读后、写锁释放后调用 {@link RealtimePushPort}；推送失败不影响 HTTP 确认。
+ * <b>选择 F/G：</b>会话与心跳在 Handler。拒绝路径（如 {@code 20003}）不推送；{@code 20004} 已确认前进则仍推 {@code delta}。
+ * <b>约束：</b>禁止 Store 层推送；无订阅者 no-op；不改契约、不新增 {@code ErrorCode}、不做历史帧缓冲。
+ * <b>仍不做：</b>「立即同步」、改契约字节、小程序消费（Epic 6）、真机 WSS（Epic 7）。
  */
 @Service
 public class ProgressSyncService {
@@ -132,6 +144,7 @@ public class ProgressSyncService {
     private final DeviceStateStore deviceStateStore;
     private final StateSnapshotService stateSnapshotService;
     private final HistoryStatsService historyStatsService;
+    private final RealtimePushPort realtimePush;
     private final ObjectMapper objectMapper;
     private final String canonicalScriptureVersion;
     private final int consumableHan;
@@ -145,13 +158,15 @@ public class ProgressSyncService {
 
     public ProgressSyncService(ProgressStore progressStore, CommandsStore commandsStore,
             DeviceStateStore deviceStateStore, StateSnapshotService stateSnapshotService,
-            ObjectMapper objectMapper, HistoryStatsService historyStatsService) {
+            ObjectMapper objectMapper, HistoryStatsService historyStatsService,
+            RealtimePushPort realtimePush) {
         this.progressStore = progressStore;
         this.commandsStore = commandsStore;
         this.deviceStateStore = deviceStateStore;
         this.stateSnapshotService = stateSnapshotService;
         this.objectMapper = objectMapper;
         this.historyStatsService = historyStatsService;
+        this.realtimePush = realtimePush == null ? RealtimePushPort.NOOP : realtimePush;
         CanonicalBaseline baseline = loadCanonicalBaseline(objectMapper);
         this.canonicalScriptureVersion = baseline.scriptureVersion();
         this.consumableHan = baseline.consumableHan();
@@ -164,9 +179,12 @@ public class ProgressSyncService {
     public SyncOutcome report(String deviceId, SyncReportRequest request) {
         String identity = requireDeviceId(deviceId);
         Object lock = deviceLocks.computeIfAbsent(identity, key -> new Object());
+        LockedResult locked;
         synchronized (lock) {
-            return reportLocked(identity, request);
+            locked = reportLocked(identity, request);
         }
+        dispatchPush(locked.push());
+        return locked.outcome();
     }
 
     /**
@@ -176,9 +194,12 @@ public class ProgressSyncService {
     public SyncOutcome roundAction(String deviceId, RoundActionRequest request) {
         String identity = requireDeviceId(deviceId);
         Object lock = deviceLocks.computeIfAbsent(identity, key -> new Object());
+        LockedResult locked;
         synchronized (lock) {
-            return roundActionLocked(identity, request);
+            locked = roundActionLocked(identity, request);
         }
+        dispatchPush(locked.push());
+        return locked.outcome();
     }
 
     /**
@@ -189,9 +210,12 @@ public class ProgressSyncService {
         validateSettingsPayload(request);
         String identity = requireDeviceId(deviceId);
         Object lock = deviceLocks.computeIfAbsent(identity, key -> new Object());
+        LockedResult locked;
         synchronized (lock) {
-            return submitSettingsLocked(identity, request);
+            locked = submitSettingsLocked(identity, request);
         }
+        dispatchPush(locked.push());
+        return locked.outcome();
     }
 
     /** 供测试读取的 canonical 版本单一来源。 */
@@ -204,17 +228,17 @@ public class ProgressSyncService {
         return consumableHan;
     }
 
-    private SyncOutcome reportLocked(String deviceId, SyncReportRequest request) {
+    private LockedResult reportLocked(String deviceId, SyncReportRequest request) {
         if (!canonicalScriptureVersion.equals(request.scriptureVersion())) {
-            return reject(ErrorCode.SCRIPTURE_VERSION_MISMATCH,
+            return outcomeOnly(reject(ErrorCode.SCRIPTURE_VERSION_MISMATCH,
                     "经文版本不一致，请升级后按本次响应重建本地基准",
-                    stateSnapshotService.assemble(deviceId));
+                    stateSnapshotService.assemble(deviceId)));
         }
 
         if (!ROUND_STATES.contains(request.roundState()) || request.roundCursor() > consumableHan) {
-            return reject(ErrorCode.ROUND_UNASSIGNED,
+            return outcomeOnly(reject(ErrorCode.ROUND_UNASSIGNED,
                     "轮次无法归属，请按本次响应重建本地基准",
-                    stateSnapshotService.assemble(deviceId));
+                    stateSnapshotService.assemble(deviceId)));
         }
 
         Optional<ObjectNode> progressOpt = progressStore.read();
@@ -224,21 +248,28 @@ public class ProgressSyncService {
         String cloudState = progressOpt.map(node -> textRequired(node, "round_state")).orElse(null);
         String storedActionId = progressOpt.map(node -> textRequired(node, "action_id")).orElse(null);
         boolean cloudCompleted = STATE_COMPLETED.equals(cloudState);
+        Optional<ObjectNode> commandsBefore = commandsStore.read();
+        int commandRevisionBefore = commandsBefore.map(node -> intRequired(node, "command_revision")).orElse(0);
+        int appliedBefore = commandsBefore.map(node -> intRequired(node, "applied_revision")).orElse(0);
+        boolean appliedBeforeFlag = StateSnapshotService.commandApplied(appliedBefore, commandRevisionBefore);
 
         if (storedActionId != null && storedActionId.equals(request.actionId())) {
             writeDerivedBestEffort(request, cloudAcked);
             StateSnapshotResponse snapshot = stateSnapshotService.assemble(deviceId);
-            if (queueFull(request)) {
-                return reject(ErrorCode.QUEUE_FULL, "离线积压已达上限，请继续上报收敛", snapshot);
-            }
-            return accept(snapshot);
+            boolean commandFlip = !appliedBeforeFlag
+                    && StateSnapshotService.commandApplied(snapshot.appliedRevision(), snapshot.commandRevision());
+            SyncOutcome outcome = queueFull(request)
+                    ? reject(ErrorCode.QUEUE_FULL, "离线积压已达上限，请继续上报收敛", snapshot)
+                    : accept(snapshot);
+            // 同键幂等：水位不前进；仅当派生写导致已生效翻转时推 command_state
+            return acceptedWithPush(deviceId, outcome, false, false, commandFlip);
         }
 
         // 跨轮仅由篇章动作 restart 创建新 round_id；/report 不得自行换轮（含进行中）。
         if (cloudRoundId >= 1 && request.roundId() != cloudRoundId) {
-            return reject(ErrorCode.ROUND_UNASSIGNED,
+            return outcomeOnly(reject(ErrorCode.ROUND_UNASSIGNED,
                     "轮次无法归属，请按本次响应重建本地基准",
-                    stateSnapshotService.assemble(deviceId));
+                    stateSnapshotService.assemble(deviceId)));
         }
 
         // 完成锁定：权威已 completed 时冻结轮次四字段；矛盾 pending 一并拒绝。
@@ -246,24 +277,24 @@ public class ProgressSyncService {
             if (request.pendingCompletion()
                     || request.roundCursor() != cloudCursor
                     || !STATE_COMPLETED.equals(request.roundState())) {
-                return reject(ErrorCode.ROUND_UNASSIGNED,
+                return outcomeOnly(reject(ErrorCode.ROUND_UNASSIGNED,
                         "轮次无法归属，请按本次响应重建本地基准",
-                        stateSnapshotService.assemble(deviceId));
+                        stateSnapshotService.assemble(deviceId)));
             }
         } else {
             // 确认前矛盾：未达末字却要求完成 / 置 pending。
             if (request.roundCursor() < consumableHan
                     && (request.pendingCompletion() || STATE_COMPLETED.equals(request.roundState()))) {
-                return reject(ErrorCode.ROUND_UNASSIGNED,
+                return outcomeOnly(reject(ErrorCode.ROUND_UNASSIGNED,
                         "轮次无法归属，请按本次响应重建本地基准",
-                        stateSnapshotService.assemble(deviceId));
+                        stateSnapshotService.assemble(deviceId)));
             }
         }
 
         if (request.localTotal() < cloudAcked) {
-            return reject(ErrorCode.DEVICE_RESET_CONFLICT,
+            return outcomeOnly(reject(ErrorCode.DEVICE_RESET_CONFLICT,
                     "本地基准低于云端已确认基准，请按云端基准重建后继续",
-                    stateSnapshotService.assemble(deviceId));
+                    stateSnapshotService.assemble(deviceId)));
         }
 
         boolean queueFull = queueFull(request);
@@ -281,6 +312,7 @@ public class ProgressSyncService {
         }
 
         RoundWrite roundWrite = resolveRoundWrite(cloudCompleted, cloudRoundId, cloudCursor, request);
+        boolean becomingCompleted = !cloudCompleted && STATE_COMPLETED.equals(roundWrite.roundState());
 
         ObjectNode progressPayload = objectMapper.createObjectNode();
         progressPayload.put("local_total", request.localTotal());
@@ -295,10 +327,13 @@ public class ProgressSyncService {
         writeDerivedBestEffort(request, newAcked);
 
         StateSnapshotResponse snapshot = stateSnapshotService.assemble(deviceId);
-        if (queueFull) {
-            return reject(ErrorCode.QUEUE_FULL, "离线积压已达上限，请继续上报收敛", snapshot);
-        }
-        return accept(snapshot);
+        boolean commandFlip = !appliedBeforeFlag
+                && StateSnapshotService.commandApplied(snapshot.appliedRevision(), snapshot.commandRevision());
+        SyncOutcome outcome = queueFull
+                ? reject(ErrorCode.QUEUE_FULL, "离线积压已达上限，请继续上报收敛", snapshot)
+                : accept(snapshot);
+        // 20004 已确认前进仍推 delta；硬拒绝（20003 等）不走此分支
+        return acceptedWithPush(deviceId, outcome, advancing, becomingCompleted, commandFlip);
     }
 
     private RoundWrite resolveRoundWrite(boolean cloudCompleted, int cloudRoundId, int cloudCursor,
@@ -317,28 +352,40 @@ public class ProgressSyncService {
                 request.pendingCompletion());
     }
 
-    private SyncOutcome submitSettingsLocked(String deviceId, SettingsCommandRequest request) {
+    private LockedResult submitSettingsLocked(String deviceId, SettingsCommandRequest request) {
         Optional<ObjectNode> existing = commandsStore.read();
         int currentRevision = existing.map(node -> intRequired(node, "command_revision")).orElse(0);
         int appliedRevision = existing.map(node -> intRequired(node, "applied_revision")).orElse(0);
         String storedActionId = existing.map(node -> textRequired(node, "action_id")).orElse("");
+        int volumeBefore = existing.map(node -> intRequired(node, "volume")).orElse(StateSnapshotResponse.DEFAULT_VOLUME);
+        String brightnessBefore = existing.map(node -> textRequired(node, "brightness"))
+                .orElse(StateSnapshotResponse.DEFAULT_BRIGHTNESS);
+        int timeoutBefore = existing.map(node -> intRequired(node, "timeout")).orElse(StateSnapshotResponse.DEFAULT_TIMEOUT);
 
-        if (request.baseRevision() != null && request.baseRevision() != currentRevision) {
-            return reject(ErrorCode.COMMAND_STALE_REVISION,
-                    "命令修订已过期，请按本次响应重建后重试",
-                    stateSnapshotService.assemble(deviceId));
+        // 同键幂等优先于 CAS：丢失响应后的同 action_id 重试（常携带首次提交时的 base_revision）
+        // 必须返回成功快照，不得因修订已推进而误报 20006（裁决 D）。
+        if (!storedActionId.isEmpty() && storedActionId.equals(request.actionId())) {
+            StateSnapshotResponse snapshot = stateSnapshotService.assemble(deviceId);
+            boolean changed = snapshot.commandRevision() != currentRevision
+                    || snapshot.appliedRevision() != appliedRevision
+                    || snapshot.volume() != volumeBefore
+                    || !snapshot.brightness().equals(brightnessBefore)
+                    || snapshot.timeout() != timeoutBefore;
+            return acceptedWithPush(deviceId, accept(snapshot), false, false, changed);
         }
 
-        if (!storedActionId.isEmpty() && storedActionId.equals(request.actionId())) {
-            return accept(stateSnapshotService.assemble(deviceId));
+        if (request.baseRevision() != null && request.baseRevision() != currentRevision) {
+            return outcomeOnly(reject(ErrorCode.COMMAND_STALE_REVISION,
+                    "命令修订已过期，请按本次响应重建后重试",
+                    stateSnapshotService.assemble(deviceId)));
         }
 
         int nextRevision = currentRevision + 1;
         // 防御：任何写路径算出的新修订严格小于磁盘当前值 → fail-closed 20006，不可静默降修订。
         if (nextRevision < currentRevision) {
-            return reject(ErrorCode.COMMAND_STALE_REVISION,
+            return outcomeOnly(reject(ErrorCode.COMMAND_STALE_REVISION,
                     "命令修订已过期，请按本次响应重建后重试",
-                    stateSnapshotService.assemble(deviceId));
+                    stateSnapshotService.assemble(deviceId)));
         }
 
         ObjectNode payload = objectMapper.createObjectNode();
@@ -349,7 +396,7 @@ public class ProgressSyncService {
         payload.put("brightness", request.brightness());
         payload.put("timeout", request.timeout());
         commandsStore.write(payload);
-        return accept(stateSnapshotService.assemble(deviceId));
+        return acceptedWithPush(deviceId, accept(stateSnapshotService.assemble(deviceId)), false, false, true);
     }
 
     /**
@@ -362,12 +409,12 @@ public class ProgressSyncService {
         }
     }
 
-    private SyncOutcome roundActionLocked(String deviceId, RoundActionRequest request) {
+    private LockedResult roundActionLocked(String deviceId, RoundActionRequest request) {
         Optional<ObjectNode> progressOpt = progressStore.read();
         if (progressOpt.isEmpty()) {
-            return reject(ErrorCode.ROUND_UNASSIGNED,
+            return outcomeOnly(reject(ErrorCode.ROUND_UNASSIGNED,
                     "轮次无法归属，请按本次响应重建本地基准",
-                    stateSnapshotService.assemble(deviceId));
+                    stateSnapshotService.assemble(deviceId)));
         }
 
         ObjectNode current = progressOpt.get();
@@ -377,7 +424,7 @@ public class ProgressSyncService {
         // 同键重放：单槽命中或进程内已消费集合命中均不得再次开轮。
         // 不区分 action 类型时，同键跨 restart/exit 碰撞视为幂等返回当前权威（客户端须换新键）。
         if (storedActionId.equals(request.actionId()) || consumed.contains(request.actionId())) {
-            return accept(stateSnapshotService.assemble(deviceId));
+            return outcomeOnly(accept(stateSnapshotService.assemble(deviceId)));
         }
 
         String cloudState = textRequired(current, "round_state");
@@ -389,14 +436,14 @@ public class ProgressSyncService {
 
         if (ACTION_RESTART.equals(request.action())) {
             if (!cloudCompleted) {
-                return reject(ErrorCode.ROUND_UNASSIGNED,
+                return outcomeOnly(reject(ErrorCode.ROUND_UNASSIGNED,
                         "轮次无法归属，请按本次响应重建本地基准",
-                        stateSnapshotService.assemble(deviceId));
+                        stateSnapshotService.assemble(deviceId)));
             }
             if (roundId == Integer.MAX_VALUE) {
-                return reject(ErrorCode.ROUND_UNASSIGNED,
+                return outcomeOnly(reject(ErrorCode.ROUND_UNASSIGNED,
                         "轮次无法归属，请按本次响应重建本地基准",
-                        stateSnapshotService.assemble(deviceId));
+                        stateSnapshotService.assemble(deviceId)));
             }
             ObjectNode payload = objectMapper.createObjectNode();
             payload.put("local_total", localTotal);
@@ -408,14 +455,15 @@ public class ProgressSyncService {
             payload.put("action_id", request.actionId());
             progressStore.write(payload);
             consumed.add(request.actionId());
-            return accept(stateSnapshotService.assemble(deviceId));
+            // restart 离开完成态：不发明新帧；客户端靠后续 snapshot 查询
+            return outcomeOnly(accept(stateSnapshotService.assemble(deviceId)));
         }
 
         if (ACTION_EXIT.equals(request.action())) {
             if (!cloudCompleted) {
-                return reject(ErrorCode.ROUND_UNASSIGNED,
+                return outcomeOnly(reject(ErrorCode.ROUND_UNASSIGNED,
                         "轮次无法归属，请按本次响应重建本地基准",
-                        stateSnapshotService.assemble(deviceId));
+                        stateSnapshotService.assemble(deviceId)));
             }
             ObjectNode payload = objectMapper.createObjectNode();
             payload.put("local_total", localTotal);
@@ -427,12 +475,13 @@ public class ProgressSyncService {
             payload.put("action_id", request.actionId());
             progressStore.write(payload);
             consumed.add(request.actionId());
-            return accept(stateSnapshotService.assemble(deviceId));
+            StateSnapshotResponse snapshot = stateSnapshotService.assemble(deviceId);
+            return acceptedWithPush(deviceId, accept(snapshot), false, true, false);
         }
 
-        return reject(ErrorCode.ROUND_UNASSIGNED,
+        return outcomeOnly(reject(ErrorCode.ROUND_UNASSIGNED,
                 "轮次无法归属，请按本次响应重建本地基准",
-                stateSnapshotService.assemble(deviceId));
+                stateSnapshotService.assemble(deviceId)));
     }
 
     /**
@@ -490,6 +539,27 @@ public class ProgressSyncService {
 
     private static boolean queueFull(SyncReportRequest request) {
         return request.localTotal() - request.ackedTotal() >= QUEUE_FULL_THRESHOLD;
+    }
+
+
+    private void dispatchPush(PushPlan push) {
+        if (push == null || !push.any()) {
+            return;
+        }
+        realtimePush.dispatch(push.deviceId(), push.snapshot(), push.delta(), push.completion(),
+                push.commandState());
+    }
+
+    private static LockedResult outcomeOnly(SyncOutcome outcome) {
+        return new LockedResult(outcome, PushPlan.none());
+    }
+
+    private LockedResult acceptedWithPush(String deviceId, SyncOutcome outcome, boolean delta,
+            boolean completion, boolean commandState) {
+        if (!delta && !completion && !commandState) {
+            return outcomeOnly(outcome);
+        }
+        return new LockedResult(outcome, new PushPlan(deviceId, outcome.snapshot(), delta, completion, commandState));
     }
 
     private static SyncOutcome accept(StateSnapshotResponse snapshot) {
@@ -558,5 +628,19 @@ public class ProgressSyncService {
     }
 
     private record RoundWrite(int roundId, int roundCursor, String roundState, boolean pendingCompletion) {
+    }
+
+    private record LockedResult(SyncOutcome outcome, PushPlan push) {
+    }
+
+    private record PushPlan(String deviceId, StateSnapshotResponse snapshot, boolean delta, boolean completion,
+            boolean commandState) {
+        static PushPlan none() {
+            return new PushPlan(null, null, false, false, false);
+        }
+
+        boolean any() {
+            return deviceId != null && snapshot != null && (delta || completion || commandState);
+        }
     }
 }

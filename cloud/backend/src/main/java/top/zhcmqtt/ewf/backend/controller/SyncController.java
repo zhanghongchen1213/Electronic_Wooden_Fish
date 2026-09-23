@@ -55,7 +55,9 @@ import top.zhcmqtt.ewf.backend.service.StateSnapshotService;
  * 成功走 {@link ApiResponse#success(Object)}。
  *
  * <p><b>本 Story（5.4）交付：</b>{@code POST /command} 设置命令修订递增与 {@code 20006} CAS。
- * <b>仍不做：</b>WebSocket {@code command_state} 帧、「立即同步」。
+ * <p><b>Story 5.5：</b>WebSocket 差量推送由独立 handler（{@code /api/v1/ws}）承载，
+ * <b>不</b>把 WS 塞进本 MVC 控制器；确认后推送钩子在 {@link ProgressSyncService}。
+ * <b>仍不做：</b>「立即同步」、小程序 UI 消费。
  */
 @Validated
 @RestController

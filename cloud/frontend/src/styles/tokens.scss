@@ -1,0 +1,20 @@
+/**
+ * MINI-06 / UI_CONTRACT-miniapp.md §1 令牌映射。
+ * Story 6.1 裁决：纸面根帧用 $bg；焦点/导航用 $accent（= colors.mini.focus）。
+ * safe_top=62 / page_pad=20 / nav_h=56。
+ */
+
+$bg: #f4f0e5;
+$card: #fffdf6;
+$fill-muted: #d7d0c4;
+$ink: #2c2823;
+$ink-2: #8b8177;
+$ink-3: #8b8177;
+$accent: #a66b3a;
+$accent-bright: #c9a66a;
+$divider: #9e7b5722;
+
+$safe-top: 62px;
+$page-pad: 20px;
+$nav-h: 56px;
+$touch-min: 44px;

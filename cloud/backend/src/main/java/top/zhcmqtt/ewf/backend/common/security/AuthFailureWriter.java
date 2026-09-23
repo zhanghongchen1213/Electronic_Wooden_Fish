@@ -11,7 +11,13 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import jakarta.servlet.http.HttpServletResponse;
 import top.zhcmqtt.ewf.backend.common.response.ApiResponse;
 
-/** 过滤器层认证失败写回统一信封。 */
+/**
+ * 过滤器层认证失败写回统一信封。
+ *
+ * <p><b>Story 5.6 裁决（A/F）：</b>Filter 层不得写裸错误体或 Problem Details；
+ * 401/403 文案须含「重新登录」等可执行语义，且不得把 JWT/Authorization 明文写入日志。
+ * 401 单飞刷新属 frontend {@code api/request}（本 Story 交付），不在本类实现。
+ */
 @Component
 public class AuthFailureWriter {
 

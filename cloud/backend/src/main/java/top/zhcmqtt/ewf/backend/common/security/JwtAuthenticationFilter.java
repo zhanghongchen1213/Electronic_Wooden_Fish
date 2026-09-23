@@ -12,8 +12,18 @@ import jakarta.servlet.http.HttpServletResponse;
 import top.zhcmqtt.ewf.backend.common.exception.BusinessException;
 import top.zhcmqtt.ewf.backend.service.IdentityStore;
 
-/** 精确 PUBLIC 白名单 + /api/** Bearer 认证过滤器。 */
+/**
+ * 精确 PUBLIC 白名单 + {@code /api/**} Bearer 认证过滤器。
+ *
+ * <p><b>Story 5.5 / 裁决 D：</b>对 {@code GET /api/v1/ws} 的 WebSocket <b>升级握手</b>放行到
+ * WebSocket 栈（不要求 {@code Authorization: Bearer}），由 {@code WsHandshakeInterceptor}
+ * 校验 query {@code token}。判定必须同时满足：路径精确等于 {@code /api/v1/ws}、方法为 GET、
+ * 且请求带有 {@code Upgrade: websocket}（或 {@code Connection} 含 upgrade）——
+ * <b>禁止</b>把该路径加成「任意 HTTP 方法公开白名单」。
+ */
 public class JwtAuthenticationFilter extends OncePerRequestFilter {
+
+    private static final String WS_PATH = "/api/v1/ws";
 
     private final JwtTokenProvider tokenProvider;
     private final AuthFailureWriter failureWriter;
@@ -31,7 +41,7 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
             throws ServletException, IOException {
         try {
             String path = request.getRequestURI().substring(request.getContextPath().length());
-            if (!path.startsWith("/api/") || isPublic(request, path)) {
+            if (!path.startsWith("/api/") || isPublic(request, path) || isWebSocketHandshake(request, path)) {
                 filterChain.doFilter(request, response);
                 return;
             }
@@ -63,5 +73,20 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
         return ("POST".equals(method) && ("/api/v1/auth/login/wechat-mini".equals(path)
                 || "/api/v1/auth/refresh".equals(path)))
                 || ("GET".equals(method) && ("/api/v1/health".equals(path) || "/".equals(path)));
+    }
+
+    /**
+     * 仅放行 WebSocket 升级握手到后续栈；普通 GET/POST {@code /api/v1/ws} 仍走 Bearer。
+     */
+    static boolean isWebSocketHandshake(HttpServletRequest request, String path) {
+        if (!"GET".equals(request.getMethod()) || !WS_PATH.equals(path)) {
+            return false;
+        }
+        String upgrade = request.getHeader("Upgrade");
+        if (upgrade != null && "websocket".equalsIgnoreCase(upgrade.trim())) {
+            return true;
+        }
+        String connection = request.getHeader("Connection");
+        return connection != null && connection.toLowerCase().contains("upgrade");
     }
 }

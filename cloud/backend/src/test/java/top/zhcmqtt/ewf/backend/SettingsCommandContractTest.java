@@ -223,6 +223,8 @@ class SettingsCommandContractTest {
     @Test
     @DisplayName("非法载荷 → 40000")
     void 非法载荷() throws Exception {
+        assertFalse(commandsStore.read().isPresent());
+
         JsonNode badBrightness = json(mockMvc.perform(post(COMMAND_PATH)
                 .header("Authorization", "Bearer " + accessToken)
                 .contentType(MediaType.APPLICATION_JSON)
@@ -236,6 +238,22 @@ class SettingsCommandContractTest {
                 .content(objectMapper.writeValueAsString(commandBody(50, "mid", 10, "y", null))))
                 .andExpect(status().isBadRequest()).andReturn());
         assertEquals(ErrorCode.PARAM_INVALID, badTimeout.path("code").asInt());
+
+        JsonNode badVolumeHigh = json(mockMvc.perform(post(COMMAND_PATH)
+                .header("Authorization", "Bearer " + accessToken)
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(objectMapper.writeValueAsString(commandBody(101, "mid", 15, "vol-hi", null))))
+                .andExpect(status().isBadRequest()).andReturn());
+        assertEquals(ErrorCode.PARAM_INVALID, badVolumeHigh.path("code").asInt());
+
+        JsonNode badVolumeLow = json(mockMvc.perform(post(COMMAND_PATH)
+                .header("Authorization", "Bearer " + accessToken)
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(objectMapper.writeValueAsString(commandBody(-1, "mid", 15, "vol-lo", null))))
+                .andExpect(status().isBadRequest()).andReturn());
+        assertEquals(ErrorCode.PARAM_INVALID, badVolumeLow.path("code").asInt());
+
+        assertFalse(commandsStore.read().isPresent(), "非法 volume/brightness/timeout 不得写盘");
     }
 
     private void seedProgress() {

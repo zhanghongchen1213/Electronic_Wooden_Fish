@@ -39,11 +39,13 @@ import top.zhcmqtt.ewf.backend.dto.sync.StateSnapshotResponse;
  * 契约默认值而**不是** `50000`。文件存在时不合法（损坏、超限、字段集合不符、字段值类型不符）一律
  * fail closed 抛 `50000` 且不改写文件——不得把「不可判定/不合法」静默降级成默认高水位。
  *
- * <p><b>只读边界（Story 5.1 / 5.4）：</b>写路径（幂等推进、落盘、设置命令修订）在
- * {@code ProgressSyncService}；本类保持只读装配，可被写路径调用 {@link #assemble(String)} 产出
- * 17 字段响应。仍不在此类内写盘、不推进高水位、不递增 {@code command_revision}。
- * 命令维度「待设备应用 / 已生效」不是 wire 字段——见 {@link #commandApplied(int, int)}。
- * 不实现 WebSocket 与断线补齐（Story 5.5）；不暴露 {@code PersistenceRecoveryReport}；
+ * <p><b>只读边界（Story 5.1 / 5.4 / 5.5）：</b>写路径（幂等推进、落盘、设置命令修订）在
+ * {@code ProgressSyncService}；本类保持只读装配，可被写路径与 WebSocket 推送口调用
+ * {@link #assemble(String)} 产出 17 字段响应。仍不在此类内写盘、不推进高水位、不递增
+ * {@code command_revision}。命令维度「待设备应用 / 已生效」不是 wire 字段——见
+ * {@link #commandApplied(int, int)}。
+ * WebSocket 帧 {@code seq} 空间须与 {@link #exportSnapshotSeq} 对齐（Story 5.5 已交付）；
+ * 本类不实现会话/心跳/推送 I/O；不暴露 {@code PersistenceRecoveryReport}；
  * 不依赖 `PersistenceRecovery` / `PersistenceRecoveryReport`。
  */
 @Service
@@ -117,8 +119,8 @@ public class StateSnapshotService {
      * 为了「严格递增」而新增计数器文件、改 `progress.json` 字段列或递增 `contract_version`
      * 都超出本 Story 面且需先改契约，故明确不做。
      *
-     * <p><b>交给 Epic 5：</b>WebSocket 帧的 {@code seq} 空间必须与本导出的 {@code snapshot_seq}
-     * 空间对齐（Story 5.5）；本 Story 只登记该契约缺口。
+     * <p><b>Story 5.5：</b>WebSocket 业务帧 {@code delta.seq} 与本导出的 {@code snapshot_seq}
+     * 对齐为同一「已确认敲击」空间；断线恢复仍以本查询冻结水位为唯一基准（不做服务端帧重放）。
      */
     public static int exportSnapshotSeq(Optional<ObjectNode> progress) {
         return intField(progress, ACKED_TOTAL, StateSnapshotResponse.NO_COUNT);

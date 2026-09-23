@@ -239,3 +239,65 @@
 2. **epics/PRD「current_revision」与契约 `command_revision` 名称落差**——实现与测试只使用 `command_revision`；规范修补属文档修订，不改契约字节。
 3. **「立即同步」是否占用设置族或篇章族 `action_id`、是否递增 `command_revision`**——契约 §9 称立即同步无值载荷；本 Story 不做，需后续 story 冻结。
 4. **WebSocket `command_state` 帧与设置下发的推送时机**——属 Story 5.5；本 Story 仅 REST 快照可读。
+
+## Deferred from: code review of 5-4-实现命令修订和待设备应用收敛.md (2026-09-23)
+
+- `applied_revision` 已超前于当前 `command_revision` 时，新设置下发按 Task 2.3 保留 applied，可能使 `commandApplied` 立刻为真；下调 applied 会破坏 5.1 单调不减。MVP 依赖设备报告 applied≤command；若产品要求「新载荷必待应用」需后续单独裁决。
+- 跨 `deviceId` 并发写共享 `CommandsStore`：产品为单身份单设备；`deviceLocks` 按 deviceId 符合边界，多设备共享文件属既有模型限制。
+- AC #3「设置下发只写 commands」与 AC #2 `applied > command` 收敛分支缺少正面测试断言；实现路径已只写 commands，属验证缺口。
+
+## Deferred from: create-story of 5-5-实现-websocket-差量推送 (2026-09-23)
+
+本 Story（5.5）**不修改契约**（`docs/contracts/sync-contract.md` 与 `sync-contract.schema.json` 只读引用）。以下缺口需契约层或后续 Epic 裁定：
+
+1. **注册表样例 `ws_snapshot` 的 `seq/snapshot_seq` 与 `acked_total` 偏移**（样例 `seq=512` vs `acked_total=128`）vs 4.6/5.5 导出口径（`snapshot_seq := acked_total`）。本 Story 实现对齐 4.6 导出，不把样例偏移当义务。
+2. **`snapshot_seq`「单调递增」vs `acked_total`「单调不减」措辞**（4.6 已登记）——仍开放；backend 只能保证不后退。
+3. **非进度帧（`command_state`/`completion`/`heartbeat`/`error`）的 `seq` 是否允许偏离敲击空间、重连是否需重放**——本 Story 取「会话单调 + 重连靠 REST」；若产品要强重放需先改契约。
+4. **WS 关闭码业务段取值表未逐事件冻结**——实现选用标准 `1000` 替换旧连接、协议错误用 `4001`；正式码表可后续补进契约。
+5. **生产 WSS 反代 idle 超时**——architecture Deferred，非本 Story；真机 1s 端到端与小程序回放 UI 属 Epic 6/7。
+6. **收敛登记（相对 5.4 缺口 4）：** WebSocket `command_state` 帧与设置下发推送时机已由本 Story 交付；契约样例偏移与措辞张力仍见上列 1–3。
+
+## Deferred from: code review of 5-5-实现-websocket-差量推送.md (2026-09-23)
+
+- 心跳 interval/timeout 路径无自动化覆盖：实现默认 30s/10s 与契约一致，但 `WebSocketPushContractTest` 未驱动真实超时关闭；可注入时钟或缩短测试配置属后续增强，真机/反代 idle 属 Epic 6/7。
+- `report` 使 `applied_revision` 追上导致「已生效」翻转时的 `command_state` 推送缺少专门 WS 断言；设置下发与拒绝路径已覆盖，实现钩子存在。
+
+## Deferred from: create-story of 5-6-实现错误语义-重试与安全边界 (2026-09-23)
+
+本 Story（5.6）**不修改契约**（`docs/contracts/sync-contract.md` 与 schema 只读）。以下缺口登记：
+
+1. **`20002` 缺少基准高水位**仍可能无写路径触发——是否需要专用 report 分支由后续产品裁定；本 Story 不发明触发条件（查询 snapshot 无基准已可验收）。
+2. **401 响应缺 `WWW-Authenticate`**（4.4 deferred）——仍开放；非本 Story。
+3. **Epic 6 登录页与 request 常量路径联调**——本 Story 固定 `/pages/login/index`；页面文件由 6.1/6.2 创建。
+4. **生产合法域名与 HTTPS**——AD-20/运维，非本 Story。
+5. **Problem Details 与信封双真源风险**——本 Story 已在 `application.yml` / `application-local.yml` 显式 `spring.mvc.problemdetails.enabled=false` 并用测试钉死；若未来有人重新启用，门禁需继续拒绝。
+
+**交接更正（相对 4.4 / 5.5）：** 401 单飞刷新队列与统一 `api/request` 已由本 Story（5.6）交付；Epic 6 只接壳层、登录页与页面消费，不得再发明第二套 request。
+
+## Deferred from: code review of 5-6-实现错误语义-重试与安全边界.md (2026-09-23)
+
+- 单飞 `isRefreshing` 在唤醒订阅者前清零存在短暂双刷窗口；与「先 notify 再清零」的挂起风险权衡后本轮不引入世代锁；跨进程 refresh 竞态仍属未证明面。
+- `ErrorSemanticsContractTest` 未独立签发真过期 access 断言精确 `40101`；现覆盖 refresh-当-access 的 40102/40101 并集。
+- 同步拒绝矩阵 `assertAction` 仅钉 `acked_total`/`snapshot_seq`；完整 17 字段闭包依赖既有 ProgressSync/StateSnapshot 契约测试。
+
+## Deferred from: create-story of 5-7-验证业务状态重启与原子恢复 (2026-09-23)
+
+本 Story（5.7）**不修改契约**（`docs/contracts/sync-contract.md` 与 schema 只读）。以下缺口登记：
+
+1. **篇章动作进程内幂等集 `consumedRoundActionIds` 跨重启**——仍开放（承接 5.2 code-review deferred）；本 Story 验收剧本规避「单槽已被 report 覆盖的旧键」，不把该集合持久化进 `progress.json`。
+2. **独立 OS 进程 fork + kill 级重启门禁**——非本 Story 强制范围；单测以「同 data-dir 重建服务/Store + PersistenceRecovery」为合法近似；真进程级属运维/Epic 7 附录。
+3. **跨文件崩溃窗口**（权威 `progress.json` 已写、派生尚未写）——既有「派生失败不回滚 + 幂等重放收敛」；本 Story 用重启后重放证明收敛，不引入两阶段提交或 WAL。
+4. **GET `/stats` 与 `deviceLocks` 并发撕裂**——5.3 deferred；本 Story 单线程业务剧本不覆盖该竞态。
+5. **掉电 / 多进程文件锁 / 生产磁盘 fsync 与挂载选项**——4.5/AtomicJsonFile 已知边界；本 Story Completion Notes 必须继续声明为未证明面。
+
+## Deferred from: code review of 5-7-验证业务状态重启与原子恢复.md (2026-09-23)
+
+- **跨文件崩溃窗口未注入：** create-story 登记「用重启后重放证明收敛」，但主剧本仅在派生全部写成功后同键重放。`action_id` 短路径下同键 report 可能不补写缺失的 `daily_stats`/`commands`/`device_state`，因此当前套件不能证明「权威已写、派生未写」窗口的收敛。需单独设计注入（或产品侧非短路径 catch-up）后再验收；不阻断 5.7 done。
+
+## Deferred from: create-story of 6-1-建立-mini-06-小程序壳层-令牌和导航
+
+1. 原生 tabBar vs 自定义 bottom-nav 的最终视觉像素差——以 MINI-06 HTML 对拍为准，6.9 终验前允许壳层近似（本 Story 采用 pages.json 原生 tabBar + selectedColor `#a66b3a`，自定义 BottomNav 组件保留备选）。
+2. 字体 Noto Serif/Sans SC 小程序加载策略（包体 vs 系统回退）——壳层使用系统字体保底，正式字形闭合随 6.9。
+3. 微信隐私协议/用户协议勾选文案——属 6.2 登录页产品文案，不在 6.1 发明。
+4. 生产 `VITE_WX_APPID` 仍为 replace 占位——部署前替换；本 Story 只保证从 env 读取。
+5. 交接：6.2 负责登录直达与权限态；6.3+ 填业务页；6.9 做 14 状态对拍终验。

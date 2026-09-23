@@ -1,0 +1,82 @@
+{
+  "pages": [
+    {
+      "path": "pages/reading/index",
+      "style": {
+        "navigationStyle": "custom",
+        "navigationBarTitleText": "阅读",
+        "backgroundColor": "#f4f0e5"
+      }
+    },
+    {
+      "path": "pages/records/index",
+      "style": {
+        "navigationStyle": "custom",
+        "navigationBarTitleText": "记录",
+        "backgroundColor": "#f4f0e5"
+      }
+    },
+    {
+      "path": "pages/device/index",
+      "style": {
+        "navigationStyle": "custom",
+        "navigationBarTitleText": "设备",
+        "backgroundColor": "#f4f0e5"
+      }
+    },
+    {
+      "path": "pages/settings/index",
+      "style": {
+        "navigationStyle": "custom",
+        "navigationBarTitleText": "设置",
+        "backgroundColor": "#f4f0e5"
+      }
+    },
+    {
+      "path": "pages/login/index",
+      "style": {
+        "navigationStyle": "custom",
+        "navigationBarTitleText": "登录",
+        "backgroundColor": "#f4f0e5"
+      }
+    }
+  ],
+  "globalStyle": {
+    "navigationBarTextStyle": "black",
+    "navigationBarTitleText": "电子木鱼",
+    "navigationBarBackgroundColor": "#f4f0e5",
+    "backgroundColor": "#f4f0e5"
+  },
+  "tabBar": {
+    "color": "#8b8177",
+    "selectedColor": "#a66b3a",
+    "backgroundColor": "#fffdf6",
+    "borderStyle": "white",
+    "list": [
+      {
+        "pagePath": "pages/reading/index",
+        "text": "阅读",
+        "iconPath": "static/tab/reading.png",
+        "selectedIconPath": "static/tab/reading-active.png"
+      },
+      {
+        "pagePath": "pages/records/index",
+        "text": "记录",
+        "iconPath": "static/tab/records.png",
+        "selectedIconPath": "static/tab/records-active.png"
+      },
+      {
+        "pagePath": "pages/device/index",
+        "text": "设备",
+        "iconPath": "static/tab/device.png",
+        "selectedIconPath": "static/tab/device-active.png"
+      },
+      {
+        "pagePath": "pages/settings/index",
+        "text": "设置",
+        "iconPath": "static/tab/settings.png",
+        "selectedIconPath": "static/tab/settings-active.png"
+      }
+    ]
+  }
+}

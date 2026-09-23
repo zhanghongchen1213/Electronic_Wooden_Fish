@@ -5,6 +5,10 @@ spring:
     name: electronic-wooden-fish-backend
   jackson:
     time-zone: Asia/Shanghai
+  # Story 5.6 裁决 G：显式关闭 Problem Details，对外唯一形状仍是 {code,message,data}。
+  mvc:
+    problemdetails:
+      enabled: false
 
 server:
   port: 9218

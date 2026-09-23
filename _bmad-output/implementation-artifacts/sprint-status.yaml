@@ -29,7 +29,7 @@
 # - Dev moves story to 'review', then runs code-review (fresh context, different LLM recommended)
 # - Retrospective appends its action items to action_items; the status view surfaces open ones
 generated: 09-22-2026 02:37
-last_updated: 09-23-2026 20:10
+last_updated: 09-23-2026 23:49
 project: Electronic_Wooden_Fish
 project_key: NOKEY
 tracking_system: file-system
@@ -73,14 +73,14 @@ development_status:
   5-1-实现高水位幂等同步: done
   5-2-实现轮次-完成与跨轮动作: done
   5-3-实现可信时间和历史统计: done
-  5-4-实现命令修订和待设备应用收敛: review
-  5-5-实现-websocket-差量推送: backlog
-  5-6-实现错误语义-重试与安全边界: backlog
-  5-7-验证业务状态重启与原子恢复: backlog
+  5-4-实现命令修订和待设备应用收敛: done
+  5-5-实现-websocket-差量推送: done
+  5-6-实现错误语义-重试与安全边界: done
+  5-7-验证业务状态重启与原子恢复: done
   epic-5-retrospective: optional
 
-  epic-6: backlog
-  6-1-建立-mini-06-小程序壳层-令牌和导航: backlog
+  epic-6: in-progress
+  6-1-建立-mini-06-小程序壳层-令牌和导航: review
   6-2-实现登录直达与权限状态: backlog
   6-3-实现在线心经持续阅读流: backlog
   6-4-实现断线查询与离线回放: backlog

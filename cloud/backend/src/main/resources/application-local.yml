@@ -5,6 +5,9 @@ spring:
       on-profile: local
   jackson:
     time-zone: Asia/Shanghai
+  mvc:
+    problemdetails:
+      enabled: false
 
 server:
   port: 9218

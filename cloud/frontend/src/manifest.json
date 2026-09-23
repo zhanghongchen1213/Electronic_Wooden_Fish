@@ -1,0 +1,19 @@
+{
+  "name": "电子木鱼",
+  "appid": "__UNI__EWFMINI06",
+  "description": "电子木鱼微信小程序壳层",
+  "versionName": "0.1.0",
+  "versionCode": "100",
+  "transformPx": false,
+  "mp-weixin": {
+    "appid": "",
+    "setting": {
+      "urlCheck": false
+    },
+    "usingComponents": true
+  },
+  "uniStatistics": {
+    "enable": false
+  },
+  "vueVersion": "3"
+}
