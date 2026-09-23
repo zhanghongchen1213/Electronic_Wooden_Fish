@@ -41,6 +41,8 @@ static const char *TAG = "SVC_STATE";
 
 /** 自检 terminal apply ACK 的启动周期内序号。 */
 static atomic_uint s_next_apply_ack_id;
+/** 统一敲击 gate owner 的单调发布序号。 */
+static atomic_uint s_next_tap_gate_update_sequence;
 /** 当前 state_task 句柄，仅供发布成功后直接唤醒 owner。 */
 static _Atomic(TaskHandle_t) s_owner_task;
 /** 保护 BLE latest-value mailbox 按值副本的短临界区。 */
@@ -617,6 +619,23 @@ esp_err_t state_service_publish_tap_gate(
     return publish_queue_update(queue, &message, timeout_ticks);
 }
 
+esp_err_t state_service_update_tap_gate_owner(bool completed,
+                                              bool fault_locked,
+                                              TickType_t timeout_ticks)
+{
+    uint32_t sequence = atomic_fetch_add(&s_next_tap_gate_update_sequence, 1U) + 1U;
+    if (sequence == 0U)
+    {
+        sequence = atomic_fetch_add(&s_next_tap_gate_update_sequence, 1U) + 1U;
+    }
+    const watch_tap_gate_update_t update = {
+        .update_sequence = sequence,
+        .completed = completed,
+        .fault_locked = fault_locked,
+    };
+    return state_service_publish_tap_gate(&update, timeout_ticks);
+}
+
 esp_err_t state_service_read_tap_gate(bool *service_ready,
                                       bool *completed,
                                       bool *fault_locked)
@@ -659,6 +678,14 @@ void state_service_run(void)
     }
 
     atomic_store(&s_owner_task, xTaskGetCurrentTaskHandle());
+    /* 生产 owner 启动时先发布明确的进行中 gate，避免快照停留在未初始化的默认值。 */
+    const esp_err_t tap_gate_init_error =
+        state_service_update_tap_gate_owner(false, false, 0);
+    if (tap_gate_init_error != ESP_OK)
+    {
+        ESP_LOGE(TAG, "统一敲击 gate owner 初始化发布失败，错误=%s",
+                 esp_err_to_name(tap_gate_init_error));
+    }
     bool prefer_config_mailbox = true;
     bool prefer_ble_mailbox = true;
     bool prefer_modem_mailbox = true;

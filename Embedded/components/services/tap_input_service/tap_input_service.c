@@ -12,16 +12,25 @@
 
 #include "esp_log.h"
 #include "event_bus.h"
+#include "cst9217_bsp.h"
 #include "legbot_services.h"
 #include "freertos/semphr.h"
 #include "state_service.h"
+#include "app_state.h"
 
 static const char *TAG = "SVC_TAP";
 
 #define EWF_TAP_INPUT_QUEUE_DEPTH EWF_TAP_INPUT_QUEUE_CAPACITY
 #define EWF_TAP_VALID_EVENT_PUBLISH_TIMEOUT_MS 10U
 
+typedef enum {
+    TAP_INPUT_MESSAGE_EVENT = 0,
+    TAP_INPUT_MESSAGE_TOUCH,
+    TAP_INPUT_MESSAGE_STOP,
+} tap_input_message_kind_t;
+
 typedef struct {
+    tap_input_message_kind_t kind;
     ewf_tap_event_t event;
 } tap_input_message_t;
 
@@ -32,6 +41,7 @@ static uint32_t s_last_sequence;
 static bool s_has_sequence;
 static bool s_prepared;
 static bool s_running;
+static uint32_t s_next_producer_sequence;
 
 static esp_err_t submit_from_source(ewf_tap_source_t source,
                                     const ewf_tap_event_t *event,
@@ -42,6 +52,8 @@ static void record_rejection(const ewf_tap_event_t *event,
                              size_t queue_depth);
 static void record_acceptance(ewf_tap_source_t source);
 static bool load_gate_state(ewf_tap_gate_state_t *state);
+static void tap_input_service_touch_isr(void *user_ctx);
+static bool touch_is_wood_fish_region(const cst9217_bsp_point_t *point);
 
 esp_err_t tap_input_service_init_contracts(void)
 {
@@ -59,6 +71,7 @@ esp_err_t tap_input_service_init_contracts(void)
     s_snapshot.last_reason = EWF_TAP_REASON_NONE;
     s_last_sequence = 0U;
     s_has_sequence = false;
+    s_next_producer_sequence = 0U;
     return ESP_OK;
 }
 
@@ -68,26 +81,54 @@ esp_err_t tap_input_service_prepare_run(void)
         return ESP_ERR_INVALID_STATE;
     }
     s_prepared = true;
+    const esp_err_t touch_registration =
+        cst9217_bsp_register_interrupt_callback(tap_input_service_touch_isr, NULL);
+    if (touch_registration != ESP_OK)
+    {
+        ESP_LOGW(TAG, "CST9217 触摸生产路径未登记，错误=%s",
+                 esp_err_to_name(touch_registration));
+    }
     return ESP_OK;
 }
 
 void tap_input_service_cancel_prepared_run(void)
 {
-    if (!s_running) { s_prepared = false; }
+    if (!s_running)
+    {
+        (void)cst9217_bsp_register_interrupt_callback(NULL, NULL);
+        s_prepared = false;
+    }
 }
 
 esp_err_t tap_input_service_deinit_contracts(void)
 {
     if (s_running) { return ESP_ERR_INVALID_STATE; }
+    (void)cst9217_bsp_register_interrupt_callback(NULL, NULL);
     if (s_queue != NULL) { vQueueDelete(s_queue); s_queue = NULL; }
     if (s_mutex != NULL) { vSemaphoreDelete(s_mutex); s_mutex = NULL; }
     s_last_sequence = 0U;
     s_has_sequence = false;
+    s_next_producer_sequence = 0U;
     s_prepared = false;
     return ESP_OK;
 }
 
 QueueHandle_t tap_input_service_queue(void) { return s_queue; }
+
+uint32_t tap_input_service_next_sequence(void)
+{
+    if (s_mutex == NULL || xSemaphoreTake(s_mutex, portMAX_DELAY) != pdTRUE)
+    {
+        return 0U;
+    }
+    uint32_t sequence = ++s_next_producer_sequence;
+    if (sequence == 0U)
+    {
+        sequence = ++s_next_producer_sequence;
+    }
+    xSemaphoreGive(s_mutex);
+    return sequence;
+}
 
 esp_err_t tap_input_service_submit(const ewf_tap_event_t *event,
                                    TickType_t timeout_ticks,
@@ -126,7 +167,10 @@ esp_err_t tap_input_service_submit(const ewf_tap_event_t *event,
                  (unsigned)queue_depth);
         return decision.reason == EWF_TAP_REASON_QUEUE_FULL ? ESP_ERR_TIMEOUT : ESP_ERR_INVALID_ARG;
     }
-    const tap_input_message_t message = {.event = *event};
+    const tap_input_message_t message = {
+        .kind = TAP_INPUT_MESSAGE_EVENT,
+        .event = *event,
+    };
     if (xQueueSend(s_queue, &message, timeout_ticks) != pdTRUE) {
         record_rejection(event, EWF_TAP_REASON_QUEUE_FULL,
                          uxQueueMessagesWaiting(s_queue));
@@ -186,8 +230,54 @@ esp_err_t tap_input_service_run(void)
     if (s_queue == NULL || !s_prepared) { return ESP_ERR_INVALID_STATE; }
     s_running = true;
     tap_input_message_t message = {0};
+    bool stop_requested = false;
     while (xQueueReceive(s_queue, &message, portMAX_DELAY) == pdTRUE) {
-        if (message.event.control_event && message.event.sequence == UINT32_MAX) { break; }
+        if (message.kind == TAP_INPUT_MESSAGE_STOP)
+        {
+            stop_requested = true;
+            if (uxQueueMessagesWaiting(s_queue) == 0U)
+            {
+                break;
+            }
+            message = (tap_input_message_t){0};
+            continue;
+        }
+        if (message.kind == TAP_INPUT_MESSAGE_TOUCH)
+        {
+            cst9217_bsp_point_t point = {0};
+            if (cst9217_bsp_read_point(&point) != ESP_OK || !point.pressed)
+            {
+                ESP_LOGW(TAG, "CST9217 触摸点读取失败或无有效触点");
+                message = (tap_input_message_t){0};
+                continue;
+            }
+            watch_power_snapshot_t power = {0};
+            if (watch_state_power_snapshot(&power, 0) != ESP_OK)
+            {
+                ESP_LOGW(TAG, "触摸生产路径读取显示状态失败");
+                message = (tap_input_message_t){0};
+                continue;
+            }
+            const bool screen_on = power.screen_state == WATCH_SCREEN_STATE_ON;
+            const ewf_tap_event_t touch = {
+                .source = EWF_TAP_SOURCE_DEVICE_TOUCH,
+                .sequence = tap_input_service_next_sequence(),
+                .at_ms = (uint32_t)pdTICKS_TO_MS(xTaskGetTickCount()),
+                .candidate_confirmed = true,
+                .screen_on = screen_on,
+                .wood_fish_hit = screen_on && touch_is_wood_fish_region(&point),
+                .wake_only = !screen_on,
+            };
+            ewf_tap_decision_t decision = {0};
+            (void)tap_input_service_submit_device_touch(
+                &touch, pdMS_TO_TICKS(EWF_TAP_VALID_EVENT_PUBLISH_TIMEOUT_MS), &decision);
+            message = (tap_input_message_t){0};
+            if (stop_requested && uxQueueMessagesWaiting(s_queue) == 0U)
+            {
+                break;
+            }
+            continue;
+        }
         ewf_tap_gate_state_t state = {0};
         const bool state_available = load_gate_state(&state);
         if (!state_available) {
@@ -233,7 +323,12 @@ esp_err_t tap_input_service_run(void)
             s_snapshot.queue_depth = uxQueueMessagesWaiting(s_queue);
             xSemaphoreGive(s_mutex);
         }
+        if (stop_requested && uxQueueMessagesWaiting(s_queue) == 0U)
+        {
+            break;
+        }
     }
+    (void)cst9217_bsp_register_interrupt_callback(NULL, NULL);
     s_running = false;
     s_prepared = false;
     return ESP_OK;
@@ -242,7 +337,7 @@ esp_err_t tap_input_service_run(void)
 esp_err_t tap_input_service_request_stop(TickType_t timeout_ticks)
 {
     if (s_queue == NULL || !s_prepared) { return ESP_ERR_INVALID_STATE; }
-    const tap_input_message_t stop = {.event = {.sequence = UINT32_MAX, .control_event = true}};
+    const tap_input_message_t stop = {.kind = TAP_INPUT_MESSAGE_STOP};
     return xQueueSend(s_queue, &stop, timeout_ticks) == pdTRUE ? ESP_OK : ESP_ERR_TIMEOUT;
 }
 
@@ -301,4 +396,31 @@ static void record_acceptance(ewf_tap_source_t source)
         ++s_snapshot.by_source[source].accepted_count;
         s_snapshot.by_source[source].last_reason = EWF_TAP_REASON_ACCEPTED;
     }
+}
+
+static void tap_input_service_touch_isr(void *user_ctx)
+{
+    (void)user_ctx;
+    if (s_queue == NULL)
+    {
+        return;
+    }
+    const tap_input_message_t message = {.kind = TAP_INPUT_MESSAGE_TOUCH};
+    BaseType_t higher_priority_task_woken = pdFALSE;
+    (void)xQueueSendFromISR(s_queue, &message, &higher_priority_task_woken);
+    if (higher_priority_task_woken == pdTRUE)
+    {
+        portYIELD_FROM_ISR();
+    }
+}
+
+static bool touch_is_wood_fish_region(const cst9217_bsp_point_t *point)
+{
+    if (point == NULL)
+    {
+        return false;
+    }
+    /* 触摸页中央木鱼触区：仅该区域可生成正式 device_touch。 */
+    return point->x >= 80U && point->x <= 330U &&
+           point->y >= 110U && point->y <= 390U;
 }

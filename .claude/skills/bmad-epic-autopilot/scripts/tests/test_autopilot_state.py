@@ -160,6 +160,15 @@ class AutopilotStateTests(unittest.TestCase):
             unknown.write_text("development_status:\n  1-1-demo: mystery\n", encoding="utf-8")
             result = self.run_helper("validate-status", "--file", unknown, check=False)
             self.assertEqual(result["reason"], "unknown-status")
+            repaired = self.run_helper(
+                "repair-status", "--file", unknown,
+                "--implementation-artifacts", Path(directory), "--epic", "1",
+            )
+            self.assertTrue(repaired["ok"])
+            self.assertEqual(
+                self.run_helper("validate-status", "--file", unknown, "--epic", "1")["stories"],
+                [{"key": "1-1-demo", "status": "backlog"}],
+            )
 
     def test_risk_classification_is_risk_first(self):
         with tempfile.TemporaryDirectory() as directory:
@@ -181,6 +190,19 @@ class AutopilotStateTests(unittest.TestCase):
                 encoding="utf-8",
             )
             diff.write_text("--- a/src/service.py\n+++ b/src/service.py\n@@ -1 +1 @@\n-old\n+new\n", encoding="utf-8")
+            result = self.run_helper("classify-risk", "--diff", diff, "--dev-receipt", receipt)
+            self.assertEqual(result["review_depth"], "standard")
+
+            receipt.write_text(
+                '{"file_list":["tests/test_service.py"],"test_commands":["true"],'
+                '"test_exit_codes":[0],"runtime_behavior_changed":false,"change_kind":"test"}',
+                encoding="utf-8",
+            )
+            diff.write_text(
+                "--- a/tests/test_service.py\n+++ b/tests/test_service.py\n"
+                "@@ -1 +1 @@\n-old\n+new\n",
+                encoding="utf-8",
+            )
             result = self.run_helper("classify-risk", "--diff", diff, "--dev-receipt", receipt)
             self.assertEqual(result["review_depth"], "standard")
 
@@ -226,6 +248,85 @@ class AutopilotStateTests(unittest.TestCase):
             self.assertEqual(result["review_depth"], "deep")
             self.assertIn("runtime_behavior_changed 缺失或无效", result["risk_reasons"])
 
+    def test_missing_or_failed_tests_are_quality_debt_not_deep_risk(self):
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            diff = root / "story.diff"
+            receipt = root / "dev.json"
+            diff.write_text(
+                "--- /dev/null\n+++ b/docs/notes.md\n@@ -0,0 +1 @@\n+# note\n",
+                encoding="utf-8",
+            )
+            receipt.write_text(
+                '{"file_list":["docs/notes.md"],"test_commands":[],"test_exit_codes":[],'
+                '"runtime_behavior_changed":false}',
+                encoding="utf-8",
+            )
+            result = self.run_helper("classify-risk", "--diff", diff, "--dev-receipt", receipt)
+            self.assertEqual(result["review_depth"], "lite")
+            self.assertIn("测试命令缺失", result["quality_debt_reasons"])
+            self.assertNotIn("测试命令缺失", result["risk_reasons"])
+
+    def test_repair_receipt_never_manufactures_success(self):
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            broken = root / "broken.json"
+            broken.write_text("{not-json", encoding="utf-8")
+            diff = root / "story.diff"
+            diff.write_text(
+                "--- /dev/null\n+++ b/src/a.py\n@@ -0,0 +1 @@\n+pass\n",
+                encoding="utf-8",
+            )
+            output = root / "repaired.json"
+            result = self.run_helper(
+                "repair-receipt", "--file", broken, "--phase", "B",
+                "--story-key", "1-1-demo", "--output", output, "--diff", diff,
+            )
+            self.assertTrue(result["ok"])
+            repaired = json.loads(output.read_text(encoding="utf-8"))
+            self.assertFalse(repaired["ok"])
+            self.assertEqual(repaired["file_list"], ["src/a.py"])
+            self.assertTrue((root / "broken.json.repair-backup").is_file())
+
+    def test_repair_status_recovers_story_from_frontmatter(self):
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            artifacts = root / "implementation-artifacts"
+            artifacts.mkdir()
+            status = artifacts / "sprint-status.yaml"
+            status.write_text("development_status: [", encoding="utf-8")
+            story = artifacts / "1-1-demo.md"
+            story.write_text("---\nStatus: review\n---\n# Demo\n", encoding="utf-8")
+            result = self.run_helper(
+                "repair-status", "--file", status,
+                "--implementation-artifacts", artifacts, "--epic", "1",
+            )
+            self.assertTrue(result["ok"])
+            self.assertEqual(
+                self.run_helper("validate-status", "--file", status, "--epic", "1")["stories"],
+                [{"key": "1-1-demo", "status": "review"}],
+            )
+            self.assertTrue((artifacts / "sprint-status.yaml.repair-backup.yaml").is_file())
+
+    def test_repair_status_does_not_trust_done_without_review_receipt(self):
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            artifacts = root / "implementation-artifacts"
+            artifacts.mkdir()
+            status = artifacts / "sprint-status.yaml"
+            status.write_text("development_status: [", encoding="utf-8")
+            story = artifacts / "1-1-demo.md"
+            story.write_text("---\nStatus: done\n---\n# Demo\n", encoding="utf-8")
+            result = self.run_helper(
+                "repair-status", "--file", status,
+                "--implementation-artifacts", artifacts, "--epic", "1",
+            )
+            self.assertTrue(result["ok"])
+            self.assertEqual(
+                self.run_helper("validate-status", "--file", status, "--epic", "1")["stories"],
+                [{"key": "1-1-demo", "status": "review"}],
+            )
+
     def test_receipt_validation_is_fail_closed(self):
         with tempfile.TemporaryDirectory() as directory:
             receipt = Path(directory) / "dev.json"
@@ -234,6 +335,21 @@ class AutopilotStateTests(unittest.TestCase):
                 '"phase":"B","file_list":["src/a.py"],"test_commands":["true"],'
                 '"test_exit_codes":[0],"change_kind":"runtime",'
                 '"runtime_behavior_changed":true,"build_attempts":[],'
+                '"build_exit_codes":[],"build_log_paths":[],"final_build_exit_code":null,'
+                '"build_recovery":"not-applicable","status":"review","ok":true}',
+                encoding="utf-8",
+            )
+            result = self.run_helper(
+                "validate-receipt", "--file", receipt, "--phase", "B",
+                "--story-key", "1-1-demo", "--expected-status", "review",
+            )
+            self.assertTrue(result["ok"])
+
+            receipt.write_text(
+                '{"story_key":"1-1-demo","story_path":"/tmp/1-1-demo.md",'
+                '"phase":"B","file_list":[],"test_commands":[],"test_exit_codes":[],'
+                '"change_kind":"none","runtime_behavior_changed":false,'
+                '"implementation_complete":true,"no_code_change":true,"build_attempts":[],'
                 '"build_exit_codes":[],"build_log_paths":[],"final_build_exit_code":null,'
                 '"build_recovery":"not-applicable","status":"review","ok":true}',
                 encoding="utf-8",
@@ -293,6 +409,24 @@ class AutopilotStateTests(unittest.TestCase):
                 "--story-key", "1-1-demo", "--expected-status", "review", check=False,
             )
             self.assertEqual(result["reason"], "build-not-resolved")
+            receipt.write_text(
+                '{"story_key":"1-1-demo","story_path":"/tmp/1-1-demo.md",'
+                '"phase":"B","file_list":["Embedded/main/main.c"],"test_commands":[],'
+                '"test_exit_codes":[],"change_kind":"runtime",'
+                '"runtime_behavior_changed":true,"build_attempts":[{"attempt":1,'
+                '"exit_code":1,"log_path":"/tmp/build-1.log","diagnosis":"编译错误",'
+                '"fix":"关闭新硬件路径"}],"build_exit_codes":[1],'
+                '"build_log_paths":["/tmp/build-1.log"],"final_build_exit_code":1,'
+                '"build_recovery":"degraded","build_status":"degraded",'
+                '"safety_degraded":true,"disabled_capabilities":["new-hardware-path"],'
+                '"status":"review","ok":true}',
+                encoding="utf-8",
+            )
+            result = self.run_helper(
+                "validate-receipt", "--file", receipt, "--phase", "B",
+                "--story-key", "1-1-demo", "--expected-status", "review",
+            )
+            self.assertTrue(result["ok"])
             receipt.write_text('{"story_key":"1-1-demo","phase":"B","ok":true}', encoding="utf-8")
             completed = subprocess.run(
                 [
@@ -314,6 +448,39 @@ class AutopilotStateTests(unittest.TestCase):
                 '"patches":0,"deferred":0,"rejected":0,"unresolved_high_medium":0,'
                 '"test_command":"true","test_exit_code":0,"outcome":"clean",'
                 '"failure_reason":null,"status":"done","ok":true}',
+                encoding="utf-8",
+            )
+            result = self.run_helper(
+                "validate-receipt", "--file", receipt, "--phase", "C", "--story-key", "1-1-demo"
+            )
+            self.assertTrue(result["ok"])
+
+            receipt.write_text(
+                '{"story_key":"1-1-demo","spec_file":"","diff_file":"/tmp/1-1-demo.diff",'
+                '"review_mode":"no-spec","phase":"C","review_depth":"lite",'
+                '"risk_reasons":[],"active_layers":["edge-case-hunter"],'
+                '"mandatory_layers":["edge-case-hunter"],"completed_layers":[],'
+                '"failed_layers":["edge-case-hunter"],"findings":0,"patches":0,'
+                '"deferred":0,"rejected":0,"unresolved_high_medium":0,'
+                '"test_command":"","test_exit_code":null,"outcome":"unverified",'
+                '"failure_reason":null,"no_code_change":true,"status":"done","ok":true}',
+                encoding="utf-8",
+            )
+            result = self.run_helper(
+                "validate-receipt", "--file", receipt, "--phase", "C", "--story-key", "1-1-demo"
+            )
+            self.assertTrue(result["ok"])
+
+            receipt.write_text(
+                '{"story_key":"1-1-demo","spec_file":"/tmp/1-1-demo.md",'
+                '"diff_file":"/tmp/1-1-demo.diff","review_mode":"full",'
+                '"phase":"C","review_depth":"deep","risk_reasons":[],'
+                '"active_layers":["edge-case-hunter"],"mandatory_layers":["edge-case-hunter"],'
+                '"completed_layers":[],"failed_layers":["edge-case-hunter"],"findings":1,'
+                '"patches":0,"deferred":1,"rejected":0,"unresolved_high_medium":0,'
+                '"unresolved_catastrophic":0,"test_command":"","test_exit_code":1,'
+                '"outcome":"degraded","failure_reason":null,"status":"done","ok":true,'
+                '"quality_state":"degraded","quality_debt":[],"quality_debt_file":"/tmp/debt.json"}',
                 encoding="utf-8",
             )
             result = self.run_helper(

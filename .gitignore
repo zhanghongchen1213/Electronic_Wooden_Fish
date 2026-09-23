@@ -48,3 +48,7 @@ docs/hardware/参考原理图
 _bmad-output/implementation-artifacts/.autopilot
 docs/embedded/build_records
 docs/embedded/hardware_test_records
+
+# Python
+__pycache__/
+*.py[cod]

@@ -5,7 +5,7 @@ description: 'Autonomously drive an entire BMad epic through create-story → de
 
 # Epic Autopilot Workflow
 
-**Goal:** 输入一个 epic 号，全程无人监管，自动把该 epic 下所有未完成的 story 依次走完 `create-story → dev-story → 按风险选择审查深度的 code-review`，直到每个 story 都 `done`；遇到无法安全自动解决的阻塞时 fail-closed 并结束，不等待人类、不无限循环。
+**Goal:** 输入一个 epic 号，全程无人监管，自动把该 epic 下所有未完成的 story 依次走完 `create-story → dev-story → 按风险选择审查深度的 code-review`，直到每个 story 都 `done`。测试、审查、实现、构建和证据问题优先进入自动恢复；只有模型/工具、文件系统、必要外部凭证或无法推导的仓库事实源确实不可用时，才生成结构化外部阻断，不等待人类。
 
 **Your Role:** 你是**编排器（orchestrator）**，不是实现者。你只做五件事：解析 epic、跟踪 sprint 状态、为每个阶段派发一个全新隔离的子 Agent、为 review 建立 story-local diff/receipt、用 sprint-status.yaml 与机器回执验证状态推进。**你绝不亲自执行 create-story / dev-story / code-review 中的任何一步，绝不亲自写业务代码。**
 
@@ -67,22 +67,24 @@ description: 'Autonomously drive an entire BMad epic through create-story → de
 2. **FOLLOW SEQUENCE**：按节执行。
 3. **LOAD NEXT**：被指示时读完并遵循下一步骤文件。
 
-### Critical Rules (NO EXCEPTIONS)
+### Critical Rules (NO HUMAN CHECKPOINTS)
 
-- ⚠️ **本工作流无人监管（UNATTENDED）**：与常规 BMad 工作流相反，**绝不在任何 checkpoint HALT 等待人类**。一切本应"问人"的抉择，一律按推荐/最正确项自动决策并继续。只有在"重试 1 次后仍无法推进状态"这一种情形下，才停止——且是**中止整个 epic 并报告**，不是等人。
+- ⚠️ **本工作流无人监管（UNATTENDED）**：与常规 BMad 工作流相反，**绝不在任何 checkpoint HALT 等待人类**。一切本应"问人"的抉择，一律按兼容、保守、可验证的方案自动决策并继续。普通失败进入恢复层，不因一次失败中止整个 epic。
 - **NEVER** 同时加载多个步骤文件。
 - **ALWAYS** 动手前读完整个步骤文件；**NEVER** 跳步或优化顺序。
 - **主 Agent 防过载纪律**：你**绝不**读 `epics.md`、`architecture`、UX 规格或任何业务实现代码；绝不亲自实现任何 story。你对 sprint-status.yaml 只做**小切片**读取（grep 目标行）。每个 story 在你上下文里只保留 1 行状态。重活全部在子 Agent 的隔离上下文中完成，你只接收其**简短结构化回报**。
 - **每个阶段都派发一个全新的 general-purpose 子 Agent（干净上下文，绝不复用上一个）**；子 Agent 提示词从 `subagent-prompts/` 对应模板**原样加载**、仅填变量，不即兴改写。
 - **全程零变更性 git 操作**：你和子 Agent 都不得 commit / branch / stash / reset / checkout。只允许只读 `git diff` 用于查看变更。
-- **每个 child 只执行一次阶段**：child 不得自行再次派发同阶段或进入 review→fix 无限循环；retry 只能由本编排器统一执行，单阶段最多 2 次尝试（业务/证据失败）。若子 Agent 在真正启动前明确因模型容量/服务容量错误而未执行，且未产生任何状态、story、代码、git 变更或阶段 receipt，则该次只算“启动失败”，不消耗阶段尝试次数；编排器必须派发全新的 child 持续重试，直到成功启动或出现无法明确归因于容量的错误。
-- **模型容量启动失败的证据门禁**：只有同时满足“child 明确返回容量错误”“子 Agent 未执行任何阶段动作”“sprint-status、story/代码和 receipt 均无变化”才可走上述持续重试例外；若有任一状态或文件已变化，回到普通阶段失败与最多 2 次尝试规则，不得借容量例外绕过验证。
-- **sprint-status.yaml 是状态唯一裁判，但不是唯一完成证据**：每阶段还必须核对对应机器 receipt、story 文件、story-local diff、测试退出码与 review quorum，不轻信子 Agent 自述。
-- **ESP-IDF 构建恢复门禁**：涉及 `Embedded/`、ESP-IDF、CMake、固件、硬件、驱动或构建系统的 B 阶段必须遵循当前项目 macOS runbook；`idf.py` 缺失或退出码 `127` 先重新激活环境、定位并修复，再用新日志重建成功，不能即时终止。B receipt 必须记录所有构建尝试、日志、退出码、诊断和修复；最终构建未以 0 退出不得进入 C。
-- **状态门禁**：`backlog→A`、`ready-for-dev/in-progress→B`、`review→C`、`done→跳过`；未知/blocked/缺文件/坏 YAML/空 diff/receipt 缺失统一 fail-closed。
-- **review contract**：C 必须显式传 `review_depth`、`risk_reasons`、`action_policy=autofix`、`unattended=true`、`story_key`、`spec_file`、`diff_file`、`receipt_file`、`test_command` 与 `sprint_status`，禁止 code-review 自己猜目标或重新选择工作树 diff。
-- **风险优先**：命中 API/schema、认证权限、持久化/迁移、并发/状态机、协议/网络、硬件/电源/OTA、依赖/构建、删除、跨组件或测试失败时至少使用 `deep`；无法判断时升级 `deep`。
-- **成功条件**：mandatory reviewer 全部成功、没有 unresolved HIGH/MEDIUM、patch 后测试通过、receipt 完整，才允许写 `done`。
+- **每个 child 只执行一次阶段**：child 不得自行再次派发同阶段或进入 review→fix 无限循环；修复责任由本编排器通过不同 recovery stage 重新派发。每次重试必须有新证据、新策略或明确的安全降级，不得空转。
+- **模型容量恢复**：child 在真正启动前明确容量错误且零状态变化时，按普通、compact、ultra-compact 三种 prompt 顺序重新派发；三种方式都无法启动才生成 `capacity-unavailable` 外部阻断。
+- **sprint-status.yaml 是状态裁判，但不是唯一完成证据**：每阶段核对 receipt、story 文件、story-local diff 和实际改动。测试退出码和 review quorum 是质量证据；失败时记录 quality debt，不伪装成通过。
+- **ESP-IDF 构建恢复门禁**：涉及 `Embedded/`、ESP-IDF、CMake、固件、硬件、驱动或构建系统的 B 阶段必须遵循当前项目 macOS runbook；`idf.py` 缺失或退出码 `127` 先重新激活环境、定位并修复，再用新日志重建。五次根因修复仍失败时，先关闭受影响的新能力并记录安全降级与验证证据；只有无法安全隔离时才终止，不能把构建失败伪装成通过。B receipt 必须记录所有构建尝试、日志、退出码、诊断、修复和最终 `resolved`/`degraded` 结果。
+- **状态门禁**：`backlog→A`、`ready-for-dev/in-progress→B`、`review→C`、`done→跳过`；未知/损坏输入先走自动 evidence/status repair。只有无法恢复时才 `blocked`。
+- **review contract**：C 必须显式传 `review_depth`、`risk_reasons`、`action_policy=autofix`、`unattended=true`、`completion_policy=continue_on_quality_failure`、`quality_policy=best_effort`、`safety_policy=conservative_degrade`、`story_key`、`spec_file`、`diff_file`、`receipt_file`、`test_command`、`quality_debt_file`、`repair_stage`、`repair_attempt` 与 `sprint_status`。
+- **风险优先**：命中 API/schema、认证权限、持久化/迁移、并发/状态机、协议/网络、硬件/电源/OTA、依赖/构建、删除或跨组件时升级审查深度；测试缺失只进入 `quality_debt_reasons`，不单独把小 story 升到 `deep`。
+- **成功条件**：实现或安全降级完成、构建门禁完成、scope/receipt/status 可验证、危险路径已修复或隔离，才允许写 `done`；测试失败、reviewer 失败和普通 unresolved findings 不再阻断。
+- **恢复状态**：使用 `repairing-implementation`、`repairing-build`、`repairing-evidence`、`repairing-review`、`degraded-complete` 记录内部恢复阶段；sprint-status 对外继续使用兼容状态。
+- **唯一外部阻断**：模型/Agent 工具、文件系统、必需外部凭证/真实设备、无法推导的事实源均不可用，或所有保守降级都无法隔离危险路径。
 
 ## FIRST STEP
 

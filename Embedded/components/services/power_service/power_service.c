@@ -18,6 +18,7 @@
 #include "freertos/semphr.h"
 #include "freertos/task.h"
 #include "key.h"
+#include "tap_input_service.h"
 
 static const char *TAG = "PWR_BOOT";
 
@@ -56,6 +57,8 @@ static void power_service_pwr_isr(void *context);
 static void power_service_boot_isr(void *context);
 static void power_service_publish_snapshot(const power_service_snapshot_t *snapshot);
 static const char *power_service_event_name(ewf_power_boot_event_kind_t kind);
+static void power_service_publish_automatic_tap(
+    const ewf_power_boot_event_t *event);
 
 esp_err_t power_service_init_contracts(void)
 {
@@ -249,6 +252,10 @@ esp_err_t power_service_run(void)
                          power_service_event_name(event.kind),
                          (unsigned)event.duration_ms,
                          (unsigned)s_policy.boot_tap_count);
+                if (event.kind == EWF_POWER_BOOT_EVENT_BOOT0_RUNTIME_TAP)
+                {
+                    power_service_publish_automatic_tap(&event);
+                }
             }
             (void)key_rearm_boot_isr_for_next_level();
         }
@@ -337,6 +344,33 @@ static const char *power_service_event_name(ewf_power_boot_event_kind_t kind)
         return "BOOT0_STARTUP_SUPPRESSED";
     default:
         return "NONE";
+    }
+}
+
+static void power_service_publish_automatic_tap(
+    const ewf_power_boot_event_t *event)
+{
+    if (event == NULL)
+    {
+        return;
+    }
+    const ewf_tap_event_t tap = {
+        .source = EWF_TAP_SOURCE_AUTOMATIC_TAP,
+        .sequence = tap_input_service_next_sequence(),
+        .at_ms = event->at_ms,
+        .candidate_confirmed = true,
+        .screen_on = true,
+        .wood_fish_hit = true,
+    };
+    ewf_tap_decision_t decision = {0};
+    const esp_err_t error = tap_input_service_submit_automatic_tap(
+        &tap, pdMS_TO_TICKS(10U), &decision);
+    if (error != ESP_OK)
+    {
+        ESP_LOGW(TAG,
+                 "BOOT0 自动敲击未进入统一队列：原因=%s，错误=%s",
+                 ewf_tap_reason_name(decision.reason),
+                 esp_err_to_name(error));
     }
 }
 

@@ -49,14 +49,23 @@
    If `review_mode` = `no-spec` and an entry would otherwise be `decision_needed`, reclassify it as `patch` (if the fix is unambiguous) or `defer` (if not).
 
    If `unattended=true` and `action_policy=autofix`, do not ask the user at
-   this step. Apply the conservative policy: an unambiguous, compatibility-
-   preserving `patch` remains `patch`; an ambiguous decision becomes
-   `unresolved` unless one conservative option is uniquely determined by the
-   project rules; `maybe-false` and low-risk pre-existing issues remain
-   `defer`. `unresolved` findings are carried to Step 4 and block `done` when
-   their verified or possible harm is high or medium.
+   this step. Apply the autonomous policy: an unambiguous,
+   compatibility-preserving `patch` remains `patch`; an ambiguous decision
+   chooses the most conservative project-compatible behavior. `maybe-false`,
+   low-risk pre-existing issues and ordinary unresolved HIGH/MEDIUM findings
+   become explicit `defer` quality debt. A finding is `catastrophic` only when
+   the harmful path is verified and reachable (authentication bypass, secret
+   exposure, data corruption/loss, incompatible protocol, or unsafe hardware/
+   OTA behavior). Catastrophic findings require an automatic patch or a
+   conservative quarantine/degrade action; they never ask the user.
+   Conservative fallbacks are deterministic: authentication defaults to deny
+   and rejects expired/forged tokens; persistence disables unsafe writes while
+   preserving safe reads; protocol changes retain the old format and disable
+   the incompatible branch; hardware/OTA actions remain disabled; concurrency
+   falls back to a serialized path. Record the selected capability and the
+   verification evidence in the receipt.
 
-5. If `failed_layers` is non-empty, report which layers failed before announcing results. If zero entries remain after rejections AND `failed_layers` is non-empty, mark the run `mandatory-review-failed` rather than announcing a clean review. A failed mandatory layer always prevents `done` in unattended mode.
+5. If `failed_layers` is non-empty, report which layers failed before announcing results. Mark the run `unverified` and append quality debt; a failed layer does not by itself prevent `done` in unattended mode. If the review skill/config itself cannot be restored, mark the run externally blocked.
 
 6. If zero entries remain after triage (all rejected or none raised): state "✅ Clean review — all layers passed." (Step 3 already warned if any review layers failed via `failed_layers`.)
 

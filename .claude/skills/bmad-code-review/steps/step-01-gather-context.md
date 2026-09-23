@@ -10,6 +10,8 @@ action_policy: '' # set at runtime: autofix or interactive
 unattended: false # set at runtime by an explicit automation contract
 receipt_file: '' # set at runtime for unattended runs
 test_command: '' # set at runtime for unattended runs
+quality_debt_file: '' # set at runtime for unattended runs
+no_code_change: false # set at runtime when B confirmed an empty story-local diff
 sprint_status: '' # set at runtime for unattended runs
 ---
 
@@ -23,12 +25,12 @@ sprint_status: '' # set at runtime for unattended runs
 
 ## INSTRUCTIONS
 
-0. **Resolve an explicit automation contract first.** If the invocation supplies `unattended: true`, `story_key`, `spec_file`, `review_mode`, `diff_file`, `review_depth`, `risk_reasons`, `action_policy`, `receipt_file`, `test_command`, and `sprint_status`, set all runtime fields from that contract and skip the interactive target-selection cascade below.
+0. **Resolve an explicit automation contract first.** If the invocation supplies `unattended: true`, `story_key`, `spec_file`, `review_mode`, `diff_file`, `review_depth`, `risk_reasons`, `action_policy`, `completion_policy`, `quality_policy`, `safety_policy`, `receipt_file`, `test_command`, `quality_debt_file`, `no_code_change`, `repair_stage`, `repair_attempt`, and `sprint_status`, set all runtime fields from that contract and skip the interactive target-selection cascade below.
    - `review_depth` must be one of `lite`, `standard`, or `deep`; unknown values are a structured failure.
    - `action_policy=autofix` is the only unattended action policy. Any other value is a structured failure.
    - `risk_reasons` must be retained verbatim in the review receipt. If the diff proves a higher-risk condition than the supplied depth, upgrade to `deep` and record the conflict; never downgrade.
    - `review_mode` must be `full` when a readable `spec_file` is supplied and `no-spec` only when the spec path is intentionally empty; a mismatch is a structured failure.
-   - Verify `diff_file` and `spec_file` (when non-empty) exist, are readable, and are absolute paths. Verify `sprint_status` is an absolute readable file and `receipt_file` is an absolute path whose parent can be written. Empty diff, invalid encoding, missing story, or a diff over 3000 lines is a structured failure; do not ask whether to chunk.
+   - Verify `diff_file` and `spec_file` (when non-empty) exist, are readable, and are absolute paths. Verify `sprint_status` is an absolute readable file and `receipt_file` is an absolute path whose parent can be written. An empty diff is accepted only when `no_code_change=true`, in which case skip reviewers and record an `unverified` no-code result; otherwise empty diff, invalid encoding, missing story, or a diff over 3000 lines first enters evidence repair: reload the explicit story-local path, regenerate the diff from the snapshot, or ask the outer orchestrator to rerun B. Do not ask a human whether to chunk.
    - Set `review_mode=full` when `spec_file` is present and readable; otherwise set `review_mode=no-spec`.
    - Load only the context documents declared by the spec. Do not discover a different story, branch, commit, or working-tree diff.
    - Set `claims_file=''` unless the caller explicitly supplies one. Continue directly to Step 2 without presenting the summary checkpoint.

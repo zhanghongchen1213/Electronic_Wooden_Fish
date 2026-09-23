@@ -1,21 +1,22 @@
-build/*
-.vscode
-.cache
-managed_components
-docs/ESPWatch-S3-4G
-docs/hardware/datasheets/
+# ESP-IDF 构建目录与组件管理器下载（idf.py 可重建）
+build/
+managed_components/
 
-.agents
-.claude
+# menuconfig 改写 sdkconfig 时留下的备份
+# sdkconfig、sdkconfig.defaults、dependencies.lock 继续入库
+sdkconfig.old
 
-# Python 本地缓存与字节码
-__pycache__/
-*.py[cod]
+# 本机 IDE：串口、IDF 绝对路径。根 .gitignore 也会忽略 .vscode/
+.vscode/
+.cache/
 
-# SquareLine Studio — 本地临时与自动备份（不应入库）
+# SquareLine Studio 本地备份、缓存和本机项目信息
+# 不包含 components/ui/generated/project.info，那份导出元数据继续入库
 lvgl-design/squareline_studio/backup/
 lvgl-design/squareline_studio/cache/
 lvgl-design/squareline_studio/project.info
 
-tmp
-docs/hardware_test_records
+
+# Python
+__pycache__/
+*.py[cod]

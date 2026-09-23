@@ -14,6 +14,7 @@
 #include "app_state.h"
 #include "bsp_board.h"
 #include "bsp_resources.h"
+#include "cst9217_bsp.h"
 #include "config_service.h"
 #include "esp_app_desc.h"
 #include "esp_chip_info.h"
@@ -254,6 +255,13 @@ static esp_err_t init_shared_buses(void)
         ESP_LOGW(TAG,
                  "QMI8658C 不可用，六轴能力降级，稳定错误码=%s，错误=0x%x",
                  qmi8658c_bsp_error_code(qmi8658c_bsp_last_status()),
+                 (unsigned)err);
+    }
+    err = cst9217_bsp_init(i2c_access.bus_handle);
+    if (err != ESP_OK)
+    {
+        ESP_LOGW(TAG,
+                 "CST9217 触摸链路不可用，device_touch 生产路径降级，错误=0x%x",
                  (unsigned)err);
     }
     ESP_LOGI(TAG,

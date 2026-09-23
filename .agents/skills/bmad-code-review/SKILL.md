@@ -5,7 +5,7 @@ description: 'Review code changes with several independent reviewers in parallel
 
 # Code Review Workflow
 
-**Goal:** Review code changes adversarially with a caller-selected depth. No noise, no filler, and no automatic completion claim when a mandatory reviewer or verification step failed.
+**Goal:** Review code changes adversarially with a caller-selected depth. No noise, no filler, and no false `clean` claim when a reviewer or verification step failed. In unattended best-effort mode, failed verification is recorded as `unverified` quality debt and may still complete after implementation/build/safety gates close.
 
 ## Automation contract
 
@@ -17,19 +17,29 @@ risk_reasons: <JSON/list of classifier reasons>
 review_mode: full | no-spec
 action_policy: autofix
 unattended: true
+completion_policy: continue_on_quality_failure
+quality_policy: best_effort
+safety_policy: conservative_degrade
+quality_debt_file: <absolute JSON quality debt ledger path>
+no_code_change: true | false
 story_key: <exact sprint-status key>
 spec_file: <absolute story path>
 diff_file: <absolute story-local unified diff>
 receipt_file: <absolute JSON receipt path>
-test_command: <non-empty command recorded by dev-story>
+test_command: <command or empty when no test exists>
 sprint_status: <absolute sprint-status path>
+repair_stage: normal | repairing-review | degraded-complete
+repair_attempt: <non-negative integer>
 ```
 
 When the contract is complete, use those paths and values directly. Do not
 run the interactive target-selection cascade, ask for a spec, ask for a diff,
 wait at a summary checkpoint, or rediscover the working-tree diff. Missing,
-unreadable, empty, or oversized inputs are structured failures in unattended
-mode. Interactive invocations retain the normal human checkpoints.
+unreadable, empty, or oversized inputs first enter evidence repair in
+unattended mode. If the input can be reconstructed from the explicit story,
+receipt, snapshot, or diff paths, repair and rerun it. Only an unavailable
+filesystem/tool or an irrecoverable external input is a terminal failure.
+Interactive invocations retain the normal human checkpoints.
 
 Subagents, when the capability is available, are an important part of this workflow. Use them as directed by the workflow steps.
 Interactive runs may ask once if the host requires explicit permission to launch them; unattended runs already carry that authorization and must not ask.

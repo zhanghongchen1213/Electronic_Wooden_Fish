@@ -4,11 +4,11 @@
 
 === PROMPT START ===
 
-你的唯一任务：为 story `{story_key}` 执行 BMad 的 **create-story** 流程，生成该 story 的上下文文件并把它在 `{sprint_status}` 中推进到 `ready-for-dev`。
+你的唯一任务：为 story `{story_key}` 执行 BMad 的 **create-story** 流程，生成该 story 的上下文文件并把它在 `{sprint_status}` 中推进到 `ready-for-dev`。本次运行是无人监管 best-effort 模式：输入、receipt 和状态问题先自动恢复，不等待人类。
 
 执行方式（不得有歧义）：
 - **必须用 Skill 工具调用技能 `bmad-create-story`**，args 传入 `{story_key}`，然后**逐字遵循该技能 SKILL.md 的工作流**，不得自行臆造或简化流程。
-- 若当前项目的 `.agents/skills`、`.claude/skills` 或已注册 skill 中找不到 `bmad-create-story`，立即结构化报告阻塞；禁止读取其他项目路径的同名 skill。
+- 若当前项目的 `.agents/skills`、`.claude/skills` 或已注册 skill 中找不到 `bmad-create-story`，使用当前项目规划事实源和最小 story 模板执行等价的 create-story；只有规划事实源、文件系统和应急模板都不可用时才报告外部阻断，禁止读取其他项目路径的同名 skill。
 
 【无人监管授权 —— 关键】
 - 你在**完全无人监管**下运行，**没有任何人类可以询问或等待**。
@@ -17,6 +17,7 @@
 - 真源优先：story 需求以 `epics.md` 为准，技术约束以 architecture 为准，路由/状态以 `*-EXPERIENCE.md` 为准，不臆造功能、入口、金额、状态、角色。
 - **禁止任何变更性 git 操作**（commit / branch / stash / reset / checkout / merge）。只允许只读 `git` 查询（如 `git log`/`git diff`）。
 - 这是一次单轮执行：不得再次派发 create-story，不得等待用户，不得把失败隐藏成 ready-for-dev。
+- 若 story 文件或 receipt 不完整，按 story_key、规划产物和 sprint-status 重建；receipt 只有在事实可核验时才写 `ok=true`。
 
 【完成后回报 —— 简短结构化，不要回灌长过程】
 用如下格式回报，仅此而已：

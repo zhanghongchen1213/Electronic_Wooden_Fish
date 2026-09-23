@@ -3,13 +3,13 @@
 # requires-python = ">=3.11"
 # dependencies = ["ruamel.yaml>=0.18"]
 # ///
-"""Deterministic, read-only state helpers for the Epic Autopilot.
+"""Deterministic state and recovery helpers for the Epic Autopilot.
 
 The workflow is model-driven, but these operations are intentionally boring and
-machine-readable: capture a worktree snapshot, derive a story-local diff, and
-validate the sprint-status document before an agent is dispatched.  The helper
-never writes inside the repository except to an explicitly supplied output
-directory or output file.
+machine-readable: capture a worktree snapshot, derive a story-local diff,
+repair mechanically recoverable evidence, and validate the sprint-status
+document before an agent is dispatched.  Writes are limited to explicitly
+supplied output files and recovery backups.
 """
 
 from __future__ import annotations
@@ -30,6 +30,19 @@ ALLOWED_STATUSES = {
     "review",
     "done",
     "blocked",
+}
+
+QUALITY_STATES = {"clean", "degraded", "unverified"}
+TEST_STATES = {"passed", "failed", "missing", "not-run"}
+BUILD_STATES = {"passed", "failed", "not-applicable", "degraded"}
+REVIEW_OUTCOMES = {"clean", "autofixed", "degraded", "unverified", "review", "blocked"}
+REPAIR_STAGES = {
+    "normal",
+    "repairing-implementation",
+    "repairing-build",
+    "repairing-evidence",
+    "repairing-review",
+    "degraded-complete",
 }
 
 HIGH_RISK_PATTERNS = (
@@ -56,6 +69,234 @@ def load_json(path: Path) -> dict:
     if not isinstance(value, dict):
         raise ValueError("receipt root must be a mapping")
     return value
+
+
+def write_json(path: Path, value: dict) -> None:
+    path.parent.mkdir(parents=True, exist_ok=True)
+    path.write_text(json.dumps(value, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
+
+
+def derive_file_list(diff_path: Path) -> list[str]:
+    content = diff_path.read_text(encoding="utf-8")
+    paths, _, _, _ = diff_paths_and_stats(content)
+    return sorted(paths)
+
+
+def repair_receipt(path: Path, phase: str, story_key: str, output: Path, diff_path: Path | None) -> dict:
+    """Repair only mechanically recoverable receipt fields.
+
+    The repaired receipt is deliberately marked ``ok=false`` when evidence is
+    incomplete.  The orchestrator must rerun the affected phase before it can
+    accept the receipt; this command can never manufacture a successful phase.
+    """
+    original = None
+    if path.is_file():
+        original = path.with_name(path.name + ".repair-backup")
+        if not original.exists():
+            shutil.copy2(path, original)
+    try:
+        value = load_json(path) if path.is_file() else {}
+    except (OSError, UnicodeError, json.JSONDecodeError, ValueError):
+        value = {}
+    value["story_key"] = story_key
+    value["phase"] = phase
+    if diff_path and diff_path.is_file():
+        try:
+            derived = derive_file_list(diff_path)
+        except (OSError, UnicodeError):
+            derived = []
+        if derived:
+            value["file_list"] = derived
+            value["diff_file"] = str(diff_path.resolve())
+    if phase == "B":
+        value.setdefault("story_path", "")
+        value.setdefault("test_commands", [])
+        value.setdefault("test_exit_codes", [])
+        value.setdefault("build_attempts", [])
+        value.setdefault("build_exit_codes", [])
+        value.setdefault("build_log_paths", [])
+        value.setdefault("final_build_exit_code", None)
+        value.setdefault("build_recovery", "not-applicable")
+        value.setdefault("change_kind", "runtime")
+        value.setdefault("runtime_behavior_changed", True)
+        value.setdefault("status", "review")
+        value.setdefault("implementation_complete", False)
+    elif phase == "C":
+        value.setdefault("spec_file", "")
+        value.setdefault("review_mode", "full")
+        value.setdefault("review_depth", "deep")
+        value.setdefault("risk_reasons", [])
+        value.setdefault("active_layers", [])
+        value.setdefault("mandatory_layers", [])
+        value.setdefault("completed_layers", [])
+        value.setdefault("failed_layers", [])
+        for field in ("findings", "patches", "deferred", "rejected", "unresolved_high_medium", "unresolved_catastrophic"):
+            value.setdefault(field, 0)
+        value.setdefault("test_command", "")
+        value.setdefault("test_exit_code", None)
+        value.setdefault("outcome", "unverified")
+        value.setdefault("failure_reason", "receipt-repaired-rerun-required")
+        value.setdefault("status", "review")
+    value.setdefault("quality_state", "unverified")
+    value.setdefault("quality_debt", [{"category": "receipt-repaired", "blocking": False}])
+    value["repair_stage"] = "repairing-evidence"
+    value["ok"] = False
+    write_json(output, value)
+    return {
+        "ok": True,
+        "repaired": True,
+        "receipt_file": str(output.resolve()),
+        "backup_file": str(original.resolve()) if original else None,
+        "rerun_required": True,
+    }
+
+
+def _story_status_from_file(path: Path) -> str | None:
+    try:
+        text = path.read_text(encoding="utf-8")
+    except (OSError, UnicodeError):
+        return None
+    match = re.search(r"(?im)^status:\s*['\"]?([a-z-]+)", text)
+    status = match.group(1) if match else None
+    return status if status in ALLOWED_STATUSES else None
+
+
+def _done_receipt_exists(artifacts: Path, key: str) -> bool:
+    """Only trust a story's ``done`` claim when a valid C receipt supports it."""
+    root = artifacts / ".autopilot"
+    candidates = sorted(
+        set(root.glob(f"*/{key}/attempt-*/code-review.json"))
+        | set(root.glob(f"*/{key}/attempt-*/review.json"))
+        | set(root.glob(f"*/{key}/attempt-*/*review*.json"))
+    )
+    for receipt in reversed(candidates):
+        try:
+            value = load_json(receipt)
+        except Exception:
+            continue
+        if (
+            value.get("story_key") == key
+            and value.get("phase") == "C"
+            and value.get("status") == "done"
+            and value.get("ok") is True
+            and value.get("outcome") in {"clean", "autofixed", "degraded", "unverified"}
+            and value.get("unresolved_catastrophic", 0) == 0
+        ):
+            return True
+    return False
+
+
+def repair_status(path: Path, artifacts: Path, epic: str | None = None) -> dict:
+    """Recover a malformed sprint-status from story files and receipts.
+
+    Existing valid statuses win.  Recovered values are conservative and never
+    promote a story to ``done`` without a valid C receipt.
+    """
+    backup = None
+    if path.is_file():
+        backup = path.with_name(path.name + ".repair-backup.yaml")
+        if not backup.exists():
+            shutil.copy2(path, backup)
+    existing: dict = {}
+    try:
+        from ruamel.yaml import YAML
+
+        yaml = YAML(typ="safe")
+        if path.is_file():
+            with path.open("r", encoding="utf-8") as handle:
+                loaded = yaml.load(handle)
+            if isinstance(loaded, dict):
+                existing = loaded
+    except Exception:
+        existing = {}
+
+    development = existing.get("development_status")
+    if not isinstance(development, dict):
+        development = {}
+    recovered = 0
+    stories = sorted(artifacts.glob("*.md"))
+    for story in stories:
+        key = story.stem
+        if not re.match(r"^\d+-\d+-", key):
+            continue
+        if epic and not key.startswith(f"{epic}-"):
+            continue
+        current = development.get(key)
+        if current in ALLOWED_STATUSES:
+            continue
+        status = _story_status_from_file(story)
+        if status == "done" and not _done_receipt_exists(artifacts, key):
+            status = "review"
+        if status is None:
+            attempts = sorted((artifacts / ".autopilot").glob(f"*/{key}/attempt-*/*-story.json"))
+            attempts += sorted((artifacts / ".autopilot").glob(f"*/{key}/attempt-*/code-review.json"))
+            for receipt in reversed(attempts):
+                try:
+                    candidate = load_json(receipt).get("status")
+                except Exception:
+                    candidate = None
+                if candidate in ALLOWED_STATUSES:
+                    status = candidate
+                    break
+        development[key] = status or "backlog"
+        recovered += 1
+
+    # Also repair malformed story entries that have no corresponding markdown
+    # file in the current scan.  Keep epic/retrospective metadata untouched.
+    for key, current in list(development.items()):
+        if not isinstance(key, str) or not re.match(r"^\d+-\d+-", key):
+            continue
+        if current in ALLOWED_STATUSES:
+            continue
+        story = artifacts / f"{key}.md"
+        status = _story_status_from_file(story) if story.is_file() else None
+        if status == "done" and not _done_receipt_exists(artifacts, key):
+            status = "review"
+        if status is None:
+            status = "backlog"
+        development[key] = status
+        recovered += 1
+
+    for key, current in list(development.items()):
+        if current == "contexted":
+            development[key] = "in-progress"
+            recovered += 1
+            continue
+        if not isinstance(key, str) or not re.match(r"^epic-\d+$", key):
+            continue
+        if current in ALLOWED_STATUSES:
+            continue
+        prefix = key.removeprefix("epic-") + "-"
+        story_statuses = [
+            value for story_key, value in development.items()
+            if isinstance(story_key, str) and story_key.startswith(prefix)
+            and re.match(r"^\d+-\d+-", story_key)
+            and value in ALLOWED_STATUSES
+        ]
+        development[key] = "done" if story_statuses and all(value == "done" for value in story_statuses) else (
+            "in-progress" if story_statuses else "backlog"
+        )
+        recovered += 1
+
+    existing["development_status"] = development
+    from ruamel.yaml import YAML
+
+    yaml = YAML()
+    yaml.default_flow_style = False
+    path.parent.mkdir(parents=True, exist_ok=True)
+    with path.open("w", encoding="utf-8") as handle:
+        yaml.dump(existing, handle)
+    return {
+        "ok": True,
+        "recovered_stories": recovered,
+        "status_file": str(path.resolve()),
+        "backup_file": str(backup.resolve()) if backup else None,
+    }
+
+
+def error_fingerprint(*values: str) -> str:
+    normalized = "\n".join(value.strip() for value in values if value and value.strip())
+    return hashlib.sha256(normalized.encode("utf-8")).hexdigest()[:16]
 
 
 def diff_paths_and_stats(content: str) -> tuple[set[str], set[str], int, int]:
@@ -112,6 +353,18 @@ def receipt_test_state(receipt: dict) -> tuple[bool, list[str]]:
     return not reasons, reasons
 
 
+def quality_state(receipt: dict) -> tuple[str, list[str]]:
+    """Return a truthful, non-blocking quality state for a phase receipt."""
+    explicit = receipt.get("quality_state")
+    if isinstance(explicit, str) and explicit in QUALITY_STATES:
+        return explicit, []
+    _, reasons = receipt_test_state(receipt)
+    if reasons:
+        missing = any("缺失" in reason for reason in reasons)
+        return ("unverified" if missing else "degraded"), reasons
+    return "clean", []
+
+
 def classify_risk(diff_path: Path, receipt_path: Path) -> dict:
     if not diff_path.is_file() or not receipt_path.is_file():
         return {
@@ -139,8 +392,8 @@ def classify_risk(diff_path: Path, receipt_path: Path) -> dict:
         if diff_paths != listed_paths:
             return {"ok": False, "review_depth": "deep", "risk_reasons": ["diff 与 File List 不一致"]}
 
-    tests_ok, test_reasons = receipt_test_state(receipt)
-    reasons.extend(test_reasons)
+    _, test_reasons = receipt_test_state(receipt)
+    quality_reasons = list(test_reasons)
     text_for_signals = f"{content}\n" + "\n".join(listed_paths)
     for pattern, reason in HIGH_RISK_PATTERNS:
         if pattern.search(text_for_signals):
@@ -176,27 +429,36 @@ def classify_risk(diff_path: Path, receipt_path: Path) -> dict:
     lite_paths = listed_paths and all(
         Path(path).suffix.lower() in DOC_SUFFIXES
         or Path(path).suffix.lower() in CONFIG_SUFFIXES
-        or any(marker in path.lower() for marker in TEST_MARKERS)
         for path in listed_paths
     )
     lite_eligible = (
         not reasons
-        and tests_ok
         and runtime_changed is False
         and (lite_paths or change_kind in allowed_lite_kinds)
         and len(listed_paths) <= 2
         and changed_lines <= 80
     )
     if lite_eligible:
-        return {"ok": True, "review_depth": "lite", "risk_reasons": ["文档/测试数据/简单配置小变更，运行时行为未变"]}
+        return {
+            "ok": True,
+            "review_depth": "lite",
+            "risk_reasons": ["文档/测试数据/简单配置小变更，运行时行为未变"],
+            "quality_debt_reasons": sorted(set(quality_reasons)),
+        }
     if reasons:
-        return {"ok": True, "review_depth": "deep", "risk_reasons": sorted(set(reasons))}
-    if runtime_changed is False and not lite_paths and change_kind not in allowed_lite_kinds:
+        return {
+            "ok": True,
+            "review_depth": "deep",
+            "risk_reasons": sorted(set(reasons)),
+            "quality_debt_reasons": sorted(set(quality_reasons)),
+        }
+    if runtime_changed is False and not lite_paths and change_kind not in allowed_lite_kinds | {"test"}:
         reasons.append("无法证明变更仅限文档/测试数据/简单配置")
     return {
         "ok": True,
         "review_depth": "standard" if not reasons else "deep",
         "risk_reasons": sorted(set(reasons)) or ["普通业务逻辑变更"],
+        "quality_debt_reasons": sorted(set(quality_reasons)),
     }
 
 
@@ -254,11 +516,14 @@ def validate_receipt(path: Path, phase: str, story_key: str, expected_status: st
     if phase == "A" and status != "ready-for-dev":
         return {"ok": False, "reason": "create-story-status-invalid", "status": status}
     if phase == "B":
-        if not isinstance(receipt["file_list"], list) or not receipt["file_list"]:
+        if not isinstance(receipt["file_list"], list):
             return {"ok": False, "reason": "file-list-invalid"}
-        if not isinstance(receipt["test_commands"], list) or not receipt["test_commands"]:
+        if not receipt["file_list"]:
+            if receipt.get("change_kind") != "none" or receipt.get("implementation_complete") is not True:
+                return {"ok": False, "reason": "file-list-invalid"}
+        if not isinstance(receipt["test_commands"], list):
             return {"ok": False, "reason": "test-commands-invalid"}
-        if not isinstance(receipt["test_exit_codes"], list) or not receipt["test_exit_codes"]:
+        if not isinstance(receipt["test_exit_codes"], list):
             return {"ok": False, "reason": "test-exit-codes-invalid"}
         if any(not isinstance(code, int) or isinstance(code, bool) for code in receipt["test_exit_codes"]):
             return {"ok": False, "reason": "test-exit-codes-invalid"}
@@ -308,7 +573,7 @@ def validate_receipt(path: Path, phase: str, story_key: str, expected_status: st
             not isinstance(final_build_exit_code, int) or isinstance(final_build_exit_code, bool)
         ):
             return {"ok": False, "reason": "final-build-exit-code-invalid"}
-        if receipt["build_recovery"] not in {"resolved", "not-applicable", "blocked"}:
+        if receipt["build_recovery"] not in {"resolved", "not-applicable", "degraded", "blocked"}:
             return {"ok": False, "reason": "build-recovery-invalid"}
         if receipt["build_recovery"] == "not-applicable":
             if build_attempts or build_exit_codes or build_log_paths or final_build_exit_code is not None:
@@ -316,17 +581,31 @@ def validate_receipt(path: Path, phase: str, story_key: str, expected_status: st
         elif receipt["build_recovery"] == "resolved":
             if not build_attempts or final_build_exit_code != 0 or build_exit_codes[-1] != 0:
                 return {"ok": False, "reason": "build-not-resolved"}
+        elif receipt["build_recovery"] == "degraded":
+            if (
+                receipt.get("build_status") != "degraded"
+                or receipt.get("safety_degraded") is not True
+                or not isinstance(receipt.get("disabled_capabilities"), list)
+                or not receipt.get("disabled_capabilities")
+            ):
+                return {"ok": False, "reason": "build-degradation-unsupported"}
         else:
             return {"ok": False, "reason": "build-recovery-blocked"}
-        if requires_embedded_build(receipt["file_list"]) and receipt["build_recovery"] != "resolved":
+        if requires_embedded_build(receipt["file_list"]) and receipt["build_recovery"] == "not-applicable":
             return {"ok": False, "reason": "embedded-build-required"}
+        if "implementation_complete" in receipt and receipt["implementation_complete"] is not True:
+            return {"ok": False, "reason": "implementation-incomplete"}
     if phase == "C":
-        if not isinstance(receipt["spec_file"], str) or not receipt["spec_file"].strip():
+        if not isinstance(receipt["spec_file"], str):
             return {"ok": False, "reason": "spec-file-invalid"}
         if not isinstance(receipt["diff_file"], str) or not receipt["diff_file"].strip():
             return {"ok": False, "reason": "diff-file-invalid"}
         if receipt["review_mode"] not in {"full", "no-spec"}:
             return {"ok": False, "reason": "review-mode-invalid"}
+        if receipt["review_mode"] == "full" and not receipt["spec_file"].strip():
+            return {"ok": False, "reason": "spec-file-invalid"}
+        if receipt["review_mode"] == "no-spec" and receipt["spec_file"].strip():
+            return {"ok": False, "reason": "review-mode-spec-mismatch"}
         if receipt["review_depth"] not in {"lite", "standard", "deep"}:
             return {"ok": False, "reason": "review-depth-invalid"}
         for field in ("active_layers", "mandatory_layers", "completed_layers", "failed_layers", "risk_reasons"):
@@ -335,15 +614,46 @@ def validate_receipt(path: Path, phase: str, story_key: str, expected_status: st
         for field in ("findings", "patches", "deferred", "rejected", "unresolved_high_medium"):
             if not isinstance(receipt[field], int) or isinstance(receipt[field], bool) or receipt[field] < 0:
                 return {"ok": False, "reason": f"{field}-invalid"}
-        if receipt["outcome"] not in {"clean", "autofixed", "review", "blocked"}:
+        if receipt["outcome"] not in REVIEW_OUTCOMES:
             return {"ok": False, "reason": "review-outcome-invalid"}
-        if not isinstance(receipt["test_command"], str) or not receipt["test_command"].strip():
+        if not isinstance(receipt["test_command"], str):
             return {"ok": False, "reason": "test-command-invalid"}
         if receipt["test_exit_code"] is not None and (
             not isinstance(receipt["test_exit_code"], int)
             or isinstance(receipt["test_exit_code"], bool)
         ):
             return {"ok": False, "reason": "test-exit-code-invalid"}
+    optional_quality = {
+        "quality_state": QUALITY_STATES,
+        "test_status": TEST_STATES,
+        "build_status": BUILD_STATES,
+        "repair_stage": REPAIR_STAGES,
+    }
+    for field, allowed in optional_quality.items():
+        if field in receipt and receipt[field] not in allowed:
+            return {"ok": False, "reason": f"{field}-invalid"}
+    if "quality_debt" in receipt and not isinstance(receipt["quality_debt"], list):
+        return {"ok": False, "reason": "quality-debt-invalid"}
+    if "quality_debt_file" in receipt and (
+        not isinstance(receipt["quality_debt_file"], str)
+        or not receipt["quality_debt_file"].strip()
+        or not Path(receipt["quality_debt_file"]).is_absolute()
+    ):
+        return {"ok": False, "reason": "quality-debt-file-invalid"}
+    if "disabled_capabilities" in receipt and not isinstance(receipt["disabled_capabilities"], list):
+        return {"ok": False, "reason": "disabled-capabilities-invalid"}
+    if "safety_degraded" in receipt and not isinstance(receipt["safety_degraded"], bool):
+        return {"ok": False, "reason": "safety-degraded-invalid"}
+    if "unresolved_catastrophic" in receipt and (
+        not isinstance(receipt["unresolved_catastrophic"], int)
+        or isinstance(receipt["unresolved_catastrophic"], bool)
+        or receipt["unresolved_catastrophic"] < 0
+    ):
+        return {"ok": False, "reason": "unresolved-catastrophic-invalid"}
+    if "implementation_complete" in receipt and not isinstance(receipt["implementation_complete"], bool):
+        return {"ok": False, "reason": "implementation-complete-invalid"}
+    if "no_code_change" in receipt and not isinstance(receipt["no_code_change"], bool):
+        return {"ok": False, "reason": "no-code-change-invalid"}
     return {"ok": True, "phase": phase, "status": status, "receipt_file": str(path.resolve())}
 
 
@@ -539,6 +849,21 @@ def main(argv: list[str] | None = None) -> int:
     classify.add_argument("--diff", required=True, type=Path)
     classify.add_argument("--dev-receipt", required=True, type=Path)
 
+    repair_receipt_parser = subparsers.add_parser("repair-receipt")
+    repair_receipt_parser.add_argument("--file", required=True, type=Path)
+    repair_receipt_parser.add_argument("--phase", required=True, choices=sorted(RECEIPT_FIELDS))
+    repair_receipt_parser.add_argument("--story-key", required=True)
+    repair_receipt_parser.add_argument("--output", required=True, type=Path)
+    repair_receipt_parser.add_argument("--diff", type=Path)
+
+    repair_status_parser = subparsers.add_parser("repair-status")
+    repair_status_parser.add_argument("--file", required=True, type=Path)
+    repair_status_parser.add_argument("--implementation-artifacts", required=True, type=Path)
+    repair_status_parser.add_argument("--epic")
+
+    fingerprint = subparsers.add_parser("fingerprint")
+    fingerprint.add_argument("values", nargs="*")
+
     receipt = subparsers.add_parser("validate-receipt")
     receipt.add_argument("--file", required=True, type=Path)
     receipt.add_argument("--phase", required=True, choices=sorted(RECEIPT_FIELDS))
@@ -566,6 +891,20 @@ def main(argv: list[str] | None = None) -> int:
         if args.command == "classify-risk":
             result = classify_risk(args.diff.resolve(), args.dev_receipt.resolve())
             return emit(result, 0 if result["ok"] else 1)
+        if args.command == "repair-receipt":
+            result = repair_receipt(
+                args.file.resolve(), args.phase, args.story_key, args.output.resolve(),
+                args.diff.resolve() if args.diff else None,
+            )
+            return emit(result)
+        if args.command == "repair-status":
+            return emit(
+                repair_status(
+                    args.file.resolve(), args.implementation_artifacts.resolve(), args.epic
+                )
+            )
+        if args.command == "fingerprint":
+            return emit({"ok": True, "fingerprint": error_fingerprint(*args.values)})
         if args.command == "validate-receipt":
             result = validate_receipt(
                 args.file.resolve(), args.phase, args.story_key, args.expected_status

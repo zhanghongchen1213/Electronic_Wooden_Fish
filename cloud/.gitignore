@@ -1,0 +1,18 @@
+# 本地后端日志与 PID。根 .gitignore 的 logs/* 只匹配仓库根，不匹配 cloud/logs
+logs/
+
+# app.data-dir=./data 的 JSON 运行时数据，不入库
+# identity.json、progress.json、commands.json、device_state.json、daily_stats.json
+backend/data/
+
+# JVM 崩溃转储
+hs_err_pid*
+replay_pid*
+
+# 启动脚本写入的本机前端覆盖。已跟踪的 .env / .env.development 继续入库
+frontend/.env.local
+frontend/.env.*.local
+
+# uni-app / HBuilderX。unpackage/dist 已被根 dist/ 盖住，cache 与 debug 没有
+frontend/unpackage/
+frontend/.hbuilderx/

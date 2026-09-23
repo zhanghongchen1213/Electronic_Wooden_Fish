@@ -19,26 +19,35 @@ not execute any HALT, numbered choice, or next-step prompt below:
 
 1. Write the normalized findings to the story file and deferred-work file as
    usual, but keep `unresolved` findings unchecked and explicit.
+   If `quality_debt_file` is set, write a machine-readable JSON ledger there;
+   append rather than overwrite earlier attempts, and mark ordinary findings
+   and missing evidence as `blocking=false`.
 2. Apply only `patch` findings that triage marked unambiguous and compatible;
    do not edit the spec to make a finding disappear.
-3. Run the supplied `test_command` after patches. An empty command, missing
-   command receipt, or non-zero exit is `verification-failed`.
+3. Run the supplied `test_command` after patches when it exists. An empty
+   command, missing command receipt, or non-zero exit is recorded as
+   `test_status=missing|failed`; it is quality debt, not a human checkpoint.
 4. Compute the terminal outcome:
-   - `clean` or `autofixed`: mandatory layers succeeded, no unresolved
-     HIGH/MEDIUM findings remain, tests passed, and the receipt is complete.
-   - `review`: unresolved findings remain but none are verified HIGH/MEDIUM;
-     keep the sprint status at `review` and let the outer orchestrator own the
-     single retry.
-   - `blocked`: a mandatory layer failed, tests failed, receipt is incomplete,
-     or an unresolved HIGH/MEDIUM finding remains; set a structured
-     `failure_reason` such as `mandatory-review-failed`, `verification-failed`,
-     `receipt-incomplete`, or `unresolved-high-medium`.
-5. Only `clean` or `autofixed` may update the story and sprint status to
-   `done`. Never convert a failed or incomplete review into `done`.
+   - `clean` or `autofixed`: all active layers completed, no quality debt
+     remains, tests passed, and the receipt is complete.
+   - `degraded`: patches were applied or quality evidence is incomplete; all
+     verified dangerous paths were fixed or quarantined, and the receipt lists
+     the debt and disabled capabilities.
+   - `unverified`: one or more layers or tests could not run; no dangerous
+     path was verified as open, and the receipt lists the missing evidence.
+   - `review`: implementation or evidence repair is still required; the outer
+     orchestrator chooses the next repair stage without asking a user.
+   - `blocked`: only an external capability is unavailable or a verified
+     catastrophic path cannot be fixed or quarantined.
+5. `clean`, `autofixed`, `degraded`, and `unverified` may update the story and
+   sprint status to `done` when implementation/build/scope/receipt gates pass.
+   Never claim that failed or missing tests passed.
 6. Write `{receipt_file}` when provided with `story_key`, `spec_file`,
    `diff_file`, `review_mode`, `review_depth`, `risk_reasons`, active and mandatory layers,
-   failed layers, finding counts, patch/defer/rejected/unresolved counts, test
-   exit status, `failure_reason`, and the terminal outcome.
+   failed layers, finding counts, patch/defer/rejected/unresolved counts,
+   `unresolved_catastrophic`, `quality_state`, `quality_debt`,
+   `safety_degraded`, `disabled_capabilities`, test exit status,
+   `failure_reason`, `no_code_change`, and the terminal outcome.
 7. Return a short structured summary and end the child. Do not start another
    review pass; retry is controlled by `bmad-epic-autopilot`.
 
@@ -46,8 +55,8 @@ not execute any HALT, numbered choice, or next-step prompt below:
 
 If zero findings remain after triage (all rejected or none raised), this is a
 clean result only when `failed_layers` is empty and all mandatory reviewers
-completed. Otherwise use the unattended failure rules above or report an
-incomplete interactive review.
+completed. Otherwise use `unverified` in unattended mode and record the
+missing evidence; do not manufacture a clean result.
 
 ### 2. Write findings to the story file
 
@@ -121,9 +130,9 @@ Skip this section if `spec_file` is not set.
 
 #### Determine new status based on review outcome
 
-- If all `decision-needed` and `patch` findings were resolved (fixed or rejected), all mandatory layers succeeded, verification passed, and no unresolved `high`/`medium` findings remain: set `new_status` = `done`. Update the story file Status section to `done`.
-- If review findings remain unresolved but no unresolved high/medium finding exists: set `new_status` = `review`. Review is a review-stage checkpoint; do not send it back to development automatically.
-- If a mandatory layer failed, verification failed, or an unresolved high/medium finding remains: set `new_status` = `review` and report a blocked review outcome. Never mark this case `done`.
+- If implementation/build/scope/receipt gates pass and no verified catastrophic path remains open: set `new_status` = `done`. The outcome may be `clean`, `autofixed`, `degraded`, or `unverified`; update the story Status section to `done` and persist quality debt.
+- If implementation or evidence repair is still required: set `new_status` = `review`; the unattended outer orchestrator chooses the next repair stage without human input.
+- A failed layer, failed test, ordinary unresolved high/medium finding, or missing verification alone is not a reason to keep the story at `review`.
 
 Save the story file.
 

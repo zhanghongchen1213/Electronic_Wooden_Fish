@@ -114,3 +114,11 @@
 - `identity.json` 文件大小未设上限；需结合 JSON 持久化基线定义文件大小策略。
 - OPTIONS 预检请求未进入公开白名单；本 Story 未建立 CORS/浏览器预检策略，需由 frontend/API 部署契约裁定。
 - `EnvelopeContractTest` 删除 405/Allow 与 ERROR 日志断言；恢复需设计携带有效 access token 的 405 场景。
+
+## Deferred from: code review of 2-1-统一有效敲击队列与输入闸门.md (2026-09-23)
+
+- 主机回归绕过真实 `state_service_run()` owner/队列循环，直接写入 owner 原子变量并调用静态 apply；需增加可控停止的真实任务循环验证，确认 gate 更新能在固件运行路径中应用。
+- `state_service_publish_tap_gate()` 的有界队列满/超时行为没有测试证据；需在不消费 state queue 的条件下验证稳定失败原因与旧快照保持。
+- 统一 tap service 的 1–20 次突发且无消费者的运行时背压没有覆盖；现有用例每次提交后立即消费，需补充第 17–20 次输入的稳定 `queue_full` 与顺序证据。
+- `tap_input_service_submit()` 未初始化分支未填充稳定 typed 原因；该问题不在本次 story-local diff 改动面，后续与服务生命周期契约一并收敛。
+- 首次 TAP_GATE 更新前的启动窗口语义未冻结；需裁定是否要求首个 owner 快照确认后才允许正式输入。

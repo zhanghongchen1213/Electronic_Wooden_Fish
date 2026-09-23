@@ -1,10 +1,10 @@
 # 子 Agent 提示词模板 · 阶段 B（dev-story）
 
-> 主 Agent 用法：用 Agent 工具起一个**全新、无历史上下文的 general-purpose** 子 Agent，把下面 `=== PROMPT START ===` 到 `=== PROMPT END ===` 之间的全文**原样**作为 prompt，仅替换 `{story_key}`、`{story_path}`、`{sprint_status}`、`{receipt_file}`、`{baseline_snapshot}`。不要增删改写其余内容。
+> 主 Agent 用法：用 Agent 工具起一个**全新、无历史上下文的 general-purpose** 子 Agent，把下面 `=== PROMPT START ===` 到 `=== PROMPT END ===` 之间的全文**原样**作为 prompt，仅替换 `{story_key}`、`{story_path}`、`{sprint_status}`、`{receipt_file}`、`{baseline_snapshot}`、`{quality_debt_file}`、`{repair_stage}`、`{repair_attempt}`。不要增删改写其余内容。
 
 === PROMPT START ===
 
-你的唯一任务：对 story `{story_key}`（文件 `{story_path}`）执行 BMad 的 **dev-story** 流程，按其 Tasks/Subtasks 实现代码与测试，并把它在 `{sprint_status}` 中推进到 `review`。
+你的唯一任务：对 story `{story_key}`（文件 `{story_path}`）执行 BMad 的 **dev-story** 流程，按其 Tasks/Subtasks 实现代码与测试，并把它在 `{sprint_status}` 中推进到 `review`。本次由 Epic Autopilot 以无人监管 best-effort 模式调用：实现必须闭合；构建先自动修复，仍无法完成时关闭受影响的新能力并安全降级；测试可以缺失或失败，但必须如实记录并继续推进，不得等待人类。
 
 开发前基线快照位于 `{baseline_snapshot}`。不要修改快照；它只用于外层编排器在开发完成后生成 story-local diff。
 
@@ -19,11 +19,11 @@
 3. 对其他非零退出码，定位日志中最早的真实 `error:`、`fatal error:`、`undefined reference` 或第一个失败命令，先修复该根因，再重跑完整构建；不能只摘录最后的 `ninja failed`。
 4. 每次修复后使用从 1 开始递增的构建尝试编号和新日志路径重新构建，并再次核验生成产物。不得执行 `flash`、`app-flash` 或 `monitor` 代替构建验证。
 
-构建诊断最多允许 5 次尝试；每次必须有新的证据或实际修复，同一错误没有新证据时不得空转。5 次后仍无法成功才结构化报告阻塞。只有最终构建退出码为 0、产物核验通过且其他测试通过，才可把 sprint status 推进到 `review`。
+构建诊断最多允许 5 次尝试；每次必须有新的证据或实际修复，同一错误没有新证据时不得空转。5 次后仍无法成功时，优先关闭受影响的新能力并记录 `safety_degraded=true`、`disabled_capabilities`、`degradation_reason` 和验证证据；只有无法安全隔离时才报告外部阻断。构建成功或已安全降级后才可把 sprint status 推进到 `review`。测试缺失或失败不阻断状态推进，必须写入 `test_status`、`quality_state` 和 `quality_debt`；不得声称测试通过。
 
 执行方式（不得有歧义）：
 - **必须用 Skill 工具调用技能 `bmad-dev-story`**，args 传入 `{story_path}`（story 文件绝对路径），然后**逐字遵循该技能 SKILL.md 的工作流**（RED-GREEN-REFACTOR、逐任务验证、Definition of Done），不得自行臆造或简化流程。
-- 若当前项目的 `.agents/skills`、`.claude/skills` 或已注册 skill 中找不到 `bmad-dev-story`，立即结构化报告阻塞；禁止读取其他项目路径的同名 skill。
+- 若当前项目的 `.agents/skills`、`.claude/skills` 或已注册 skill 中找不到 `bmad-dev-story`，使用本 prompt 的最小 dev-story 应急执行器完成 story；只有当前项目事实源和应急执行器都不可用时才报告外部阻断，禁止读取其他项目路径的同名 skill。
 
 【无人监管授权 —— 关键】
 - 你在**完全无人监管**下运行，**没有任何人类可以询问或等待**。
@@ -32,7 +32,8 @@
 - 严格遵守当前项目的 `CLAUDE.md`、`AGENTS.md`，以及存在时的 `_bmad-output/implementation-artifacts/pitfall-avoidance.md`。只使用本项目约束，不引入其他项目的领域规则。
 - 实现必须精确映射到 story 的 Tasks/Subtasks，不做规范外的额外功能；不破坏既有测试（跑全量回归）。
 - **禁止任何变更性 git 操作**（commit / branch / stash / reset / checkout / merge）。只允许只读 `git` 查询。完成的代码改动**留在当前分支工作区即可，不要提交**。
-- 这是一次单轮执行：不得再次派发 dev-story，不得自行进入 code-review，不得隐藏测试失败；若确实无法完成，保持当前状态并精确报告阻塞。
+- 这是一次单轮执行：不得再次派发 dev-story，不得自行进入 code-review，不得隐藏测试失败；若本轮实现仍不完整，记录 `implementation_complete=false`、错误指纹和下一恢复阶段，让外层派发 focused repair，不得等待人类。
+- 自动恢复上下文：当实现任务未完成、receipt 不完整或构建失败时，记录 `repair_stage` 和错误指纹，按外层传入的恢复阶段继续修复。不得因为测试失败、没有测试、lint 失败或验证缺口而 HALT；这些都进入质量债务。
 
 【file_list 口径 —— 硬性】
 `file_list` 与回报中的 File List 必须与本 story 的 story-local diff 的 changed paths **完全同一集合**，因此只列本 story 改动的、会被 git 看见的实现文件。以下两类**不得列入**：
@@ -40,7 +41,7 @@
 - story 文件本身（`{story_path}`）与 `{sprint_status}` —— 外层 diff 会显式 `--exclude` 它们；
 - 任何被 `.gitignore` 忽略的路径（用 `git check-ignore -v <path>` 判定），例如 `docs/embedded/build_records/` 下的构建记录 —— 外层 diff 基于 `git ls-files -co --exclude-standard` 生成，看不见被忽略的文件；构建证据请在 receipt 的 `build_log_paths` 字段中引用，不要放进 `file_list`。
 
-两个集合一旦不等，code-review 前置的 `classify-risk` 会以"diff 与 File List 不一致"返回 `ok:false`，C 阶段被阻断。
+两个集合不等时，外层先用 story-local diff 机械重建 File List，并把修复动作写入 evidence receipt；只有 diff helper、工作树或文件系统本身不可用时才阻断 C。
 
 【完成后回报 —— 简短结构化，不要回灌长过程】
 用如下格式回报，仅此而已：
@@ -52,9 +53,9 @@
 - 测试退出码：<每个命令的整数退出码>
 - 构建尝试：<每次 attempt 的编号、日志绝对路径、退出码、最早错误/环境诊断与修复；非 ESP-IDF story 填 []>
 - 构建最终退出码：<整数或 null；非 ESP-IDF story 填 null>
-- 构建恢复：<resolved | not-applicable | blocked；只有最终构建成功才可为 resolved>
+- 构建恢复：<resolved | not-applicable | degraded | blocked；degraded 必须同时写入 safety_degraded、disabled_capabilities、degradation_reason 和 verification_evidence>
 - receipt_file：{receipt_file}
-- receipt：<写入 JSON；至少包含 story_key、story_path、phase=B、file_list、test_commands、test_exit_codes、change_kind（docs/comments/format/test-data/simple-config/constant/runtime/ui/service/test）、runtime_behavior_changed、build_attempts、build_exit_codes、build_log_paths、final_build_exit_code、build_recovery、status、ok=true/false>
+- receipt：<写入 JSON；至少包含 story_key、story_path、phase=B、file_list、test_commands、test_exit_codes、test_status（passed|failed|missing|not-run）、quality_state（clean|degraded|unverified）、quality_debt、quality_debt_file={quality_debt_file}、implementation_complete、repair_stage、change_kind（none/docs/comments/format/test-data/simple-config/constant/runtime/ui/service/test）、runtime_behavior_changed、build_attempts、build_exit_codes、build_log_paths、final_build_exit_code、build_recovery、build_status、safety_degraded、disabled_capabilities、degradation_reason、verification_evidence、status、ok=true/false>。若确认没有代码变更，使用 `file_list=[]`、`change_kind=none`、`implementation_complete=true`，并明确记录 `no_code_change=true`。
 - 阻塞：<无 / 有：精确描述是什么阻塞、卡在哪个任务>
 
 === PROMPT END ===

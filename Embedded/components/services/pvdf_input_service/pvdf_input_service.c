@@ -49,7 +49,6 @@ static bool s_isr_registered;
 
 static ewf_pvdf_confirm_policy_t s_policy;
 static pvdf_input_service_snapshot_t s_snapshot;
-static uint32_t s_candidate_sequence;
 
 static void pvdf_input_service_wake_isr(void *context);
 static void publish_snapshot(const pvdf_input_service_snapshot_t *snapshot);
@@ -141,7 +140,6 @@ esp_err_t pvdf_input_service_run(void)
     }
 
     memset(&s_snapshot, 0, sizeof(s_snapshot));
-    s_candidate_sequence = 0U;
     s_snapshot.last_kind = EWF_PVDF_EVENT_NONE;
     ewf_pvdf_confirm_policy_reset(&s_policy);
 
@@ -390,7 +388,7 @@ static void publish_terminal(const ewf_pvdf_event_t *event, uint32_t now_ms)
     {
         const ewf_tap_event_t tap = {
             .source = EWF_TAP_SOURCE_PHYSICAL_PVDF,
-            .sequence = ++s_candidate_sequence,
+            .sequence = tap_input_service_next_sequence(),
             .at_ms = event->at_ms,
             .candidate_confirmed = true,
             .screen_on = true,
@@ -420,7 +418,7 @@ static void publish_terminal(const ewf_pvdf_event_t *event, uint32_t now_ms)
     /* 候选失败也交给统一 gate 留下 typed 拒绝证据，绝不进入正式有效事件。 */
     const ewf_tap_event_t rejected = {
         .source = EWF_TAP_SOURCE_PHYSICAL_PVDF,
-        .sequence = ++s_candidate_sequence,
+        .sequence = tap_input_service_next_sequence(),
         .at_ms = event->at_ms,
         .candidate_confirmed = false,
         .screen_on = true,

@@ -272,6 +272,14 @@ esp_err_t state_service_publish_tap_gate(
     TickType_t timeout_ticks);
 
 /**
+ * @brief 由完成/故障状态 owner 发布最新敲击 gate 事实
+ * @details owner 不直接写 watch_state；该入口分配单调序号并通过 state_task 应用。
+ */
+esp_err_t state_service_update_tap_gate_owner(bool completed,
+                                              bool fault_locked,
+                                              TickType_t timeout_ticks);
+
+/**
  * @brief 读取统一敲击 gate 所需的状态服务只读快照
  * @details 调用方只能取得按值复制的事实快照，不能把自造状态传入敲击服务。
  * @param service_ready 输出 state_task 与状态快照是否可用

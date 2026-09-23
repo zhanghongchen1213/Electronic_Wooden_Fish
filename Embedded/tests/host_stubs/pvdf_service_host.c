@@ -17,5 +17,4 @@ void host_pvdf_terminal(ewf_pvdf_event_kind_t kind, uint32_t at_ms)
 
 void host_pvdf_reset_sequence(void)
 {
-    s_candidate_sequence = 0U;
 }

@@ -21,6 +21,8 @@ void host_publish_error(esp_err_t error);
 void host_fail_next_send(void);
 uint32_t host_published_count(void);
 uint32_t host_published_sequence(uint32_t index);
+void host_cst9217_set_point(uint16_t x, uint16_t y, bool pressed);
+void host_cst9217_interrupt(void);
 
 static uint32_t s_state_sequence;
 static void update_gate(bool completed, bool fault_locked)
@@ -134,6 +136,16 @@ static void test_pvdf_transfer_and_diagnostics(void)
     assert(snapshot().last_reason == EWF_TAP_REASON_CANDIDATE_REJECTED);
     assert(snapshot().queue_depth == 0U && host_published_count() == 1U);
 }
+
+static void test_device_touch_production_bridge(void)
+{
+    reset_services();
+    host_cst9217_set_point(205U, 250U, true);
+    host_cst9217_interrupt();
+    consume();
+    assert(host_published_count() == 1U);
+    assert(snapshot().by_source[EWF_TAP_SOURCE_DEVICE_TOUCH].accepted_count == 1U);
+}
 static void test_three_sources_backpressure_and_downstream(void)
 {
     reset_services();
@@ -169,6 +181,7 @@ int main(void)
     test_state_owner_and_producer_gates();
     test_consumer_second_gate();
     test_pvdf_transfer_and_diagnostics();
+    test_device_touch_production_bridge();
     test_three_sources_backpressure_and_downstream();
     assert(tap_input_service_deinit_contracts() == ESP_OK);
     assert(pvdf_input_service_deinit_contracts() == ESP_OK);

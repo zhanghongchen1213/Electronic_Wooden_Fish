@@ -57,6 +57,11 @@ esp_err_t tap_input_service_submit_device_touch(const ewf_tap_event_t *event,
 esp_err_t tap_input_service_submit_automatic_tap(const ewf_tap_event_t *event,
                                                  TickType_t timeout_ticks,
                                                  ewf_tap_decision_t *decision);
+/**
+ * @brief 为设备生产者分配统一单调序号
+ * @details PVDF、CST9217 触摸和 BOOT0 自动敲击共享同一个序号空间，避免跨来源去重冲突。
+ */
+uint32_t tap_input_service_next_sequence(void);
 esp_err_t tap_input_service_snapshot(ewf_tap_input_snapshot_t *snapshot);
 QueueHandle_t tap_input_service_queue(void);
 

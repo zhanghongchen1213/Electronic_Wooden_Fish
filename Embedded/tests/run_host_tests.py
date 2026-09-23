@@ -155,6 +155,7 @@ def run_tap_runtime_host_test() -> int:
                 str(TESTS_DIR / "host_stubs/host_platform.c"),
                 str(TESTS_DIR / "host_stubs/state_service_host.c"),
                 str(TESTS_DIR / "host_stubs/pvdf_service_host.c"),
+                str(TESTS_DIR / "host_stubs/cst9217_bsp_host.c"),
                 str(EMBEDDED_DIR / "components/app_state/watch_state.c"),
                 str(EMBEDDED_DIR / "components/services/tap_input_service/tap_input_service.c"),
                 str(EMBEDDED_DIR / "components/services/pvdf_input_service/pvdf_confirm_policy.c"),
