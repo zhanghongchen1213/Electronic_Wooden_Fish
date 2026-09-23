@@ -51,8 +51,8 @@
 处置：未继续派发后续 story，未等待人类，未将未闭合审查标为 done。
 ```
 
-`review` 未闭合属于 C 阶段失败；最多重试一次，第二次仍未满足 mandatory
-review、测试和 receipt 门禁时进入本分支，不回退到 dev-story。
+`review` 未闭合属于 C 阶段失败；普通失败最多重试一次，第二次仍未满足 mandatory
+review、测试和 receipt 门禁时进入本分支，不回退到 dev-story。若子 Agent 在真正启动前明确因模型容量错误退出，且没有任何状态、story、代码或 receipt 变化，则该次不计入尝试次数，应继续派发全新 child；一旦出现状态或文件变化，则按普通失败处理。
 
 ## END
 

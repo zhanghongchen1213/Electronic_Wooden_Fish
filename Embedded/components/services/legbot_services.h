@@ -34,6 +34,7 @@ extern "C"
         LEGBOT_SERVICE_STATE,     /**< 状态聚合服务。 */
         LEGBOT_SERVICE_SELFTEST,  /**< 自检服务，按需启动。 */
         LEGBOT_SERVICE_PVDF,      /**< PVDF 候选有效输入边界服务。 */
+        LEGBOT_SERVICE_TAP_INPUT, /**< 三类来源统一有效敲击队列服务。 */
         LEGBOT_SERVICE_COUNT      /**< 服务数量。 */
     } legbot_service_id_t;
 

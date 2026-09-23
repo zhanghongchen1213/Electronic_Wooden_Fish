@@ -92,3 +92,25 @@
 - 契约门禁无法发现同一 HTTP 状态类内的码值改义交换：`cloud/backend/src/test/java/top/zhcmqtt/ewf/backend/ErrorCodeContractTest.java:51-64` 经 `registeredCodeOf` 按**码值**反查后断言 `http_status == code/100`，注册表的 `condition` 从未与 Java 常量名绑定。实测把 `ErrorCode.DEVICE_RESET_CONFLICT`(20003) 与 `ErrorCode.QUEUE_FULL`(20004) 的常量值互换后 `mvn test` 仍 18/18 绿、退出码 0——交换后任何按名取 `QUEUE_FULL` 的分支都会回 20003（被客户端读作「设备重置冲突」）。机械绑定常量名与 `condition` 正是 Task 4.2 明令不得引入的「第三真源」，故不就地收敛；码值真正被端点引用时（Epic 5 的同步分支）语义会自然钉住。
 - 新增协议级码 `40500`/`41500` 未同步 `docs/backend/经验-后端REST信封与微信登录.md`：该文档 `code 区间表`（第 41 行起）只列 `400xx`/`401xx`/`403xx`/`404xx`/`409xx`/`410xx`/`500xx`，无 `405xx`/`415xx`；`GlobalExceptionHandler 的映射`（第 49 行起）无 405/415/406/缺参任何一行，且把 `40002 PARAM_MISSING`、`40003 PARAM_TYPE_MISMATCH` 留给缺参与类型不匹配，而本实现把这两类与校验失败一并回 `40000`。该文档是 story Dev Notes 列出的「迁移经验（实现参考，非产品事实）」来源，4.4/Epic 5 若照其映射表实现协议级错误会得出与本实现不一致的码。修法是改 `docs/**`，而 spec 的「明确不触碰」列表含 `docs/**`。
 - `Accept` 头不含 JSON 时错误分支的信封不可投递：真机（`saas.jar` + `local` profile）实测 `Accept: application/xml` 下 `GET /api/v1/not-a-real-endpoint` → `404` + `Content-Length: 0`、`POST /api/v1/health` → `405` + `Allow: GET` + 空 body，状态码正确但信封丢失，日志出现 `Failure in @ExceptionHandler …handleNotFound`；隔离副本中业务错误分支（`handleBusinessException`）在同样 `Accept` 下外抛为 `jakarta.servlet.ServletException`（真机即 500）。该缺口与 406 的裁定同源——客户端已声明不接受 JSON，此时任何 JSON 信封在协议上都不可投递——故与 406 一并保持现状；强制投递需改内容协商策略（固定错误响应的 `Content-Type`），属设计决定。
+## Deferred from: code review of 2-1-统一有效敲击队列与输入闸门 (2026-09-22)
+
+- 三类来源没有实际生产者接入统一投递 API：`submit_physical_pvdf`、`submit_device_touch`、`submit_automatic_tap` 仅有声明/实现，没有 PVDF、触摸或自动敲击调用点；统一队列运行时不会收到业务事件。该项为当前审查的 unresolved HIGH/MEDIUM，需补齐接入并重新审查。
+
+## Deferred from: code review of 4-4-实现微信登录与单设备身份.md (2026-09-22)
+
+- 跨 JVM 并发下 `IdentityStore` 的 `ATOMIC_MOVE` 与目标文件已存在时的 `CREATE_NEW` 语义未锁定；架构当前限定单实例单进程，本 Story 不扩展跨进程锁协议。
+- `JwtTokenProvider` 的极端 `expirationMillis` long 溢出边界未防护；当前部署配置为固定正值，亚秒与 long 溢出不属于本 Story 的日常可达配置。
+- `expiresIn` 对小于 1 秒生命周期的舍入未定义；产品 JWT 生命周期契约以秒级配置为主，亚秒配置需另行裁定。
+- `EnvelopeContractTest` 为适配受保护路径优先级删除了原 405/Allow 与 ERROR 日志断言；恢复需单独设计带有效 access token 的 405 测试，不在本轮扩大测试面。
+
+## Deferred from: code review of 4-4-实现微信登录与单设备身份.md (attempt-2, 2026-09-22)
+
+- `EnvelopeContractTest` 为适配受保护路径优先级删除了原 405/Allow 与 ERROR 日志断言；恢复需单独设计带有效 access token 的 405 场景，不在本轮扩大测试面。
+
+## Deferred from: code review of 4-4-实现微信登录与单设备身份.md (attempt-3, 2026-09-22)
+
+- 微信上游响应体大小未设上限；当前契约未定义统一 payload 限额，需先裁定阈值后再增加保护。
+- Authorization access token 长度未设上限；当前仅 refresh 请求有 4096 字符上限，access header 限额需与网关/部署约束统一。
+- `identity.json` 文件大小未设上限；需结合 JSON 持久化基线定义文件大小策略。
+- OPTIONS 预检请求未进入公开白名单；本 Story 未建立 CORS/浏览器预检策略，需由 frontend/API 部署契约裁定。
+- `EnvelopeContractTest` 删除 405/Allow 与 ERROR 日志断言；恢复需设计携带有效 access token 的 405 场景。

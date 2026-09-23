@@ -87,6 +87,7 @@ sprint_status: {sprint_status}
 - failure_reason：<null 或 mandatory-review-failed / verification-failed / unresolved-high-medium / receipt-incomplete>
 - phase：C
 - ok：<true 表示 receipt 完整；即使 outcome=blocked 也必须为 true；false 仅表示无法写完整 receipt>
+- status：<done | review | blocked；必须写入 JSON receipt 的 `status` 字段>
 - 新状态：<done | review | blocked>
 - 阻塞：<无 / 精确描述>
 

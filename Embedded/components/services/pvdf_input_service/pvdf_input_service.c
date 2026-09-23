@@ -13,11 +13,11 @@
 #include <string.h>
 
 #include "esp_log.h"
-#include "event_bus.h"
 #include "freertos/queue.h"
 #include "freertos/semphr.h"
 #include "freertos/task.h"
 #include "pvdf_bsp.h"
+#include "tap_input_service.h"
 
 static const char *TAG = "SVC_PVDF";
 
@@ -49,6 +49,7 @@ static bool s_isr_registered;
 
 static ewf_pvdf_confirm_policy_t s_policy;
 static pvdf_input_service_snapshot_t s_snapshot;
+static uint32_t s_candidate_sequence;
 
 static void pvdf_input_service_wake_isr(void *context);
 static void publish_snapshot(const pvdf_input_service_snapshot_t *snapshot);
@@ -140,6 +141,7 @@ esp_err_t pvdf_input_service_run(void)
     }
 
     memset(&s_snapshot, 0, sizeof(s_snapshot));
+    s_candidate_sequence = 0U;
     s_snapshot.last_kind = EWF_PVDF_EVENT_NONE;
     ewf_pvdf_confirm_policy_reset(&s_policy);
 
@@ -386,18 +388,24 @@ static void publish_terminal(const ewf_pvdf_event_t *event, uint32_t now_ms)
 
     if (event->kind == EWF_PVDF_EVENT_CANDIDATE_TAP)
     {
-        const legbot_event_t candidate = {
-            .source = LEGBOT_EVENT_SOURCE_PVDF,
-            .type = LEGBOT_EVENT_TYPE_SIGNAL,
-            .code = EWF_PVDF_EVENT_CANDIDATE,
-            .value = (uint32_t)event->margin_millivolt,
+        const ewf_tap_event_t tap = {
+            .source = EWF_TAP_SOURCE_PHYSICAL_PVDF,
+            .sequence = ++s_candidate_sequence,
+            .at_ms = event->at_ms,
+            .candidate_confirmed = true,
+            .screen_on = true,
         };
-        const esp_err_t err = event_bus_publish(
-            &candidate,
-            pdMS_TO_TICKS(EWF_PVDF_INPUT_SERVICE_PUBLISH_TIMEOUT_MS));
+        ewf_tap_decision_t decision = {0};
+        const esp_err_t err = tap_input_service_submit_physical_pvdf(
+            &tap,
+            pdMS_TO_TICKS(EWF_PVDF_INPUT_SERVICE_PUBLISH_TIMEOUT_MS),
+            &decision);
         if (err != ESP_OK)
         {
-            ESP_LOGW(TAG, "PVDF 候选事件发布失败，错误=%s", esp_err_to_name(err));
+            ESP_LOGW(TAG,
+                     "PVDF 候选未进入统一敲击队列：原因=%s，错误=%s",
+                     ewf_tap_reason_name(decision.reason),
+                     esp_err_to_name(err));
         }
         ESP_LOGI(TAG,
                  "PVDF 结论=%s，确认裕量=%ld mV，峰值=%ld mV，候选累计=%lu，来源=%s",
@@ -408,6 +416,20 @@ static void publish_terminal(const ewf_pvdf_event_t *event, uint32_t now_ms)
                  EWF_PVDF_EVENT_SOURCE_NAME);
         return;
     }
+
+    /* 候选失败也交给统一 gate 留下 typed 拒绝证据，绝不进入正式有效事件。 */
+    const ewf_tap_event_t rejected = {
+        .source = EWF_TAP_SOURCE_PHYSICAL_PVDF,
+        .sequence = ++s_candidate_sequence,
+        .at_ms = event->at_ms,
+        .candidate_confirmed = false,
+        .screen_on = true,
+    };
+    ewf_tap_decision_t rejected_decision = {0};
+    (void)tap_input_service_submit_physical_pvdf(
+        &rejected,
+        pdMS_TO_TICKS(EWF_PVDF_INPUT_SERVICE_PUBLISH_TIMEOUT_MS),
+        &rejected_decision);
 
     ESP_LOGI(TAG,
              "PVDF 结论=%s，峰值=%ld mV，采样数=%lu，拒绝累计=%lu",

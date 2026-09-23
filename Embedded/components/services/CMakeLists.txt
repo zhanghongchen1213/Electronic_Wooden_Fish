@@ -8,12 +8,15 @@ idf_component_register(
         "power_service/power_service.c"
         "pvdf_input_service/pvdf_confirm_policy.c"
         "pvdf_input_service/pvdf_input_service.c"
+        "tap_input_service/tap_input_policy.c"
+        "tap_input_service/tap_input_service.c"
         "selftest_service/selftest_service.c"
         "state_service/state_service.c"
     INCLUDE_DIRS
         "."
         "power_service"
         "pvdf_input_service"
+        "tap_input_service"
         "selftest_service"
         "state_service"
     REQUIRES

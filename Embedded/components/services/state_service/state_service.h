@@ -45,6 +45,7 @@ typedef enum
     STATE_SERVICE_UPDATE_SELFTEST_FINISH, /**< 固化自检完成或取消终态。 */
     STATE_SERVICE_UPDATE_SELFTEST_RETRY_BEGIN,  /**< 标记一个既有失败项进入重试。 */
     STATE_SERVICE_UPDATE_SELFTEST_RETRY_FINISH, /**< 覆盖被重试项的最新终态。 */
+    STATE_SERVICE_UPDATE_TAP_GATE,         /**< 统一敲击完成/故障 gate owner 更新。 */
 } state_service_update_type_t;
 
 typedef struct
@@ -68,6 +69,7 @@ typedef struct
         watch_selftest_finish_update_t selftest_finish; /**< 自检 finish 小载荷。 */
         watch_selftest_retry_begin_update_t selftest_retry_begin;   /**< 自检重试 begin 小载荷。 */
         watch_selftest_retry_finish_update_t selftest_retry_finish; /**< 自检重试 finish 小载荷。 */
+        watch_tap_gate_update_t tap_gate;             /**< 统一敲击 gate owner 小载荷。 */
     } payload;                                          /**< 按 type 解释的更新载荷。 */
     TaskHandle_t apply_ack_task;                        /**< 需要确认时的稳定任务目标，其他更新为 NULL。 */
     uint32_t apply_ack_id;                              /**< apply 确认序号，不需确认时为 0。 */
@@ -257,6 +259,30 @@ esp_err_t state_service_publish_selftest_retry_finish(
  *         ESP_ERR_TIMEOUT 队列在有界等待内仍满
  */
 esp_err_t state_service_request_stop(TickType_t timeout_ticks);
+
+/**
+ * @brief 发布统一敲击 gate owner 的完成/故障状态
+ * @details 由 state_task 串行应用到不可变状态快照；敲击服务不得自行伪造 gate 状态。
+ * @param update 单调序号、完成遮罩与故障锁定事实
+ * @param timeout_ticks 等待状态队列空间的有界 tick 数
+ * @return ESP_OK 已入队，其他值表示参数、状态或队列超时
+ */
+esp_err_t state_service_publish_tap_gate(
+    const watch_tap_gate_update_t *update,
+    TickType_t timeout_ticks);
+
+/**
+ * @brief 读取统一敲击 gate 所需的状态服务只读快照
+ * @details 调用方只能取得按值复制的事实快照，不能把自造状态传入敲击服务。
+ * @param service_ready 输出 state_task 与状态快照是否可用
+ * @param completed 输出完成遮罩事实
+ * @param fault_locked 输出故障锁定事实
+ * @return ESP_OK 成功，ESP_ERR_INVALID_ARG 参数非法，ESP_ERR_INVALID_STATE 状态服务未运行，
+ *         ESP_ERR_TIMEOUT 快照互斥锁繁忙
+ */
+esp_err_t state_service_read_tap_gate(bool *service_ready,
+                                      bool *completed,
+                                      bool *fault_locked);
 
 /**
  * @brief 进入固定 state_task 的类型化更新循环

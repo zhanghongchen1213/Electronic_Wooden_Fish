@@ -1,0 +1,17 @@
+/**
+ * @file     cw2015_bsp.h
+ * @brief    统一敲击服务主机测试的平台替身。
+ * @details  只替代 FreeRTOS/硬件边界，业务代码仍使用真实生产实现。
+ * @author   ZHC
+ * @date     2026-09-22
+ */
+
+#ifndef EWF_HOST_CW2015_BSP_H
+#define EWF_HOST_CW2015_BSP_H
+#define CW2015_ERROR_OK "DRV_CW2015_OK"
+#define CW2015_ERROR_NOT_READY "DRV_CW2015_NOT_READY"
+#define CW2015_ERROR_DEVICE_MISSING "DRV_CW2015_DEVICE_MISSING"
+#define CW2015_ERROR_BUS_BUSY "DRV_CW2015_BUS_BUSY"
+#define CW2015_ERROR_INIT_FAILED "DRV_CW2015_INIT_FAILED"
+#define CW2015_ERROR_READ_FAILED "DRV_CW2015_READ_FAILED"
+#endif

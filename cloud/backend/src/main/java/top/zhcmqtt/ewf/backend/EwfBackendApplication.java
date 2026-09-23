@@ -2,6 +2,7 @@ package top.zhcmqtt.ewf.backend;
 
 import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
+import org.springframework.boot.context.properties.ConfigurationPropertiesScan;
 
 /**
  * 电子木鱼 backend 启动类。
@@ -9,6 +10,7 @@ import org.springframework.boot.autoconfigure.SpringBootApplication;
  * 单实例单进程、JSON 零库，不引入任何数据库或第二套并行 backend。
  */
 @SpringBootApplication
+@ConfigurationPropertiesScan
 public class EwfBackendApplication {
 
     public static void main(String[] args) {

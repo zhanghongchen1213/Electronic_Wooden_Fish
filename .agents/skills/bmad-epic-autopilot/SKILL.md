@@ -75,7 +75,8 @@ description: 'Autonomously drive an entire BMad epic through create-story → de
 - **主 Agent 防过载纪律**：你**绝不**读 `epics.md`、`architecture`、UX 规格或任何业务实现代码；绝不亲自实现任何 story。你对 sprint-status.yaml 只做**小切片**读取（grep 目标行）。每个 story 在你上下文里只保留 1 行状态。重活全部在子 Agent 的隔离上下文中完成，你只接收其**简短结构化回报**。
 - **每个阶段都派发一个全新的 general-purpose 子 Agent（干净上下文，绝不复用上一个）**；子 Agent 提示词从 `subagent-prompts/` 对应模板**原样加载**、仅填变量，不即兴改写。
 - **全程零变更性 git 操作**：你和子 Agent 都不得 commit / branch / stash / reset / checkout。只允许只读 `git diff` 用于查看变更。
-- **每个 child 只执行一次阶段**：child 不得自行再次派发同阶段或进入 review→fix 无限循环；retry 只能由本编排器统一执行，单阶段最多 2 次尝试。
+- **每个 child 只执行一次阶段**：child 不得自行再次派发同阶段或进入 review→fix 无限循环；retry 只能由本编排器统一执行，单阶段最多 2 次尝试（业务/证据失败）。若子 Agent 在真正启动前明确因模型容量/服务容量错误而未执行，且未产生任何状态、story、代码、git 变更或阶段 receipt，则该次只算“启动失败”，不消耗阶段尝试次数；编排器必须派发全新的 child 持续重试，直到成功启动或出现无法明确归因于容量的错误。
+- **模型容量启动失败的证据门禁**：只有同时满足“child 明确返回容量错误”“子 Agent 未执行任何阶段动作”“sprint-status、story/代码和 receipt 均无变化”才可走上述持续重试例外；若有任一状态或文件已变化，回到普通阶段失败与最多 2 次尝试规则，不得借容量例外绕过验证。
 - **sprint-status.yaml 是状态唯一裁判，但不是唯一完成证据**：每阶段还必须核对对应机器 receipt、story 文件、story-local diff、测试退出码与 review quorum，不轻信子 Agent 自述。
 - **ESP-IDF 构建恢复门禁**：涉及 `Embedded/`、ESP-IDF、CMake、固件、硬件、驱动或构建系统的 B 阶段必须遵循当前项目 macOS runbook；`idf.py` 缺失或退出码 `127` 先重新激活环境、定位并修复，再用新日志重建成功，不能即时终止。B receipt 必须记录所有构建尝试、日志、退出码、诊断和修复；最终构建未以 0 退出不得进入 C。
 - **状态门禁**：`backlog→A`、`ready-for-dev/in-progress→B`、`review→C`、`done→跳过`；未知/blocked/缺文件/坏 YAML/空 diff/receipt 缺失统一 fail-closed。

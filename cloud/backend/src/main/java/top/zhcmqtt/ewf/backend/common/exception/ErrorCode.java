@@ -42,6 +42,18 @@ public final class ErrorCode {
     /** 令牌失效（鉴权实现属 4.4，本 Story 只登记码值）。 */
     public static final int TOKEN_EXPIRED = 40101;
 
+    /** 令牌签名、格式或类型非法。 */
+    public static final int TOKEN_INVALID = 40102;
+
+    /** 请求缺少 Bearer 令牌。 */
+    public static final int TOKEN_MISSING = 40103;
+
+    /** 当前微信身份与固定设备身份不匹配。 */
+    public static final int IDENTITY_MISMATCH = 40300;
+
+    /** 微信上游不可用或身份/JWT 配置仍为占位值。 */
+    public static final int WECHAT_UPSTREAM = 50200;
+
     // ---- 异常层兜底码 ----
 
     /** 参数不合法（绑定校验失败或参数类型不匹配）。 */

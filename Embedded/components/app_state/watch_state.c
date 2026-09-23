@@ -451,6 +451,35 @@ esp_err_t watch_state_apply_update(const watch_state_update_t *update, TickType_
     return ESP_OK;
 }
 
+esp_err_t watch_state_apply_tap_gate_update(
+    const watch_tap_gate_update_t *update,
+    TickType_t timeout_ticks)
+{
+    if (s_state_mutex == NULL)
+    {
+        return ESP_ERR_INVALID_STATE;
+    }
+    if (update == NULL || update->update_sequence == 0U)
+    {
+        return ESP_ERR_INVALID_ARG;
+    }
+    if (xSemaphoreTake(s_state_mutex, timeout_ticks) != pdTRUE)
+    {
+        return ESP_ERR_TIMEOUT;
+    }
+    if (s_state.tap_gate_update_sequence != 0U &&
+        update->update_sequence <= s_state.tap_gate_update_sequence)
+    {
+        xSemaphoreGive(s_state_mutex);
+        return ESP_ERR_INVALID_STATE;
+    }
+    s_state.tap_gate_update_sequence = update->update_sequence;
+    s_state.tap_completed = update->completed;
+    s_state.tap_fault_locked = update->fault_locked;
+    xSemaphoreGive(s_state_mutex);
+    return ESP_OK;
+}
+
 esp_err_t watch_state_apply_battery_update(const watch_battery_update_t *update,
                                            TickType_t timeout_ticks)
 {

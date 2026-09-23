@@ -208,6 +208,18 @@ extern "C"
         uint32_t value;            /**< 字段新值，布尔字段使用 0/非 0 表示。 */
     } watch_state_update_t;
 
+    /**
+     * @brief 统一敲击 gate 的状态 owner 更新
+     * @details 完成遮罩与故障锁定只允许由 state_service 通过单调序号发布，
+     *          tap_input_service 只能从不可变快照读取，不能传入自造状态。
+     */
+    typedef struct
+    {
+        uint32_t update_sequence; /**< owner 单调更新序号，必须从 1 开始递增。 */
+        bool completed;            /**< 是否处于完成遮罩。 */
+        bool fault_locked;         /**< 是否处于故障锁定。 */
+    } watch_tap_gate_update_t;
+
     typedef enum
     {
         WATCH_POWER_LEVEL_NORMAL = 0,             /**< 电量正常，不限制运行资源。 */
@@ -803,6 +815,9 @@ extern "C"
         watch_audio_error_t audio_error;                                 /**< 当前或最近一次音频错误原因。 */
         TickType_t audio_updated_at_ticks;                               /**< 最近音频状态更新时间。 */
         uint32_t audio_update_sequence;                                  /**< 每次成功 apply 后递增的音频状态序号。 */
+        uint32_t tap_gate_update_sequence;                               /**< 统一敲击 gate owner 最近更新序号。 */
+        bool tap_completed;                                               /**< 完成遮罩事实，由 state_service owner 更新。 */
+        bool tap_fault_locked;                                            /**< 故障锁定事实，由 state_service owner 更新。 */
         watch_selftest_summary_t selftest;                               /**< 当前启动周期的最近一次自检摘要。 */
     } watch_state_snapshot_t;
 
@@ -823,6 +838,16 @@ extern "C"
      *         ESP_ERR_TIMEOUT 获取互斥锁超时
      */
     esp_err_t watch_state_apply_update(const watch_state_update_t *update, TickType_t timeout_ticks);
+
+    /**
+     * @brief 原子应用统一敲击 gate owner 更新
+     * @param update 完成遮罩与故障锁定的类型化更新
+     * @param timeout_ticks 等待状态互斥锁的超时时间
+     * @return ESP_OK 成功；ESP_ERR_INVALID_STATE/ARG；ESP_ERR_TIMEOUT
+     */
+    esp_err_t watch_state_apply_tap_gate_update(
+        const watch_tap_gate_update_t *update,
+        TickType_t timeout_ticks);
 
     /**
      * @brief 原子应用一条类型化手环电量更新

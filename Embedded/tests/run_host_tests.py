@@ -17,6 +17,7 @@ from pathlib import Path
 TESTS_DIR = Path(__file__).resolve().parent
 EMBEDDED_DIR = TESTS_DIR.parent
 POLICY_DIR = EMBEDDED_DIR / "components/services/power_service"
+TAP_POLICY_DIR = EMBEDDED_DIR / "components/services/tap_input_service"
 
 
 def run_source_contracts() -> int:
@@ -83,9 +84,103 @@ def run_edge_policy_host_test() -> int:
     return 0
 
 
+def run_tap_policy_host_test() -> int:
+    compiler = shutil.which("cc") or shutil.which("gcc") or shutil.which("clang")
+    if compiler is None:
+        print("FAIL tap-policy: 未找到 cc/gcc/clang，无法构建主机测试")
+        return 1
+
+    with tempfile.TemporaryDirectory() as tmpdir:
+        binary = Path(tmpdir) / "test_tap_input_policy"
+        build = subprocess.run(
+            [
+                compiler,
+                "-std=c17",
+                "-Wall",
+                "-Wextra",
+                "-Werror",
+                "-I",
+                str(TAP_POLICY_DIR),
+                str(TESTS_DIR / "test_tap_input_policy.c"),
+                str(TAP_POLICY_DIR / "tap_input_policy.c"),
+                "-o",
+                str(binary),
+            ],
+            capture_output=True,
+            text=True,
+            check=False,
+        )
+        if build.returncode != 0:
+            print("FAIL tap-policy: 主机测试构建失败")
+            print(build.stdout)
+            print(build.stderr)
+            return 1
+        run = subprocess.run([str(binary)], capture_output=True, text=True, check=False)
+        sys.stdout.write(run.stdout)
+        sys.stderr.write(run.stderr)
+        return run.returncode
+
+
+def run_tap_runtime_host_test() -> int:
+    compiler = shutil.which("cc") or shutil.which("gcc") or shutil.which("clang")
+    if compiler is None:
+        print("FAIL tap-runtime: 未找到 cc/gcc/clang，无法构建主机测试")
+        return 1
+
+    with tempfile.TemporaryDirectory() as tmpdir:
+        binary = Path(tmpdir) / "test_tap_input_runtime"
+        build = subprocess.run(
+            [
+                compiler,
+                "-std=c17",
+                "-Wall",
+                "-Wextra",
+                "-Werror",
+                "-I",
+                str(TAP_POLICY_DIR),
+                "-I",
+                str(TESTS_DIR / "host_stubs"),
+                "-I",
+                str(EMBEDDED_DIR / "components/app_state"),
+                "-I",
+                str(EMBEDDED_DIR / "components/services/state_service"),
+                "-I",
+                str(EMBEDDED_DIR / "components/services"),
+                "-I",
+                str(EMBEDDED_DIR / "components/services/pvdf_input_service"),
+                "-I",
+                str(EMBEDDED_DIR / "components/platform/event_bus"),
+                str(TESTS_DIR / "test_tap_input_runtime.c"),
+                str(TAP_POLICY_DIR / "tap_input_policy.c"),
+                str(TESTS_DIR / "host_stubs/host_platform.c"),
+                str(TESTS_DIR / "host_stubs/state_service_host.c"),
+                str(TESTS_DIR / "host_stubs/pvdf_service_host.c"),
+                str(EMBEDDED_DIR / "components/app_state/watch_state.c"),
+                str(EMBEDDED_DIR / "components/services/tap_input_service/tap_input_service.c"),
+                str(EMBEDDED_DIR / "components/services/pvdf_input_service/pvdf_confirm_policy.c"),
+                "-o",
+                str(binary),
+            ],
+            capture_output=True,
+            text=True,
+            check=False,
+        )
+        if build.returncode != 0:
+            print("FAIL tap-runtime: 主机测试构建失败")
+            print(build.stdout)
+            print(build.stderr)
+            return 1
+        run = subprocess.run([str(binary)], capture_output=True, text=True, check=False)
+        sys.stdout.write(run.stdout)
+        sys.stderr.write(run.stderr)
+        return run.returncode
+
+
 def main() -> int:
     failures = run_source_contracts()
     failures += run_edge_policy_host_test()
+    failures += run_tap_policy_host_test()
+    failures += run_tap_runtime_host_test()
     if failures != 0:
         print("host tests: 失败")
         return 1

@@ -597,6 +597,58 @@ esp_err_t state_service_request_stop(TickType_t timeout_ticks)
     return publish_queue_update(queue, &message, timeout_ticks);
 }
 
+esp_err_t state_service_publish_tap_gate(
+    const watch_tap_gate_update_t *update,
+    TickType_t timeout_ticks)
+{
+    if (update == NULL || update->update_sequence == 0U)
+    {
+        return ESP_ERR_INVALID_ARG;
+    }
+    QueueHandle_t queue = legbot_state_service_queue();
+    if (queue == NULL)
+    {
+        return ESP_ERR_INVALID_STATE;
+    }
+    const state_service_update_t message = {
+        .type = STATE_SERVICE_UPDATE_TAP_GATE,
+        .payload.tap_gate = *update,
+    };
+    return publish_queue_update(queue, &message, timeout_ticks);
+}
+
+esp_err_t state_service_read_tap_gate(bool *service_ready,
+                                      bool *completed,
+                                      bool *fault_locked)
+{
+    if (service_ready == NULL || completed == NULL || fault_locked == NULL)
+    {
+        return ESP_ERR_INVALID_ARG;
+    }
+
+    *service_ready = false;
+    *completed = false;
+    *fault_locked = false;
+
+    /* state_task 是敲击 gate 的唯一事实源入口；调用方不得传入可伪造的状态。 */
+    if (atomic_load(&s_owner_task) == NULL)
+    {
+        return ESP_ERR_INVALID_STATE;
+    }
+
+    watch_state_snapshot_t snapshot = {0};
+    const esp_err_t error = watch_state_snapshot(&snapshot, 0);
+    if (error != ESP_OK)
+    {
+        return error;
+    }
+
+    *completed = snapshot.tap_completed;
+    *fault_locked = snapshot.tap_fault_locked;
+    *service_ready = true;
+    return ESP_OK;
+}
+
 void state_service_run(void)
 {
     QueueHandle_t queue = legbot_state_service_queue();
@@ -928,6 +980,12 @@ static esp_err_t apply_update(const state_service_update_t *update)
     {
         return watch_state_apply_selftest_retry_finish(
             &update->payload.selftest_retry_finish,
+            pdMS_TO_TICKS(STATE_SERVICE_APPLY_TIMEOUT_MS));
+    }
+    if (update->type == STATE_SERVICE_UPDATE_TAP_GATE)
+    {
+        return watch_state_apply_tap_gate_update(
+            &update->payload.tap_gate,
             pdMS_TO_TICKS(STATE_SERVICE_APPLY_TIMEOUT_MS));
     }
     return ESP_ERR_INVALID_ARG;

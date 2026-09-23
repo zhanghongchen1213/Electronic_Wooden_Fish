@@ -6,7 +6,7 @@
 - [ ] 该 story 实际经过了所需的全部阶段（按起跑 status：backlog→A/B/C；ready-for-dev→B/C；review→C），无跳阶段。
 - [ ] 阶段 A、B、C **各自由一个全新 general-purpose 子 Agent** 执行，无复用上一个子 Agent 的上下文。
 - [ ] 每个阶段的子 Agent 提示词都是从 `subagent-prompts/` 对应模板**原样加载**、仅替换变量，未即兴改写。
-- [ ] child 没有递归派发、没有内部 review→fix 循环；同一阶段最多由编排器重试一次。
+- [ ] child 没有递归派发、没有内部 review→fix 循环；普通业务/证据失败同一阶段最多由编排器重试一次；明确的模型容量启动失败且零状态/零 receipt 不计入次数，持续用全新 child 重试。
 
 ## 状态推进验证（以 sprint-status.yaml 为唯一裁判）
 - [ ] 阶段 A 后，grep 验证该 story 由 `backlog` → `ready-for-dev`（若起跑即跳过 A 则免）。

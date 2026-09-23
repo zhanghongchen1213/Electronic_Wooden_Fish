@@ -2,7 +2,7 @@
 current_story_key: '' # set at runtime: the story being driven this iteration
 current_story_path: '' # set at runtime: absolute path to the story .md
 phase: '' # set at runtime: A | B | C
-attempt: 0 # set at runtime: 1 or 2 (retry-once policy)
+attempt: 0 # set at runtime: business/verification attempt number; capacity-only launch retries do not increment it
 baseline_snapshot: '' # set at runtime before B
 diff_file: '' # set at runtime after B, story-local unified diff
 dev_receipt: '' # set at runtime after B
@@ -16,7 +16,7 @@ blocked_reason: '' # set at runtime for fail-closed exits
 # Step 2: Run One Story（核心循环步）
 
 > 主 Agent 每处理一个 story 都重读本步骤文件一次。本步骤把一个 story
-> 从其当前合法状态推进到 `done`，或者在第二次失败后 fail-closed 终止整个 epic。
+> 从其当前合法状态推进到 `done`，或者在第二次业务/证据失败后 fail-closed 终止整个 epic。子 Agent 若在真正启动前明确因模型容量错误退出，且没有任何状态、story、代码或 receipt 变化，则不计入阶段尝试次数，必须继续用全新 child 重试。
 
 ## RULES
 
@@ -24,7 +24,7 @@ blocked_reason: '' # set at runtime for fail-closed exits
 - 你是编排器：**绝不**亲自执行 create-story/dev-story/code-review，**绝不**亲自写业务代码。
 - 每个阶段派发**一个全新 general-purpose 子 Agent**；child 只执行一次阶段，不得递归派发或自发 review→fix 循环。
 - **零变更性 git 操作**（你与子 Agent 都不得 commit/branch/stash/reset/checkout）。快照和 diff helper 只能写入 `{autopilot_state_root}` 或临时目录。
-- **不等待人类**。所有 checkpoint、决策和异常按本文件的自动化契约处理；只有重试一次后仍无法推进才终止 epic。
+- **不等待人类**。所有 checkpoint、决策和异常按本文件的自动化契约处理；业务/证据失败重试一次后仍无法推进才终止 epic。模型容量导致的“未启动且零状态/零 receipt”属于启动失败例外，不消耗次数，持续派发全新 child 重试；一旦出现任何阶段动作或无法明确归因于容量的错误，立即回到普通失败门禁。
 - **状态 + receipt 双门禁**：sprint-status 行、story 文件、阶段 receipt、测试退出码和 review quorum 必须共同满足，不能只 grep 状态。
 
 ## INSTRUCTIONS
@@ -59,7 +59,7 @@ backlog 的 A 阶段允许 story 文件尚不存在，因为 create-story 的职
 - sprint status 从 `backlog` 变为 `ready-for-dev`；
 - A receipt 存在且内容与 story key 一致。
 
-未达标：只允许使用同模板、同变量派发一个全新的 `attempt=2` child；第二次仍未达标立即终止 epic。
+未达标：若属于普通阶段/证据失败，只允许使用同模板、同变量派发一个全新的 `attempt=2` child；第二次仍未达标立即终止 epic。若 child 在真正启动前明确因模型容量错误退出，且 sprint-status、story/代码和 receipt 均未变化，则不增加 `attempt`，继续以全新 child 重试阶段 A，直到成功启动或出现非容量错误。
 
 ### 3. 阶段 B — dev-story 与 story-local 快照
 
@@ -95,7 +95,7 @@ uv run --no-cache {skill-root}/scripts/autopilot_state.py diff \\
   --exclude {autopilot_state_root}
 ```
 
-验证实际 changed paths 与 B receipt 的 File List 完全一致；漏列、超列、空 diff 或 helper 失败均为本阶段失败。只有第一次失败才允许用全新 child 重试 B；第二次失败终止 epic。
+验证实际 changed paths 与 B receipt 的 File List 完全一致；漏列、超列、空 diff 或 helper 失败均为本阶段失败。普通失败只有第一次失败才允许用全新 child 重试 B，第二次失败终止 epic；若 child 在真正启动前明确因模型容量错误退出且零状态/零 receipt，则不消耗 B 的尝试次数，继续派发全新 child。
 
 ### 4. 阶段 C — 风险路由与一次性 code-review
 
@@ -142,7 +142,7 @@ C child 返回后先执行 `validate-receipt --file {review_receipt} --phase C -
 - outcome 为 `clean` 或 `autofixed`；
 - sprint status 为 `done`。
 
-如果 outcome 为 `review` 或仍为 `review`，只允许再派发一次全新 C child；不回到 B。第二次仍未 `done` 或 receipt 不完整，终止整个 epic。
+如果 outcome 为 `review` 或仍为 `review`，只允许再派发一次全新 C child；不回到 B。第二次仍未 `done` 或 receipt 不完整，终止整个 epic。若 C child 在真正启动前明确因模型容量错误退出且零状态/零 receipt，则不消耗 C 的尝试次数，继续派发全新 child。
 
 如果 C 返回 `in-progress`、`blocked`、未知状态或写入状态与 receipt 冲突，视为失败；不得自动改跑 B。
 
@@ -151,9 +151,9 @@ C child 返回后先执行 `validate-receipt --file {review_receipt} --phase C -
 每个阶段严格执行：
 
 1. `attempt=1` 派发全新 child；
-2. 读取 sprint-status 和机器 receipt；
-3. 未达标时 `attempt=2`，只重派同一阶段的全新 child；
-4. 第二次仍未达标，记录 key、阶段、实际 status、receipt 错误和 child 阻塞，进入 step-03 blocked 分支。
+2. 读取 sprint-status 和机器 receipt，并先判断 child 是否在真正启动前因模型容量错误退出且零状态/零 receipt；
+3. 若为容量启动失败，保持当前 `attempt` 不变，继续派发全新的同阶段 child；若为普通未达标，递增到 `attempt=2` 并只重派同一阶段的全新 child；
+4. 普通第二次仍未达标，记录 key、阶段、实际 status、receipt 错误和 child 阻塞，进入 step-03 blocked 分支。任何出现状态/文件/receipt 变化的“容量错误”均按普通失败计数。
 
 当前 story 达到 `done` 后，对照 `{skill-root}/checklist.md` 自检，再重新读取下一个 story 的 status。不要依赖旧队列状态。
 
@@ -161,4 +161,4 @@ C child 返回后先执行 `validate-receipt --file {review_receipt} --phase C -
 
 - 还有非 done story → 重读并遵循本文件。
 - 队列耗尽 → Read fully and follow `./step-03-finalize.md` 成功分支。
-- 任一阶段第二次失败、输入损坏、mandatory review 失败或 unresolved HIGH/MEDIUM → Read fully and follow `./step-03-finalize.md` blocked 分支。
+- 任一阶段普通第二次失败、输入损坏、mandatory review 失败或 unresolved HIGH/MEDIUM → Read fully and follow `./step-03-finalize.md` blocked 分支；仅“明确模型容量启动失败且零状态/零 receipt”可继续重试，不进入 blocked 分支。

@@ -40,9 +40,10 @@ class ErrorCodeContractTest {
     /**
      * 本 Story 的异常层兜底码：除 40000/40400/50000（迁移经验 §② 区间表）外，含协议级客户端错误
      * 40500（方法不支持）与 41500（请求体媒体类型不支持）——两者按码形规则取值，使 HTTP 状态与码形自洽。
-     * 该集合不是契约冻结值，4.4 及后续模块可扩但不得改义。
+     * 该集合不是契约冻结值；4.4 的鉴权/上游码也在这里登记，后续模块可扩但不得改义。
      */
-    private static final Set<Integer> FALLBACK_CODES = Set.of(40000, 40400, 40500, 41500, 50000);
+    private static final Set<Integer> FALLBACK_CODES = Set.of(
+            40000, 40400, 40500, 41500, 50000, 40102, 40103, 40300, 50200);
 
     private static final ObjectMapper OBJECT_MAPPER = new ObjectMapper();
 

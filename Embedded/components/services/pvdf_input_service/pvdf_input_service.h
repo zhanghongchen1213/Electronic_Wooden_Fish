@@ -30,7 +30,7 @@ extern "C"
 /** pvdf_task 私有 typed 命令队列深度。 */
 #define EWF_PVDF_INPUT_SERVICE_QUEUE_DEPTH 8U
 
-/** 候选有效输入在事件总线上的稳定 code；来源固定 LEGBOT_EVENT_SOURCE_PVDF。 */
+/** 历史候选事件 code，保留用于诊断兼容；正式输入统一转投 tap_input_service。 */
 #define EWF_PVDF_EVENT_CANDIDATE 1U
 
 /** 候选事件的产品名，架构约定事件来源固定 physical_pvdf/device_touch。 */
