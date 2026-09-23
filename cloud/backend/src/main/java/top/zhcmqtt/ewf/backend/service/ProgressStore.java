@@ -35,8 +35,10 @@ import top.zhcmqtt.ewf.backend.common.persistence.VersionedJsonFile;
  * <p><b>迁移说明（契约 §11）：</b>新增字段时可省略读取并取默认值；删除或改义字段必须递增
  * {@code schema_version} 并提供一次性重写。
  *
- * <p><b>本 Story 不做：</b>幂等推进、轮次归属、完成翻转等业务规则属 Epic 5；本类只提供严格读取
- * 与整体替换，不实现任何收敛或判定逻辑。
+ * <p><b>写路径归属：</b>Story 5.1 落地幂等高水位推进；Story 5.2 落地完成确认、完成锁定与
+ * 篇章动作（restart/exit）状态机——均经 {@code ProgressSyncService} 调用本类 {@link #write}
+ * 落盘权威事务组。Story 5.3 在确认后挂钩 {@code daily_stats.json} 派生（本类仍不内嵌日期算法）。
+ * 本类本身仍只提供严格读取与整体替换，不内嵌业务判定。
  *
  * <p><b>并发：</b>原子写是崩溃保护，不替代单实例内互斥；跨进程/跨 JVM 语义不在 AD-16 承诺范围。
  */

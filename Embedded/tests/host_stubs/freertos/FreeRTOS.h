@@ -19,6 +19,7 @@ typedef unsigned UBaseType_t;
 #define portMAX_DELAY UINT32_MAX
 #define pdMS_TO_TICKS(ms) ((TickType_t)(ms))
 #define pdTICKS_TO_MS(ticks) (ticks)
+#define portTICK_PERIOD_MS ((TickType_t)1)
 #define taskYIELD() ((void)0)
 #define portYIELD_FROM_ISR() ((void)0)
 #endif

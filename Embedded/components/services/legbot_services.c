@@ -14,6 +14,7 @@
 #include <string.h>
 
 #include "esp_log.h"
+#include "feedback_service.h"
 #include "freertos/task.h"
 #include "power_service.h"
 #include "progress_service.h"
@@ -34,6 +35,8 @@ static const char *TAG = "SVC_CORE";
 #define LEGBOT_PVDF_SERVICE_STACK_BYTES 4096U
 /** 高水位/轮次 owner 任务栈空间。 */
 #define LEGBOT_PROGRESS_SERVICE_STACK_BYTES 4096U
+/** 反馈任务栈空间：播放链 wav 解析与 BSP 调用链需要高于默认栈。 */
+#define LEGBOT_FEEDBACK_SERVICE_STACK_BYTES 6144U
 /** state_task 的状态应用与错误日志调用链专用内部栈空间。 */
 #define LEGBOT_STATE_SERVICE_STACK_BYTES 4096U
 /** 自检编排任务栈空间。 */
@@ -86,6 +89,13 @@ static const legbot_service_descriptor_t s_descriptors[LEGBOT_SERVICE_COUNT] = {
         .task_name = "progress_task",
         .owner_component = "components/services/progress_service",
         .input_mask = LEGBOT_SERVICE_INPUT_QUEUE | LEGBOT_SERVICE_INPUT_TYPED_UPDATE,
+        .starts_by_default = true,
+    },
+    [LEGBOT_SERVICE_FEEDBACK] = {
+        .id = LEGBOT_SERVICE_FEEDBACK,
+        .task_name = "feedback_task",
+        .owner_component = "components/services/feedback_service",
+        .input_mask = LEGBOT_SERVICE_INPUT_QUEUE,
         .starts_by_default = true,
     },
 };
@@ -221,6 +231,15 @@ esp_err_t legbot_services_init_contracts(void)
         cleanup_service_contracts();
         return err;
     }
+    err = feedback_service_init_contracts();
+    if (err != ESP_OK)
+    {
+        ESP_LOGE(TAG, "服务契约初始化失败：服务=%s，错误=%s",
+                 s_descriptors[LEGBOT_SERVICE_FEEDBACK].task_name,
+                 esp_err_to_name(err));
+        cleanup_service_contracts();
+        return err;
+    }
     err = selftest_service_init_contracts();
     if (err != ESP_OK)
     {
@@ -317,20 +336,43 @@ esp_err_t legbot_services_start_all(void)
         (void)stop_service(LEGBOT_SERVICE_STATE);
         return err;
     }
+    /* 反馈 owner 最后启动：纯消费者，进度 owner 恢复完成后才接受事件扇出。 */
+    err = feedback_service_prepare_run();
+    if (err != ESP_OK)
+    {
+        (void)stop_service(LEGBOT_SERVICE_PROGRESS);
+        (void)stop_service(LEGBOT_SERVICE_TAP_INPUT);
+        (void)stop_service(LEGBOT_SERVICE_PVDF);
+        (void)stop_service(LEGBOT_SERVICE_POWER);
+        (void)stop_service(LEGBOT_SERVICE_STATE);
+        return err;
+    }
+    err = start_service(LEGBOT_SERVICE_FEEDBACK);
+    if (err != ESP_OK)
+    {
+        feedback_service_cancel_prepared_run();
+        (void)stop_service(LEGBOT_SERVICE_PROGRESS);
+        (void)stop_service(LEGBOT_SERVICE_TAP_INPUT);
+        (void)stop_service(LEGBOT_SERVICE_PVDF);
+        (void)stop_service(LEGBOT_SERVICE_POWER);
+        (void)stop_service(LEGBOT_SERVICE_STATE);
+        return err;
+    }
 
     ESP_LOGI(TAG,
-             "默认服务已启动：state_task、power_task、pvdf_task、tap_input_task 与 "
-             "progress_task；BLE/GPS/ML307R/cloud/voice/audio 旧链路不在本 Story 的启动图中");
+             "默认服务已启动：state_task、power_task、pvdf_task、tap_input_task、"
+             "progress_task 与 feedback_task；BLE/GPS/ML307R/cloud/voice 旧链路不在启动图中");
     return ESP_OK;
 }
 
 esp_err_t legbot_services_stop_all(void)
 {
     /* 自检依赖 state_task 才能发布结果，因此自检必须先停，state_task 最后停；
-     * 进度 owner 是有效敲击消费者，先于输入边界停止。 */
+     * 进度 owner 与反馈 owner 是有效敲击消费者，先于输入边界停止。 */
     static const legbot_service_id_t stop_order[LEGBOT_SERVICE_COUNT] = {
         LEGBOT_SERVICE_SELFTEST,
         LEGBOT_SERVICE_PVDF,
+        LEGBOT_SERVICE_FEEDBACK,
         LEGBOT_SERVICE_PROGRESS,
         LEGBOT_SERVICE_TAP_INPUT,
         LEGBOT_SERVICE_POWER,
@@ -410,6 +452,9 @@ static esp_err_t stop_service(legbot_service_id_t id)
     case LEGBOT_SERVICE_PROGRESS:
         return progress_service_request_stop(
             pdMS_TO_TICKS(LEGBOT_SERVICE_STOP_ENQUEUE_TIMEOUT_MS));
+    case LEGBOT_SERVICE_FEEDBACK:
+        return feedback_service_request_stop(
+            pdMS_TO_TICKS(LEGBOT_SERVICE_STOP_ENQUEUE_TIMEOUT_MS));
     default:
         return ESP_ERR_INVALID_ARG;
     }
@@ -466,6 +511,11 @@ static esp_err_t start_service(legbot_service_id_t id)
         stack_bytes = LEGBOT_PROGRESS_SERVICE_STACK_BYTES;
         priority = tskIDLE_PRIORITY + 3;
         break;
+    case LEGBOT_SERVICE_FEEDBACK:
+        /* 反馈是可合并型低打扰通道：低优先级，绝不抢占核心队列与持久化路径。 */
+        stack_bytes = LEGBOT_FEEDBACK_SERVICE_STACK_BYTES;
+        priority = tskIDLE_PRIORITY + 2;
+        break;
     default:
         break;
     }
@@ -515,6 +565,9 @@ static void service_task_entry(void *argument)
     case LEGBOT_SERVICE_PROGRESS:
         err = progress_service_run();
         break;
+    case LEGBOT_SERVICE_FEEDBACK:
+        err = feedback_service_run();
+        break;
     default:
         err = ESP_ERR_INVALID_ARG;
         break;
@@ -536,6 +589,7 @@ static void cleanup_service_contracts(void)
     (void)pvdf_input_service_deinit_contracts();
     (void)tap_input_service_deinit_contracts();
     (void)progress_service_deinit_contracts();
+    (void)feedback_service_deinit_contracts();
     (void)selftest_service_deinit_contracts();
     if (s_state_queue != NULL)
     {

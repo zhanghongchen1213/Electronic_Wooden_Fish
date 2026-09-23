@@ -102,6 +102,19 @@ extern "C"
      */
     esp_err_t event_bus_publish_from_isr(const legbot_event_t *event, BaseType_t *higher_priority_woken);
 
+    /**
+     * @brief 注册事件扇出订阅队列
+     * @details 订阅方（如反馈服务）是可合并型纯消费者：每次发布时收到事件副本，
+     *          投递为非阻塞且订阅队列满时丢弃该次事件（AD-7 可合并型丢最新），
+     *          不影响主队列投递结果；主队列消费者语义保持不变。
+     * @param queue 订阅方自有队列，元素类型必须为 legbot_event_t
+     * @return ESP_OK 成功或重复注册同一队列
+     *         ESP_ERR_INVALID_STATE 事件总线尚未初始化
+     *         ESP_ERR_INVALID_ARG 参数无效
+     *         ESP_ERR_NO_MEM 订阅槽已满
+     */
+    esp_err_t event_bus_subscribe(QueueHandle_t queue);
+
 #ifdef __cplusplus
 }
 #endif

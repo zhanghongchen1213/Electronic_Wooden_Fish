@@ -12,6 +12,7 @@
 #include "control_gate.h"
 #include "key.h"
 #include "legbot_services.h"
+#include "rgb_bsp.h"
 #include "power_boot_policy.h"
 #include "power_service.h"
 #include "pvdf_bsp.h"
@@ -134,9 +135,14 @@ _Static_assert(LEGBOT_BSP_RESOURCE_COUNT == 15,
                "BSP resource table must cover the authoritative EWF board resources.");
 _Static_assert(LEGBOT_BSP_STAGE_COUNT == 6,
                "Story 1.1 fixes six serial initialization stages.");
-_Static_assert(LEGBOT_SERVICE_COUNT == 6,
-               "The EWF startup graph adds the unified tap input service and the "
-               "progress owner to the input boundary.");
+_Static_assert(LEGBOT_SERVICE_COUNT == 7,
+               "The EWF startup graph adds the unified tap input service, the "
+               "progress owner and the feedback owner to the input boundary.");
+_Static_assert(LEGBOT_FEEDBACK_SERVICE_ID == LEGBOT_SERVICE_FEEDBACK,
+               "Feedback must own its fixed service slot.");
+_Static_assert(EWF_BSP_RGB_DATA_GPIO == GPIO_NUM_3, "RGB_DATA must be IO3.");
+_Static_assert(RGB_BSP_DATA_GPIO_ID == (int)EWF_BSP_RGB_DATA_GPIO,
+               "RGB BSP must consume the authoritative RGB_DATA pin.");
 _Static_assert(LEGBOT_SELFTEST_SERVICE_ID == LEGBOT_SERVICE_SELFTEST,
                "Self-test must own its fixed service slot.");
 _Static_assert(SELFTEST_ITEM_COUNT == 7,

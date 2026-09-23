@@ -247,6 +247,68 @@ extern "C"
         WATCH_POWER_LEVEL_COUNT                   /**< 电量等级数量，不是有效产品状态。 */
     } watch_power_level_t;
 
+    /**
+     * @brief 统一反馈服务的通道标识
+     * @details 屏幕通道只预留事实承载位：屏幕渲染失败事实的生产者属 Epic 3
+     *          显示链路，本 Story 不实现该生产者（Story 2.3 Task 6）。
+     */
+    typedef enum
+    {
+        WATCH_FEEDBACK_CHANNEL_AUDIO = 0, /**< 音频反馈通道（codec/I2S/功放/资源）。 */
+        WATCH_FEEDBACK_CHANNEL_RGB,       /**< RGB 状态灯反馈通道。 */
+        WATCH_FEEDBACK_CHANNEL_SCREEN,    /**< 屏幕反馈通道，Epic 3 显示链路预留。 */
+        WATCH_FEEDBACK_CHANNEL_COUNT      /**< 反馈通道数量，不是有效通道。 */
+    } watch_feedback_channel_t;
+
+    typedef enum
+    {
+        WATCH_FEEDBACK_CHANNEL_OK = 0, /**< 通道空闲且最近一次反馈成功。 */
+        WATCH_FEEDBACK_CHANNEL_ACTIVE, /**< 通道正在输出反馈。 */
+        WATCH_FEEDBACK_CHANNEL_FAILED, /**< 通道最近一次反馈失败，处于降级跳过状态。 */
+    } watch_feedback_channel_state_t;
+
+    /**
+     * @brief 反馈通道稳定错误域
+     * @details 剥离 legbot 遗留 resource_available（绑定 selftest_ok）语义后，
+     *          由反馈服务作为唯一生产 owner 维护。
+     */
+    typedef enum
+    {
+        WATCH_FEEDBACK_ERROR_NONE = 0,         /**< 最近一次反馈无错误。 */
+        WATCH_FEEDBACK_ERROR_NOT_READY,        /**< 播放链或灯效链尚未就绪。 */
+        WATCH_FEEDBACK_ERROR_RESOURCE_MISSING, /**< 木鱼音资源文件缺失。 */
+        WATCH_FEEDBACK_ERROR_RESOURCE_CORRUPT, /**< 木鱼音资源格式损坏或参数不符。 */
+        WATCH_FEEDBACK_ERROR_IO_FAILED,        /**< SPIFFS 文件读取失败。 */
+        WATCH_FEEDBACK_ERROR_BUSY,             /**< 反馈请求队列已满，事件按可合并型丢弃。 */
+        WATCH_FEEDBACK_ERROR_CODEC_FAILED,     /**< ES8311 配置或写入失败。 */
+        WATCH_FEEDBACK_ERROR_I2S_FAILED,       /**< I2S0 启停或写入失败。 */
+        WATCH_FEEDBACK_ERROR_PA_FAILED,        /**< NS4150 功放控制失败。 */
+        WATCH_FEEDBACK_ERROR_RGB_FAILED,       /**< RGB 灯带初始化或设色失败。 */
+    } watch_feedback_error_t;
+
+    typedef struct
+    {
+        watch_feedback_channel_t channel;     /**< 通道。 */
+        watch_feedback_channel_state_t state; /**< 通道状态。 */
+        watch_feedback_error_t error;         /**< 最近一次稳定错误原因。 */
+    } watch_feedback_channel_update_t;
+
+    /**
+     * @brief 统一反馈服务的 typed 快照更新
+     * @details 反馈是纯消费者（AD-9/AD-12）：只读取有效敲击事件事实，
+     *          不推进累计/游标/持久化；消费者只读本不可变快照。
+     */
+    typedef struct
+    {
+        uint32_t update_sequence;     /**< owner 单调更新序号，必须从 1 开始递增。 */
+        uint32_t last_event_sequence; /**< 最近一次反馈关联的有效敲击统一序号。 */
+        uint32_t feedback_count;      /**< 本启动周期累计完成输出的反馈事件数。 */
+        uint32_t merged_count;        /**< 本启动周期因限速合并而跳过输出的事件数。 */
+        watch_feedback_channel_update_t channels[WATCH_FEEDBACK_CHANNEL_COUNT]; /**< 按通道的最近事实。 */
+        uint8_t volume;               /**< 当前生效音量，取值域 0-100。 */
+        bool volume_persist_error;    /**< 最近一次音量落盘或恢复是否失败。 */
+    } watch_feedback_update_t;
+
     typedef struct
     {
         bool valid;                    /**< 本次电量读取是否有效。 */
@@ -847,6 +909,7 @@ extern "C"
         bool tap_pending_completion;                                      /**< 本地末字完成锁定置位快照。 */
         uint32_t tap_backlog_count;                                       /**< 离线积压差值快照。 */
         bool tap_persist_error;                                           /**< 最近一次进度事务落盘失败事实。 */
+        watch_feedback_update_t feedback;                                  /**< 统一反馈服务最近一次 typed 事实。 */
         watch_selftest_summary_t selftest;                               /**< 当前启动周期的最近一次自检摘要。 */
     } watch_state_snapshot_t;
 
@@ -887,6 +950,26 @@ extern "C"
     esp_err_t watch_state_apply_tap_progress_update(
         const watch_tap_progress_update_t *update,
         TickType_t timeout_ticks);
+
+    /**
+     * @brief 原子应用统一反馈服务的类型化事实更新
+     * @details 按单调序号接受更新并整体按值复制进不可变快照；旧序号拒绝。
+     * @param update 反馈通道事实、事件关联与音量事实更新
+     * @param timeout_ticks 等待状态互斥锁的超时时间
+     * @return ESP_OK 成功；ESP_ERR_INVALID_STATE/ARG；ESP_ERR_TIMEOUT
+     */
+    esp_err_t watch_state_apply_feedback_update(
+        const watch_feedback_update_t *update,
+        TickType_t timeout_ticks);
+
+    /**
+     * @brief 获取统一反馈服务的小型只读事实快照
+     * @param snapshot 反馈通道事实与音量事实输出
+     * @param timeout_ticks 等待状态互斥锁的超时时间
+     * @return ESP_OK 成功，其他值表示未初始化、参数非法或互斥超时
+     */
+    esp_err_t watch_state_feedback_snapshot(watch_feedback_update_t *snapshot,
+                                            TickType_t timeout_ticks);
 
     /**
      * @brief 原子应用一条类型化手环电量更新

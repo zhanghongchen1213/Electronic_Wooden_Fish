@@ -47,6 +47,7 @@ typedef enum
     STATE_SERVICE_UPDATE_SELFTEST_RETRY_FINISH, /**< 覆盖被重试项的最新终态。 */
     STATE_SERVICE_UPDATE_TAP_GATE,         /**< 统一敲击完成/积压/故障 gate owner 更新。 */
     STATE_SERVICE_UPDATE_TAP_PROGRESS,     /**< 高水位/轮次 owner 的 typed 快照更新。 */
+    STATE_SERVICE_UPDATE_FEEDBACK,         /**< 统一反馈服务的通道事实与音量事实更新。 */
 } state_service_update_type_t;
 
 typedef struct
@@ -72,6 +73,7 @@ typedef struct
         watch_selftest_retry_finish_update_t selftest_retry_finish; /**< 自检重试 finish 小载荷。 */
         watch_tap_gate_update_t tap_gate;             /**< 统一敲击 gate owner 小载荷。 */
         watch_tap_progress_update_t tap_progress;     /**< 高水位/轮次 owner 小载荷。 */
+        watch_feedback_update_t feedback;             /**< 统一反馈服务 owner 小载荷。 */
     } payload;                                          /**< 按 type 解释的更新载荷。 */
     TaskHandle_t apply_ack_task;                        /**< 需要确认时的稳定任务目标，其他更新为 NULL。 */
     uint32_t apply_ack_id;                              /**< apply 确认序号，不需确认时为 0。 */
@@ -316,6 +318,27 @@ esp_err_t state_service_publish_tap_progress(
  */
 esp_err_t state_service_update_tap_progress_owner(
     const watch_tap_progress_update_t *facts,
+    TickType_t timeout_ticks);
+
+/**
+ * @brief 向 state_task 发布统一反馈服务的 typed 事实更新
+ * @param update 单调序号、通道事实、事件关联与音量事实
+ * @param timeout_ticks 等待状态队列空间的有界 tick 数
+ * @return ESP_OK 已入队，其他值表示参数、状态或队列超时
+ */
+esp_err_t state_service_publish_feedback(
+    const watch_feedback_update_t *update,
+    TickType_t timeout_ticks);
+
+/**
+ * @brief 由统一反馈服务 owner 发布最新反馈事实
+ * @details owner 不直接写 watch_state；该入口分配单调序号并通过 state_task 应用。
+ * @param facts 不含有效序号的反馈事实载荷
+ * @param timeout_ticks 等待状态队列空间的有界 tick 数
+ * @return ESP_OK 已入队，其他值表示参数、状态或队列超时
+ */
+esp_err_t state_service_update_feedback_owner(
+    const watch_feedback_update_t *facts,
     TickType_t timeout_ticks);
 
 /**

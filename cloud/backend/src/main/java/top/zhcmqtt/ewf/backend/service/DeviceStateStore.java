@@ -28,8 +28,8 @@ import top.zhcmqtt.ewf.backend.common.persistence.VersionedJsonFile;
  *
  * <p><b>迁移说明（契约 §11）：</b>属非权威镜像，可整体重建。
  *
- * <p><b>本 Story 不做：</b>设备状态上报的接收、校验与镜像更新路径属 Epic 5；本类只提供严格读取
- * 与整体替换。
+ * <p><b>写路径归属：</b>Story 5.1 同步成功后由 {@code ProgressSyncService} 整体替换四字段镜像，
+ * 保证响应对账字段可读。本类只提供严格读取与整体替换；不得据此反向覆盖权威进度。
  */
 @Service
 public class DeviceStateStore {

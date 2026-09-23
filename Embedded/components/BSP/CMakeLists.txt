@@ -9,6 +9,7 @@ set(src_dirs
             NS4150
             PVDF
             QMI8658C
+            RGB
             )
 
 set(include_dirs
@@ -21,6 +22,7 @@ set(include_dirs
             NS4150
             PVDF
             QMI8658C
+            RGB
             )
 
 set(requires
@@ -35,7 +37,8 @@ set(requires
             esp_lcd
             esp_lcd_co5300
             esp_lcd_touch
-            esp_lcd_touch_cst9217)
+            esp_lcd_touch_cst9217
+            led_strip)
 
 idf_component_register(
         SRC_DIRS ${src_dirs}

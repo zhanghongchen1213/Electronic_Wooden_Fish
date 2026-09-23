@@ -11,8 +11,14 @@
 /** 事件队列深度，覆盖早期服务骨架的轻量事件流。 */
 #define EVENT_BUS_QUEUE_DEPTH 16
 
+/** 扇出订阅槽容量；当前订阅方只有反馈服务这一可合并型纯消费者。 */
+#define EVENT_BUS_SUBSCRIBER_MAX 2U
+
 /** 系统事件队列句柄。 */
 static QueueHandle_t s_event_queue;
+
+/** 扇出订阅队列表；只登记订阅方自有队列句柄，不持有所有权。 */
+static QueueHandle_t s_subscribers[EVENT_BUS_SUBSCRIBER_MAX];
 
 /** 系统事件组句柄。 */
 static EventGroupHandle_t s_event_group;
@@ -71,7 +77,45 @@ esp_err_t event_bus_publish(const legbot_event_t *event, TickType_t timeout_tick
     {
         return ESP_ERR_INVALID_ARG;
     }
-    return xQueueSend(s_event_queue, event, timeout_ticks) == pdTRUE ? ESP_OK : ESP_ERR_TIMEOUT;
+    const esp_err_t main_result =
+        xQueueSend(s_event_queue, event, timeout_ticks) == pdTRUE ? ESP_OK : ESP_ERR_TIMEOUT;
+    /* 扇出投递为非阻塞：订阅队列满时丢弃本次副本（可合并型），不影响主队列结论。 */
+    for (size_t index = 0; index < EVENT_BUS_SUBSCRIBER_MAX; ++index)
+    {
+        if (s_subscribers[index] != NULL)
+        {
+            (void)xQueueSend(s_subscribers[index], event, 0);
+        }
+    }
+    return main_result;
+}
+
+esp_err_t event_bus_subscribe(QueueHandle_t queue)
+{
+    if (!s_initialized)
+    {
+        return ESP_ERR_INVALID_STATE;
+    }
+    if (queue == NULL)
+    {
+        return ESP_ERR_INVALID_ARG;
+    }
+    for (size_t index = 0; index < EVENT_BUS_SUBSCRIBER_MAX; ++index)
+    {
+        if (s_subscribers[index] == queue)
+        {
+            return ESP_OK;
+        }
+    }
+    for (size_t index = 0; index < EVENT_BUS_SUBSCRIBER_MAX; ++index)
+    {
+        if (s_subscribers[index] == NULL)
+        {
+            s_subscribers[index] = queue;
+            return ESP_OK;
+        }
+    }
+    return ESP_ERR_NO_MEM;
 }
 
 esp_err_t event_bus_publish_from_isr(const legbot_event_t *event, BaseType_t *higher_priority_woken)

@@ -9,6 +9,10 @@ idf_component_register(
         "progress_service/progress_transaction.c"
         "progress_service/progress_store_nvs.c"
         "progress_service/progress_service.c"
+        "feedback_service/feedback_policy.c"
+        "feedback_service/audio_volume_store_nvs.c"
+        "feedback_service/feedback_audio_bsp.c"
+        "feedback_service/feedback_service.c"
         "pvdf_input_service/pvdf_confirm_policy.c"
         "pvdf_input_service/pvdf_input_service.c"
         "tap_input_service/tap_input_policy.c"
@@ -19,6 +23,7 @@ idf_component_register(
         "."
         "power_service"
         "progress_service"
+        "feedback_service"
         "pvdf_input_service"
         "tap_input_service"
         "selftest_service"
@@ -32,6 +37,7 @@ idf_component_register(
         heap
         nvs_flash
         platform
+        spiffs
 )
 
 # canonical 生成头（ewf_scripture_canonical.h）位于仓库 docs 契约目录；

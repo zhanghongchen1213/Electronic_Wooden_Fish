@@ -36,6 +36,7 @@ extern "C"
         LEGBOT_SERVICE_PVDF,         /**< PVDF 候选有效输入边界服务。 */
         LEGBOT_SERVICE_TAP_INPUT,    /**< 三类来源统一有效敲击队列服务。 */
         LEGBOT_SERVICE_PROGRESS,     /**< 本地高水位/轮次事实 owner 服务。 */
+        LEGBOT_SERVICE_FEEDBACK,     /**< 统一反馈服务（木鱼音 + RGB + 反馈状态）。 */
         LEGBOT_SERVICE_COUNT         /**< 服务数量。 */
     } legbot_service_id_t;
 

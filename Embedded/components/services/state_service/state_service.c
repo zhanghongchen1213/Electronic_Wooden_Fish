@@ -45,6 +45,8 @@ static atomic_uint s_next_apply_ack_id;
 static atomic_uint s_next_tap_gate_update_sequence;
 /** 高水位/轮次 owner 的单调发布序号。 */
 static atomic_uint s_next_tap_progress_update_sequence;
+/** 统一反馈服务 owner 的单调发布序号。 */
+static atomic_uint s_next_feedback_update_sequence;
 /** 当前 state_task 句柄，仅供发布成功后直接唤醒 owner。 */
 static _Atomic(TaskHandle_t) s_owner_task;
 /** 保护 BLE latest-value mailbox 按值副本的短临界区。 */
@@ -713,6 +715,44 @@ esp_err_t state_service_update_tap_progress_owner(
     return state_service_publish_tap_progress(&update, timeout_ticks);
 }
 
+esp_err_t state_service_publish_feedback(
+    const watch_feedback_update_t *update,
+    TickType_t timeout_ticks)
+{
+    if (update == NULL || update->update_sequence == 0U)
+    {
+        return ESP_ERR_INVALID_ARG;
+    }
+    QueueHandle_t queue = legbot_state_service_queue();
+    if (queue == NULL)
+    {
+        return ESP_ERR_INVALID_STATE;
+    }
+    const state_service_update_t message = {
+        .type = STATE_SERVICE_UPDATE_FEEDBACK,
+        .payload.feedback = *update,
+    };
+    return publish_queue_update(queue, &message, timeout_ticks);
+}
+
+esp_err_t state_service_update_feedback_owner(
+    const watch_feedback_update_t *facts,
+    TickType_t timeout_ticks)
+{
+    if (facts == NULL)
+    {
+        return ESP_ERR_INVALID_ARG;
+    }
+    uint32_t sequence = atomic_fetch_add(&s_next_feedback_update_sequence, 1U) + 1U;
+    if (sequence == 0U)
+    {
+        sequence = atomic_fetch_add(&s_next_feedback_update_sequence, 1U) + 1U;
+    }
+    watch_feedback_update_t update = *facts;
+    update.update_sequence = sequence;
+    return state_service_publish_feedback(&update, timeout_ticks);
+}
+
 void state_service_run(void)
 {
     QueueHandle_t queue = legbot_state_service_queue();
@@ -1064,6 +1104,12 @@ static esp_err_t apply_update(const state_service_update_t *update)
     {
         return watch_state_apply_tap_progress_update(
             &update->payload.tap_progress,
+            pdMS_TO_TICKS(STATE_SERVICE_APPLY_TIMEOUT_MS));
+    }
+    if (update->type == STATE_SERVICE_UPDATE_FEEDBACK)
+    {
+        return watch_state_apply_feedback_update(
+            &update->payload.feedback,
             pdMS_TO_TICKS(STATE_SERVICE_APPLY_TIMEOUT_MS));
     }
     return ESP_ERR_INVALID_ARG;

@@ -19,21 +19,23 @@ import top.zhcmqtt.ewf.backend.common.persistence.PersistenceLimits;
 import top.zhcmqtt.ewf.backend.common.persistence.VersionedJsonFile;
 
 /**
- * {@code daily_stats.json} 的**文件级信封**基线与原子整体替换。
+ * {@code daily_stats.json} 的文件级信封与原子整体替换。
  *
- * <p><b>本 Story 只建立信封：</b>文件形如 {@code {"schema_version": 1, "buckets": { ... }}}。
- * 契约 §11 该行的字段列为「无」，因此**按日桶的键名与桶值字段都不在本 Story 冻结**；Story 5.3
- * 冻结时必须显式说明或递增 {@code schema_version}。本 Story 的读取校验**只覆盖信封**
- * （{@code schema_version}、容器为 object、JSON 完整性、字节上限），刻意**不**对桶内键名做白名单
- * 断言——那会成为 Story 5.3 之外的第二真源。
+ * <p><b>信封：</b>文件形如 {@code {"schema_version": 1, "buckets": { ... }}}。契约 §11 该行的字段列
+ * 为「无」，故 {@link #allowedFields()} 继续返回空集——参与 §11.1「五份文件字段并集」比对。
  *
- * <p><b>迁移说明（契约 §11）：</b>日界以 backend 配置时区为准，不按设备本地时间切分。
+ * <h2>裁决 B（Story 5.3）：桶形状（实现冻结，非契约字段列）</h2>
+ * <p><b>选择：</b>{@code buckets} 键 = {@code Asia/Shanghai} 的 {@code yyyy-MM-dd}；桶值 object 仅含
+ * {@code confirmed_taps}（非负 int）。无敲击日期不写 0 桶。顶层信封仍恰为
+ * {@code {schema_version, buckets}}——不得增加顶层字段。
+ * <b>理由：</b>契约字段列保持「无」以免破坏 §11.1 并集门禁；桶键/桶值由本 Story 实现冻结并登记 deferred。
+ * <b>约束：</b>不得把桶字段塞进 {@link #allowedFields()}；不得改 {@code docs/contracts/**} 字节。
  *
- * <p><b>派生面：</b>本文件由已确认增量派生，属派生文件。它缺失或损坏时**不得**改写
- * {@code progress.json}、**不得**改变权威高水位。
+ * <p><b>派生面：</b>本文件由已确认增量派生。缺失或损坏时不得改写 {@code progress.json}、不得改变权威高水位。
+ * 日界与归档算法见 {@link HistoryStatsService}；本类只提供信封读写，不实现日期计算。
  *
- * <p><b>本 Story 不做：</b>历史统计派生、日界归档与轮次完成确认（Epic 5）；本类只提供信封的
- * 严格读取与整体替换，不实现任何日期计算。
+ * <p><b>本 Story（5.3）交付：</b>桶内容首次由 {@link HistoryStatsService} 写入；查询走
+ * {@code GET /api/v1/sync/stats}。
  */
 @Service
 public class DailyStatsStore {
@@ -43,7 +45,7 @@ public class DailyStatsStore {
 
     /**
      * 容纳按日桶的容器字段名。契约 §11 只冻结「一个 object 容器」这一事实，未冻结容器键名，
-     * 故本常量不是契约真源，仅是本 Story 的实现取定。
+     * 故本常量不是契约真源，仅是实现取定。
      */
     private static final String BUCKETS_FIELD = "buckets";
 
@@ -63,8 +65,8 @@ public class DailyStatsStore {
     }
 
     /**
-     * @return 契约 §11 的承载字段列。契约把该文件的字段列记为「无」（按日桶由 Story 5.3 冻结），
-     *         因此这里返回空集合；它参与 §11.1「五份文件字段并集 = backend 作用域字段集合」的比对。
+     * @return 契约 §11 的承载字段列。契约把该文件的字段列记为「无」（按日桶由 Story 5.3 实现冻结、
+     *         仍非契约字段列），因此这里返回空集合。
      */
     public static Set<String> allowedFields() {
         return Set.of();
@@ -81,8 +83,8 @@ public class DailyStatsStore {
     }
 
     /**
-     * 原子整体替换：payload 是**容器内容**（按日桶），本方法负责补上 {@code schema_version} 信封。
-     * 不对桶内键名做白名单断言——桶结构属 Story 5.3。
+     * 原子整体替换：payload 是容器内容（按日桶），本方法负责补上 {@code schema_version} 信封。
+     * 不对桶内键名做白名单断言——桶结构属 Story 5.3 实现冻结，不进入 {@link #allowedFields()}。
      */
     public void write(ObjectNode buckets) {
         ObjectNode envelope = objectMapper.createObjectNode();

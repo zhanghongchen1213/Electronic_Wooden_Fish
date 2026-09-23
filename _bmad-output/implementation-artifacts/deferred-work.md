@@ -185,3 +185,57 @@
 - `StateSnapshotContractTest.非法基准参数回参数错误`（新增）：断言 `acked_total=-1` 与非数值 `snapshot_seq` 回 `400` + `40000`。此前该 400 的唯一护栏是一对 `@Min(0)`，去掉后 `-1` 会静默流进选码分支变成 `200` + `20003`，而 85 条门禁无一失败。
 - `StateSnapshotServiceTest` 的 `字段类型不符不静默回退`（扩写）：在原有 `intField`（`acked_total`）用例之外补 `round_state` 写数字与 `pending_completion` 写字符串两例。此前 `textField`/`booleanField` 的 fail-closed 护栏无任何测试，退化后会把「文件损坏」变成貌似合理的 `20001` 业务拒绝。
 - `StateSnapshotService.exportSnapshotSeq` 的 javadoc 更正：原文称「缺失（未初始化）或该字段不是整数时取 `NO_COUNT`」，与实现（文件存在而字段非法即 fail closed 抛 `50000`）相反，会误导读者以为存在 AC3 明令禁止的静默回退。
+
+## Deferred from: code review of 2-2-实现本地高水位事务持久化与离线积压 (2026-09-23)
+
+- `progress_store_nvs.c` 加载/保存语义零测试覆盖：NVS 主机不可测，ESP-IDF 编译通过且 dev receipt 已声明 hardware_pending；样机到位后按真机闭环 runbook 验证掉电一致性与恢复链路（并入该 story 的 QD-2.2-1）。
+- `legbot_services.c` 启动/停止序列变更无主机测试：`contract_checks` 静态断言只覆盖服务数量，启动图顺序（progress 先于输入边界停止）无回归护栏；启动图主机测试基建留待后续 story 一并建立。
+- 主机测试未记录积压拒绝计数：AC4 主文"快照或日志"已由每次拒绝的中文日志（`SVC_PROGRESS` 拒绝敲击日志）满足；替身计数需在 progress_service 新增公共计数器，作为增强项留待后续，不为本项扩展公共面。
+- `progress_service_advance_acked_total` 取锁 `portMAX_DELAY` 无界（`timeout_ticks` 只约束发布等待）：与同文件既有服务取锁模式一致，owner 持锁段为有界落盘操作，当前无阻塞证据；接口语义调整留待 Story 2.5 接入时统一评估。
+
+
+## Deferred from: create-story of 5-1-实现高水位幂等同步 (2026-09-23)
+
+1. **`POST /api/v1/sync/report` 路径未被契约冻结**（与 4.6 缺口 1 同族）：实现按裁决 D 落地该路径；需契约层补 REST 路径表或标明「实现路径 ⊆ 未冻结但可用」。
+2. **`https_sync_response` 样例 9 字段 vs 本 Story/4.6 的 17 字段响应 DTO**：实现复用 17 字段 `StateSnapshotResponse`；需契约层裁定样例是否扩展或标明「最小必填 ⊆ 实现闭包」。
+3. **写路径 `20001` 的判定输入**：本 Story 采用「请求轮次相对权威轮次无法归属」的具体分支（请求 `round_id` 小于权威，或权威 `pending_completion==true` 时提交更大新 `round_id`；取值域外亦 `20001`）；需契约层补 `condition` 判定输入表。
+4. **`action_id` 在纯高水位同步（非篇章动作）下的去重粒度**：本 Story 取「同 `action_id` → 返回首次确认后的权威快照」；若上游意图是「仅篇章动作去重」，需契约澄清。
+
+## Deferred from: code review of 5-1-实现高水位幂等同步.md (2026-09-23)
+
+- 同 `action_id` 但改写请求积压差（`local_total−acked_total`）时，短路径仍按**当前请求**重算 `20004`：同体网络重试结果一致；异体同键是否应冻结首次业务码需契约澄清去重粒度（与 create-story 缺口 4 同族）。
+- 轮次/状态非法取值经 Bean Validation 回 HTTP 400/`40000`，与裁决 B「域外 → 20001」存在张力；code-review 保守保留 Task 3.2 协议校验路径，契约层若要求业务码统一再改。
+- `round_state=completed` 且 `pending_completion=true` 的矛盾组合未在写路径拒绝：完成态状态机属 Story 5.2。
+- `ProgressSyncService.deviceLocks` 按 `deviceId` 无限增长：MVP 单身份单设备，低风险；多设备前再做弱引用/驱逐。
+- 拒绝响应（如 `20003`）未与成功路径做相同的 17 字段注册表闭包断言：现有用例已覆盖信封三键与关键基准字段，完整闭包可后续补强。
+
+## Deferred from: create-story of 5-2-实现轮次-完成与跨轮动作 (2026-09-23)
+
+1. **`POST /api/v1/sync/round-action` 与 body 字段 `action`（`restart|exit`）未被契约冻结**（与 4.6/5.1 REST 路径缺口同族）。实现按 Story 裁决 D；不得改契约字节。
+2. **「退出」是否同属 §9 篇章动作族**：契约正文点名「从头开始」「立即同步」；exit 语义在 §7/FR-C-004。本 Story 按篇章动作族 `action_id` 落 `progress.json`；需契约补枚举。
+3. **完成确认触发的精确判定输入表**（末字 + `pending_completion`/`completed` 意图）需契约 `condition` 级补强。
+4. **完成锁定期间是否仍确认更高 `local_total`**：本 Story 取「累计可推进、游标冻结」；若产品要求锁定期间连累计也拒，需契约/PRD 澄清（FR-C-004「输入不计数」主要由设备 gate 保证）。
+
+## Deferred from: code review of 5-2-实现轮次-完成与跨轮动作.md (2026-09-23)
+
+- 裁决 A「未达末字 `pending_completion=true` → 20001」与裁决 B「pending 期间允许同轮把游标推到末字」文案互相矛盾；实现保守保留 A，新写入下 pending 无法在未完成确认态稳定驻留。需后续 story/契约统一口径后再改行为或改 javadoc。
+- `roundAction` 同键短路径（含进程内已消费集合）不区分 `restart|exit`：同键跨动作碰撞返回当前权威快照。客户端须为每次动作使用新 `action_id`；若需按动作类型区分，要扩展 `progress.json` 字段闭包（契约/Store 决策）。
+- 篇章动作幂等集合 `consumedRoundActionIds` 仅进程内有效：进程重启后回退为 `progress.action_id` 单槽语义；多进程文件锁与持久化幂等集属本 Story 明确未证明面。
+
+## Deferred from: create-story of 5-3-实现可信时间和历史统计 (2026-09-23)
+
+1. **`GET /api/v1/sync/stats` 与 `HistoryStatsResponse` 字段未被契约冻结**（与 4.6/5.1/5.2 REST 缺口同族）。实现按 Story 裁决 C/D；不得改契约字节。
+2. **`daily_stats.json` 桶键/桶值形状仍不在契约 §11 字段列**——本 Story 实现冻结为 `yyyy-MM-dd` → `{confirmed_taps}`；是否升格进注册表属契约修订，不在本 Story 改字节。`DailyStatsStore.allowedFields()` 继续空集。
+3. **连续天数在「今日为 0」时是否中断**：本 Story 取裁决 F（昨日起点）；若产品要「严格含今日否则清零」，需 PRD/UX 澄清。
+4. **查询发现 `Σ ≠ acked_total` 时是否允许只读自愈写盘**：本 Story 禁止查询写盘；若运维需要，属后续 story。
+
+## Deferred from: code review of 5-3-实现可信时间和历史统计.md (2026-09-23)
+
+- GET `/api/v1/sync/stats`（`HistoryStatsService.query`）未与 `ProgressSyncService` 的 `deviceLocks` 共享：并发 report 归档与 stats 查询可能读到撕裂的 progress/buckets 组合。查询串行化会引入跨服务锁面；MVP 单设备低频，后续若出现并发撕裂再收敛。
+
+## Deferred from: create-story of 5-4-实现命令修订和待设备应用收敛 (2026-09-23)
+
+1. **`POST /api/v1/sync/command` 与 `SettingsCommandRequest`（含可选 `base_revision`）未被契约冻结**（与 4.6/5.1/5.2/5.3 REST 缺口同族）。实现按 Story 裁决 A/B；不得改契约字节。
+2. **epics/PRD「current_revision」与契约 `command_revision` 名称落差**——实现与测试只使用 `command_revision`；规范修补属文档修订，不改契约字节。
+3. **「立即同步」是否占用设置族或篇章族 `action_id`、是否递增 `command_revision`**——契约 §9 称立即同步无值载荷；本 Story 不做，需后续 story 冻结。
+4. **WebSocket `command_state` 帧与设置下发的推送时机**——属 Story 5.5；本 Story 仅 REST 快照可读。

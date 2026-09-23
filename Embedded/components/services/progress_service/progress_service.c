@@ -34,8 +34,8 @@ static const char *TAG = "SVC_PROGRESS";
 static SemaphoreHandle_t s_mutex;
 /** owner 私有单事务组；消费者只能经 state_service 快照读取。 */
 static ewf_progress_transaction_t s_transaction;
-/** prepared 状态：恢复已完成且任务允许进入消费循环。 */
-static bool s_prepared;
+/** prepared 状态：恢复已完成且任务允许进入消费循环；跨任务原子访问。 */
+static atomic_bool s_prepared;
 /** 停止请求标志；由 request_stop 置位，消费循环有界轮询。 */
 static atomic_bool s_stop_requested;
 /** fail-closed 状态：恢复校验失败后停止推进，保持可诊断。 */
@@ -62,7 +62,7 @@ esp_err_t progress_service_init_contracts(void)
         return ESP_ERR_NO_MEM;
     }
     memset(&s_transaction, 0, sizeof(s_transaction));
-    s_prepared = false;
+    atomic_store(&s_prepared, false);
     s_degraded = false;
     s_last_completed = false;
     s_last_queue_full = false;
@@ -104,6 +104,12 @@ esp_err_t progress_service_prepare_run(void)
                      esp_err_to_name(init_save_error));
         }
     }
+    else if (status == EWF_PROGRESS_STORE_ERROR)
+    {
+        /* 介质错误：不依赖兜底校验，显式 fail-closed，不静默回退零值。 */
+        s_degraded = true;
+        ESP_LOGE(TAG, "进度事务组介质读取错误，停止推进并保持可诊断");
+    }
     else
     {
         const ewf_progress_validate_result_t valid =
@@ -112,14 +118,14 @@ esp_err_t progress_service_prepare_run(void)
                                               EWF_SCRIPTURE_CONSUMABLE_COUNT);
         if (valid != EWF_PROGRESS_VALIDATE_OK)
         {
-            /* 配置错误/介质损坏：fail-closed，不静默回退零值或伪造高水位。 */
+            /* 配置错误/字段不一致：fail-closed，不静默回退零值或伪造高水位。 */
             s_degraded = true;
             ESP_LOGE(TAG, "进度事务组恢复校验失败：结果=%d，停止推进并保持可诊断",
                      (int)valid);
         }
     }
     s_transaction = recovered;
-    s_prepared = true;
+    atomic_store(&s_prepared, true);
 
     /* 恢复后立即发布初值快照与 gate 事实，消费者只读快照。 */
     const TickType_t publish_ticks = pdMS_TO_TICKS(PROGRESS_PUBLISH_TIMEOUT_MS);
@@ -148,7 +154,7 @@ void progress_service_cancel_prepared_run(void)
 {
     if (s_mutex != NULL && xSemaphoreTake(s_mutex, 0) == pdTRUE)
     {
-        s_prepared = false;
+        atomic_store(&s_prepared, false);
         xSemaphoreGive(s_mutex);
     }
 }
@@ -163,7 +169,7 @@ esp_err_t progress_service_deinit_contracts(void)
     {
         return ESP_ERR_TIMEOUT;
     }
-    if (s_prepared)
+    if (atomic_load(&s_prepared))
     {
         xSemaphoreGive(s_mutex);
         return ESP_ERR_INVALID_STATE;
@@ -176,7 +182,7 @@ esp_err_t progress_service_deinit_contracts(void)
 
 esp_err_t progress_service_run(void)
 {
-    if (s_mutex == NULL || !s_prepared)
+    if (s_mutex == NULL || !atomic_load(&s_prepared))
     {
         return ESP_ERR_INVALID_STATE;
     }
@@ -204,7 +210,7 @@ esp_err_t progress_service_run(void)
             break;
         }
     }
-    s_prepared = false;
+    atomic_store(&s_prepared, false);
     return ESP_OK;
 }
 
@@ -222,7 +228,7 @@ esp_err_t progress_service_request_stop(TickType_t timeout_ticks)
 esp_err_t progress_service_advance_acked_total(uint32_t new_acked_total,
                                                TickType_t timeout_ticks)
 {
-    if (s_mutex == NULL || !s_prepared)
+    if (s_mutex == NULL || !atomic_load(&s_prepared))
     {
         return ESP_ERR_INVALID_STATE;
     }

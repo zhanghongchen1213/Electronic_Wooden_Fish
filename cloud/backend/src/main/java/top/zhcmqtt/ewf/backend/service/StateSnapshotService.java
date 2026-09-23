@@ -39,9 +39,11 @@ import top.zhcmqtt.ewf.backend.dto.sync.StateSnapshotResponse;
  * 契约默认值而**不是** `50000`。文件存在时不合法（损坏、超限、字段集合不符、字段值类型不符）一律
  * fail closed 抛 `50000` 且不改写文件——不得把「不可判定/不合法」静默降级成默认高水位。
  *
- * <p><b>本 Story 不做（明确不做）：</b>不实现任何写路径（不推进 `acked_total`、不改轮次、不改游标、
- * 不改命令修订、不落盘任何文件）；不实现 WebSocket 与断线补齐（Epic 5）；不暴露
- * {@code PersistenceRecoveryReport}（FR-C-006 的「恢复基准」是查询响应冻结的快照水位，不是恢复报告）；
+ * <p><b>只读边界（Story 5.1 / 5.4）：</b>写路径（幂等推进、落盘、设置命令修订）在
+ * {@code ProgressSyncService}；本类保持只读装配，可被写路径调用 {@link #assemble(String)} 产出
+ * 17 字段响应。仍不在此类内写盘、不推进高水位、不递增 {@code command_revision}。
+ * 命令维度「待设备应用 / 已生效」不是 wire 字段——见 {@link #commandApplied(int, int)}。
+ * 不实现 WebSocket 与断线补齐（Story 5.5）；不暴露 {@code PersistenceRecoveryReport}；
  * 不依赖 `PersistenceRecovery` / `PersistenceRecoveryReport`。
  */
 @Service

@@ -516,6 +516,61 @@ esp_err_t watch_state_apply_tap_progress_update(
     return ESP_OK;
 }
 
+esp_err_t watch_state_apply_feedback_update(
+    const watch_feedback_update_t *update,
+    TickType_t timeout_ticks)
+{
+    if (s_state_mutex == NULL)
+    {
+        return ESP_ERR_INVALID_STATE;
+    }
+    if (update == NULL || update->update_sequence == 0U ||
+        update->volume > 100U)
+    {
+        return ESP_ERR_INVALID_ARG;
+    }
+    for (size_t index = 0; index < (size_t)WATCH_FEEDBACK_CHANNEL_COUNT; ++index)
+    {
+        const watch_feedback_channel_update_t *channel = &update->channels[index];
+        if ((unsigned)channel->channel >= (unsigned)WATCH_FEEDBACK_CHANNEL_COUNT ||
+            (unsigned)channel->state > (unsigned)WATCH_FEEDBACK_CHANNEL_FAILED ||
+            (unsigned)channel->error > (unsigned)WATCH_FEEDBACK_ERROR_RGB_FAILED ||
+            (unsigned)channel->channel != index)
+        {
+            return ESP_ERR_INVALID_ARG;
+        }
+    }
+    if (xSemaphoreTake(s_state_mutex, timeout_ticks) != pdTRUE)
+    {
+        return ESP_ERR_TIMEOUT;
+    }
+    if (s_state.feedback.update_sequence != 0U &&
+        update->update_sequence <= s_state.feedback.update_sequence)
+    {
+        xSemaphoreGive(s_state_mutex);
+        return ESP_ERR_INVALID_STATE;
+    }
+    s_state.feedback = *update;
+    xSemaphoreGive(s_state_mutex);
+    return ESP_OK;
+}
+
+esp_err_t watch_state_feedback_snapshot(watch_feedback_update_t *snapshot,
+                                        TickType_t timeout_ticks)
+{
+    if (s_state_mutex == NULL || snapshot == NULL)
+    {
+        return ESP_ERR_INVALID_STATE;
+    }
+    if (xSemaphoreTake(s_state_mutex, timeout_ticks) != pdTRUE)
+    {
+        return ESP_ERR_TIMEOUT;
+    }
+    *snapshot = s_state.feedback;
+    xSemaphoreGive(s_state_mutex);
+    return ESP_OK;
+}
+
 esp_err_t watch_state_apply_battery_update(const watch_battery_update_t *update,
                                            TickType_t timeout_ticks)
 {

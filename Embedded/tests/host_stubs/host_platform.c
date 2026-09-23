@@ -26,6 +26,7 @@ struct host_queue
 };
 struct host_mutex { bool locked; };
 static QueueHandle_t s_state_queue;
+static QueueHandle_t s_subscribers[2U];
 static TickType_t s_ticks;
 static esp_err_t s_publish_error;
 static uint32_t s_published_count;
@@ -125,7 +126,29 @@ esp_err_t event_bus_publish(const legbot_event_t *event, TickType_t timeout)
     if (s_publish_error != ESP_OK) { return s_publish_error; }
     assert(s_published_count < 64U);
     s_published_sequences[s_published_count++] = event->value;
+    /* 扇出镜像真实 event_bus：订阅队列非阻塞投递，队满丢最新（可合并型）。 */
+    for (unsigned index = 0; index < 2U; ++index)
+    {
+        if (s_subscribers[index] != NULL)
+        {
+            (void)xQueueSend(s_subscribers[index], event, 0);
+        }
+    }
     return ESP_OK;
+}
+
+esp_err_t event_bus_subscribe(QueueHandle_t queue)
+{
+    if (queue == NULL) { return ESP_ERR_INVALID_ARG; }
+    for (unsigned index = 0; index < 2U; ++index)
+    {
+        if (s_subscribers[index] == queue) { return ESP_OK; }
+    }
+    for (unsigned index = 0; index < 2U; ++index)
+    {
+        if (s_subscribers[index] == NULL) { s_subscribers[index] = queue; return ESP_OK; }
+    }
+    return ESP_ERR_NO_MEM;
 }
 
 static QueueHandle_t s_event_bus_queue;

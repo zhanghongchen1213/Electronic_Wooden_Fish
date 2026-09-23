@@ -32,7 +32,11 @@ import top.zhcmqtt.ewf.backend.common.persistence.VersionedJsonFile;
  * <p><b>去重键：</b>本文件的 {@code action_id} 是**设置命令族**的幂等去重键，与
  * {@code progress.json} 中**篇章动作族**的 {@code action_id} 是不同族，不要合并。
  *
- * <p><b>本 Story 不做：</b>「只保留最新修订」「旧修订不写回」的收敛判定（AD-5）属 Epic 5；
+ * <p><b>写路径归属：</b>Story 5.1 同步成功后由 {@code ProgressSyncService} 更新
+ * {@code applied_revision}（单调不减），不递增 {@code command_revision}、不改命令载荷。
+ * Story 5.4 设置下发由 {@code ProgressSyncService#submitSettings} 递增 {@code command_revision}
+ * 并整体替换最新载荷（只留最新）；「待设备应用 / 已生效」由客户端按
+ * {@code applied_revision ≥ command_revision} 派生（见 {@code StateSnapshotService#commandApplied}）。
  * 本类只提供严格读取与整体替换。
  */
 @Service

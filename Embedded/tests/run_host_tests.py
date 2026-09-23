@@ -19,6 +19,7 @@ EMBEDDED_DIR = TESTS_DIR.parent
 POLICY_DIR = EMBEDDED_DIR / "components/services/power_service"
 TAP_POLICY_DIR = EMBEDDED_DIR / "components/services/tap_input_service"
 PROGRESS_DIR = EMBEDDED_DIR / "components/services/progress_service"
+FEEDBACK_DIR = EMBEDDED_DIR / "components/services/feedback_service"
 CANONICAL_DIR = EMBEDDED_DIR.parent / "docs/contracts/canonical/generated"
 
 
@@ -276,6 +277,99 @@ def run_progress_runtime_host_test() -> int:
         return run.returncode
 
 
+def run_feedback_policy_host_test() -> int:
+    compiler = shutil.which("cc") or shutil.which("gcc") or shutil.which("clang")
+    if compiler is None:
+        print("FAIL feedback-policy: 未找到 cc/gcc/clang，无法构建主机测试")
+        return 1
+
+    with tempfile.TemporaryDirectory() as tmpdir:
+        binary = Path(tmpdir) / "test_feedback_policy"
+        build = subprocess.run(
+            [
+                compiler,
+                "-std=c17",
+                "-Wall",
+                "-Wextra",
+                "-Werror",
+                "-I",
+                str(FEEDBACK_DIR),
+                str(TESTS_DIR / "test_feedback_policy.c"),
+                str(FEEDBACK_DIR / "feedback_policy.c"),
+                "-o",
+                str(binary),
+            ],
+            capture_output=True,
+            text=True,
+            check=False,
+        )
+        if build.returncode != 0:
+            print("FAIL feedback-policy: 主机测试构建失败")
+            print(build.stdout)
+            print(build.stderr)
+            return 1
+        run = subprocess.run([str(binary)], capture_output=True, text=True, check=False)
+        sys.stdout.write(run.stdout)
+        sys.stderr.write(run.stderr)
+        return run.returncode
+
+
+def run_feedback_runtime_host_test() -> int:
+    compiler = shutil.which("cc") or shutil.which("gcc") or shutil.which("clang")
+    if compiler is None:
+        print("FAIL feedback-runtime: 未找到 cc/gcc/clang，无法构建主机测试")
+        return 1
+
+    with tempfile.TemporaryDirectory() as tmpdir:
+        binary = Path(tmpdir) / "test_feedback_runtime"
+        build = subprocess.run(
+            [
+                compiler,
+                "-std=c17",
+                "-Wall",
+                "-Wextra",
+                "-Werror",
+                "-I",
+                str(FEEDBACK_DIR),
+                "-I",
+                str(TAP_POLICY_DIR),
+                "-I",
+                str(TESTS_DIR / "host_stubs"),
+                "-I",
+                str(EMBEDDED_DIR / "components/app_state"),
+                "-I",
+                str(EMBEDDED_DIR / "components/services/state_service"),
+                "-I",
+                str(EMBEDDED_DIR / "components/services"),
+                "-I",
+                str(EMBEDDED_DIR / "components/platform/event_bus"),
+                "-I",
+                str(EMBEDDED_DIR / "components/BSP/RGB"),
+                str(TESTS_DIR / "test_feedback_runtime.c"),
+                str(FEEDBACK_DIR / "feedback_policy.c"),
+                str(FEEDBACK_DIR / "feedback_service.c"),
+                str(TESTS_DIR / "host_stubs/feedback_host.c"),
+                str(TESTS_DIR / "host_stubs/host_platform.c"),
+                str(TESTS_DIR / "host_stubs/state_service_host.c"),
+                str(EMBEDDED_DIR / "components/app_state/watch_state.c"),
+                "-o",
+                str(binary),
+            ],
+            capture_output=True,
+            text=True,
+            check=False,
+        )
+        if build.returncode != 0:
+            print("FAIL feedback-runtime: 主机测试构建失败")
+            print(build.stdout)
+            print(build.stderr)
+            return 1
+        run = subprocess.run([str(binary)], capture_output=True, text=True, check=False)
+        sys.stdout.write(run.stdout)
+        sys.stderr.write(run.stderr)
+        return run.returncode
+
+
 def main() -> int:
     failures = run_source_contracts()
     failures += run_edge_policy_host_test()
@@ -283,6 +377,8 @@ def main() -> int:
     failures += run_tap_runtime_host_test()
     failures += run_progress_transaction_host_test()
     failures += run_progress_runtime_host_test()
+    failures += run_feedback_policy_host_test()
+    failures += run_feedback_runtime_host_test()
     if failures != 0:
         print("host tests: 失败")
         return 1

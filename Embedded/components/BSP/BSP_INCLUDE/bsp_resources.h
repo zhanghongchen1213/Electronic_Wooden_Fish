@@ -85,6 +85,9 @@ extern "C"
 
 /** NS4150 功放使能引脚。 */
 #define LEGBOT_BSP_NS4150_PA_EN_GPIO GPIO_NUM_48
+
+/** RGB 状态灯数据引脚（权威事实源：电子木鱼-硬件网络清单.json RGB_DATA=IO3）。 */
+#define EWF_BSP_RGB_DATA_GPIO GPIO_NUM_3
 /** NS4150B 数据手册规定 CTRL 高电平进入工作模式。 */
 #define LEGBOT_BSP_NS4150_PA_ACTIVE_LEVEL 1U
 /** NS4150B 数据手册规定 CTRL 低电平进入 shutdown。 */

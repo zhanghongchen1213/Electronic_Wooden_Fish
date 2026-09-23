@@ -91,13 +91,13 @@ class PersistenceFileContractTest {
     }
 
     @Test
-    @DisplayName("daily_stats.json 的字段列为「无」，桶结构留给 Story 5.3")
+    @DisplayName("daily_stats.json 契约字段列仍为「无」；桶形状由 5.3 实现冻结、不进 allowedFields")
     void 日统计不冻结桶字段() throws IOException {
         JsonNode dailyStats = contractFiles().get(DailyStatsStore.fileName());
         assertNotNull(dailyStats, "契约 §11 应包含 daily_stats.json");
         assertEquals(0, dailyStats.get("fields").size(), "契约把该文件字段列冻结为「无」");
         assertEquals(Set.of(), DailyStatsStore.allowedFields(),
-                "本 Story 不得为按日桶发明第二套字段白名单（属 Story 5.3）");
+                "桶键/桶值由 Story 5.3 实现冻结，仍不得塞进 allowedFields（非契约 §11 字段列）");
     }
 
     private static Map<String, StoreFacade> storeFacades() {
