@@ -29,7 +29,7 @@
 # - Dev moves story to 'review', then runs code-review (fresh context, different LLM recommended)
 # - Retrospective appends its action items to action_items; the status view surfaces open ones
 generated: 09-22-2026 02:37
-last_updated: 09-24-2026 02:41
+last_updated: 09-24-2026 10:05
 project: Electronic_Wooden_Fish
 project_key: NOKEY
 tracking_system: file-system
@@ -44,11 +44,11 @@ development_status:
   epic-2: in-progress
   2-1-统一有效敲击队列与输入闸门: done
   2-2-实现本地高水位事务持久化与离线积压: done
-  2-3-提供木鱼音频与低打扰反馈: review
-  2-4-实现触摸-pwr-导航与设备设置持久化: backlog
-  2-5-实现-air780egp-活动窗口客户端与-https-mock: backlog
-  2-6-实现-boot0-自动模式: backlog
-  2-7-保护低电和故障下的核心链路: backlog
+  2-3-提供木鱼音频与低打扰反馈: done
+  2-4-实现触摸-pwr-导航与设备设置持久化: done
+  2-5-实现-air780egp-活动窗口客户端与-https-mock: done
+  2-6-实现-boot0-自动模式: done
+  2-7-保护低电和故障下的核心链路: done
   epic-2-retrospective: optional
 
   epic-3: backlog

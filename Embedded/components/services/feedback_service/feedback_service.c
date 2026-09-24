@@ -3,7 +3,8 @@
  * @brief    统一反馈服务实现。
  * @details  消费 event_bus 扇出的 EWF_TAP_EVENT_VALID 事件（纯消费者），经
  *           feedback_policy 纯逻辑决策后驱动音频与 RGB 通道；音量事实由本服务
- *           owner 持有并经 audio_volume_store 单事务持久化；反馈通道故障按低
+ *           owner 持有；持久化经统一设备设置 API（device_nav_service）写入，
+ *           禁止第二音量 NVS 真源；反馈通道故障按低
  *           打扰原则降级跳过并限频发布 typed 事实，不重试风暴、不置位输入锁定
  *           （tap_fault_locked 生产者属 Story 2.7）。反馈不推进累计/游标/持久化，
  *           也不阻塞 progress_service 的落盘路径（AD-12）。
@@ -16,12 +17,16 @@
 #include <stdatomic.h>
 #include <string.h>
 
+#include "app_state.h"
 #include "audio_volume_store.h"
+#include "device_nav_service.h"
 #include "esp_log.h"
 #include "event_bus.h"
 #include "feedback_audio.h"
 #include "feedback_policy.h"
 #include "freertos/semphr.h"
+#include "power_core_path_policy.h"
+#include "progress_service.h"
 #include "rgb_bsp.h"
 #include "state_service.h"
 #include "tap_input_service.h"
@@ -63,6 +68,8 @@ static atomic_bool s_stop_requested;
 static bool s_audio_init_done;
 /** RGB 初始化是否已尝试。 */
 static bool s_rgb_init_done;
+/** 最近一次与有效敲击关联的事件序号；音量/恢复发布不得清零。 */
+static uint32_t s_last_event_sequence;
 
 static esp_err_t restore_volume_locked(void);
 static esp_err_t publish_facts_locked(TickType_t timeout_ticks,
@@ -96,6 +103,7 @@ esp_err_t feedback_service_init_contracts(void)
     s_merged_count = 0U;
     s_audio_init_done = false;
     s_rgb_init_done = false;
+    s_last_event_sequence = 0U;
     atomic_store(&s_prepared, false);
     atomic_store(&s_stop_requested, false);
     return ESP_OK;
@@ -118,6 +126,7 @@ esp_err_t feedback_service_prepare_run(void)
     s_merged_count = 0U;
     s_audio_init_done = false;
     s_rgb_init_done = false;
+    s_last_event_sequence = 0U;
     atomic_store(&s_stop_requested, false);
 
     const esp_err_t restore_error = restore_volume_locked();
@@ -178,6 +187,8 @@ esp_err_t feedback_service_deinit_contracts(void)
     xSemaphoreGive(s_mutex);
     if (s_queue != NULL)
     {
+        /* 先退订再删队列，避免 publish 向已释放句柄投递。 */
+        (void)event_bus_unsubscribe(s_queue);
         vQueueDelete(s_queue);
         s_queue = NULL;
     }
@@ -241,85 +252,65 @@ esp_err_t feedback_service_set_volume(uint8_t volume, TickType_t timeout_ticks)
         ESP_LOGW(TAG, "音量写入被拒绝：取值域恰为 0-100，提交值=%u", (unsigned)volume);
         return ESP_ERR_INVALID_ARG;
     }
+    /* 统一设置 API 是唯一可写音量持久化入口（Story 2.4 收敛）。 */
+    const esp_err_t settings_error =
+        device_nav_service_set_volume(volume, timeout_ticks);
+    if (settings_error != ESP_OK)
+    {
+        if (xSemaphoreTake(s_mutex, portMAX_DELAY) == pdTRUE)
+        {
+            if (settings_error != ESP_ERR_INVALID_ARG)
+            {
+                s_volume_persist_error = true;
+                (void)publish_facts_locked(timeout_ticks, 0U);
+            }
+            xSemaphoreGive(s_mutex);
+        }
+        return settings_error;
+    }
     if (xSemaphoreTake(s_mutex, portMAX_DELAY) != pdTRUE)
     {
         return ESP_ERR_TIMEOUT;
     }
-    if (volume == s_volume)
+    ewf_device_settings_record_t settings = {0};
+    if (device_nav_service_get_settings(&settings) == ESP_OK)
     {
-        /* 同值 no-op：不重复落盘、不重复发布。 */
-        xSemaphoreGive(s_mutex);
-        return ESP_OK;
+        s_volume = settings.volume;
+        s_volume_persist_error = false;
     }
-    ewf_feedback_volume_record_t record = {0};
-    const ewf_feedback_volume_result_t packed =
-        ewf_feedback_volume_record_pack(volume, &record);
-    if (packed != EWF_FEEDBACK_VOLUME_OK)
+    else
     {
-        xSemaphoreGive(s_mutex);
-        ESP_LOGW(TAG, "音量记录打包被拒绝：结果=%d", (int)packed);
-        return ESP_ERR_INVALID_ARG;
+        s_volume = volume;
     }
-    /* 先持久化成功再提交内存（与 progress 事务同序）：介质错误时保持原内存值。 */
-    const esp_err_t save_error = ewf_audio_volume_store_save(&record);
-    if (save_error != ESP_OK)
-    {
-        s_volume_persist_error = true;
-        (void)publish_facts_locked(timeout_ticks, 0U);
-        xSemaphoreGive(s_mutex);
-        ESP_LOGE(TAG, "音量落盘失败，错误=%s；内存音量保持原值=%u",
-                 esp_err_to_name(save_error), (unsigned)s_volume);
-        return save_error;
-    }
-    s_volume = volume;
-    s_volume_persist_error = false;
     const esp_err_t publish_error = publish_facts_locked(timeout_ticks, 0U);
     if (publish_error != ESP_OK)
     {
         ESP_LOGW(TAG, "音量事实发布失败，错误=%s", esp_err_to_name(publish_error));
     }
     xSemaphoreGive(s_mutex);
-    ESP_LOGI(TAG, "音量已更新并落盘：volume=%u", (unsigned)volume);
+    ESP_LOGI(TAG, "音量已经统一设置 API 更新：volume=%u", (unsigned)s_volume);
     return ESP_OK;
 }
 
 static esp_err_t restore_volume_locked(void)
 {
-    ewf_feedback_volume_record_t record = {0};
-    ewf_audio_store_status_t status = EWF_AUDIO_STORE_ERROR;
-    const esp_err_t load_error = ewf_audio_volume_store_load(&record, &status);
+    ewf_device_settings_record_t settings = {0};
+    const esp_err_t load_error = device_nav_service_get_settings(&settings);
     if (load_error != ESP_OK)
     {
-        return load_error;
-    }
-    if (status == EWF_AUDIO_STORE_EMPTY)
-    {
-        /* 首启缺字段：按默认 50 初始化并落盘；落盘失败只告警，反馈照常可用。 */
-        ewf_feedback_volume_record_t initial = {0};
-        (void)ewf_feedback_volume_record_pack(EWF_FEEDBACK_VOLUME_DEFAULT, &initial);
-        const esp_err_t save_error = ewf_audio_volume_store_save(&initial);
-        if (save_error != ESP_OK)
-        {
-            ESP_LOGE(TAG, "首启音量初始落盘失败，错误=%s", esp_err_to_name(save_error));
-            s_volume_persist_error = true;
-            return ESP_OK;
-        }
-        s_volume = EWF_FEEDBACK_VOLUME_DEFAULT;
-        s_volume_persist_error = false;
+        /* 导航服务尚未就绪时 fail-closed 保持默认，不伪造第二真源。 */
+        ESP_LOGE(TAG, "从统一设置读取音量失败，错误=%s；保持默认音量",
+                 esp_err_to_name(load_error));
+        s_volume_persist_error = true;
         return ESP_OK;
     }
-    if (status == EWF_AUDIO_STORE_ERROR)
+    if (!ewf_feedback_volume_valid(settings.volume))
     {
-        /* 介质错误 fail-closed：报错 + 保持内存默认值，不静默回退伪造。 */
-        return ESP_FAIL;
-    }
-    const ewf_feedback_record_result_t valid = ewf_feedback_volume_record_validate(&record);
-    if (valid != EWF_FEEDBACK_RECORD_OK)
-    {
-        ESP_LOGE(TAG, "音量恢复校验失败：结果=%d；保持内存默认值", (int)valid);
+        ESP_LOGE(TAG, "统一设置音量非法=%u；保持默认", (unsigned)settings.volume);
+        s_volume_persist_error = true;
         return ESP_ERR_INVALID_STATE;
     }
-    s_volume = record.volume;
+    s_volume = settings.volume;
     s_volume_persist_error = false;
     return ESP_OK;
 }
@@ -328,6 +319,48 @@ static esp_err_t handle_tap_event_locked(uint32_t event_sequence)
 {
     ensure_channel_initialized_locked();
     const uint32_t now = now_ms();
+
+    /* 核心路径：落盘冲突时推迟非关键反馈；绝不回滚计数（AD-12）。 */
+    bool persist_pending = false;
+    bool persist_inflight = false;
+    const esp_err_t persist_status_error =
+        progress_service_get_persist_status(&persist_pending, &persist_inflight);
+    /* 读失败 fail-closed：视为落盘忙，推迟非关键反馈。 */
+    if (persist_status_error != ESP_OK)
+    {
+        persist_pending = true;
+        persist_inflight = true;
+    }
+    uint8_t power_level = 0U;
+    watch_state_snapshot_t snap = {0};
+    if (watch_state_snapshot(&snap, 0) == ESP_OK)
+    {
+        power_level = (uint8_t)snap.power_level;
+    }
+    const ewf_power_core_path_input_t core_input = {
+        .power_level = power_level,
+        .persist_pending = persist_pending,
+        .persist_inflight = persist_inflight,
+        .sync_window_requested = false,
+        .feedback_pending = true,
+    };
+    const ewf_power_core_path_decision_t core =
+        ewf_power_core_path_decide(&core_input);
+    if (!core.allow_feedback)
+    {
+        if (s_merged_count < 0xFFFFFFFFU)
+        {
+            ++s_merged_count;
+        }
+        ESP_LOGW(TAG,
+                 "核心路径推迟非关键反馈：事件序号=%lu，persist_pending=%d "
+                 "inflight=%d（不回滚计数）",
+                 (unsigned long)event_sequence,
+                 (int)persist_pending,
+                 (int)persist_inflight);
+        return publish_facts_locked(pdMS_TO_TICKS(FEEDBACK_PUBLISH_TIMEOUT_MS),
+                                    event_sequence);
+    }
 
     const ewf_feedback_audio_decision_t audio_decision =
         ewf_feedback_audio_decide(&s_policy, now);
@@ -340,6 +373,9 @@ static esp_err_t handle_tap_event_locked(uint32_t event_sequence)
     if (audio_decision == EWF_FEEDBACK_AUDIO_PLAY)
     {
         const esp_err_t play_error = ewf_feedback_audio_backend_play(s_volume);
+        /* 以播毕（或跳过）墙钟登记 last_audio：播放链含 ≥150 ms 稳压，若用播前时刻，
+         * 播完后立即消费的队内事件会误判为已过 80 ms 间隔而再次 PLAY。 */
+        const uint32_t audio_output_ms = now_ms();
         if (play_error == ESP_OK)
         {
             audio_ok = true;
@@ -354,7 +390,7 @@ static esp_err_t handle_tap_event_locked(uint32_t event_sequence)
             audio_error = ewf_feedback_audio_backend_typed_error();
         }
         const bool should_log = ewf_feedback_note_audio_result(
-            &s_policy, now, now, audio_ok);
+            &s_policy, audio_output_ms, audio_output_ms, audio_ok);
         if (!audio_ok && should_log)
         {
             ESP_LOGE(TAG, "音频反馈失败，降级跳过本次播放：事件序号=%lu，typed=%d",
@@ -371,13 +407,15 @@ static esp_err_t handle_tap_event_locked(uint32_t event_sequence)
     if (rgb_decision == EWF_FEEDBACK_RGB_UPDATE)
     {
         const esp_err_t flash_error = rgb_bsp_tap_flash();
+        const uint32_t rgb_output_ms = now_ms();
         if (flash_error != ESP_OK)
         {
             /* RGB 失败降级：熄灭并跳过本次灯效（不重试风暴）。 */
             (void)rgb_bsp_off();
             rgb_ok = false;
         }
-        const bool should_log = ewf_feedback_note_rgb_result(&s_policy, now, now, rgb_ok);
+        const bool should_log =
+            ewf_feedback_note_rgb_result(&s_policy, rgb_output_ms, rgb_output_ms, rgb_ok);
         if (!rgb_ok && should_log)
         {
             ESP_LOGE(TAG, "RGB 反馈失败，降级跳过本次灯效：事件序号=%lu，稳定错误码=%s",
@@ -425,8 +463,12 @@ static void ensure_channel_initialized_locked(void)
 static esp_err_t publish_facts_locked(TickType_t timeout_ticks,
                                       uint32_t event_sequence)
 {
+    if (event_sequence != 0U)
+    {
+        s_last_event_sequence = event_sequence;
+    }
     watch_feedback_update_t facts = {0};
-    facts.last_event_sequence = event_sequence;
+    facts.last_event_sequence = s_last_event_sequence;
     facts.feedback_count = s_feedback_count;
     facts.merged_count = s_merged_count;
     facts.volume = s_volume;

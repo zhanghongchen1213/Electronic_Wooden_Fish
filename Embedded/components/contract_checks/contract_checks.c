@@ -12,13 +12,19 @@
 #include "control_gate.h"
 #include "key.h"
 #include "legbot_services.h"
+#include "device_nav_service.h"
+#include "feedback_service.h"
+#include "sync_service.h"
 #include "rgb_bsp.h"
 #include "power_boot_policy.h"
+#include "power_auto_mode_policy.h"
+#include "power_core_path_policy.h"
 #include "power_service.h"
 #include "pvdf_bsp.h"
 #include "pvdf_confirm_policy.h"
 #include "pvdf_input_service.h"
 #include "selftest_service.h"
+#include "fault_gate_policy.h"
 #include "sdkconfig.h"
 
 #if !CONFIG_IDF_TARGET_ESP32S3
@@ -135,11 +141,15 @@ _Static_assert(LEGBOT_BSP_RESOURCE_COUNT == 15,
                "BSP resource table must cover the authoritative EWF board resources.");
 _Static_assert(LEGBOT_BSP_STAGE_COUNT == 6,
                "Story 1.1 fixes six serial initialization stages.");
-_Static_assert(LEGBOT_SERVICE_COUNT == 7,
-               "The EWF startup graph adds the unified tap input service, the "
-               "progress owner and the feedback owner to the input boundary.");
+_Static_assert(LEGBOT_SERVICE_COUNT == 9,
+               "The EWF startup graph adds sync to the prior eight "
+               "services (power/state/selftest/pvdf/tap/progress/feedback/nav).");
 _Static_assert(LEGBOT_FEEDBACK_SERVICE_ID == LEGBOT_SERVICE_FEEDBACK,
                "Feedback must own its fixed service slot.");
+_Static_assert(LEGBOT_DEVICE_NAV_SERVICE_ID == LEGBOT_SERVICE_DEVICE_NAV,
+               "Device nav must own its fixed service slot.");
+_Static_assert(LEGBOT_SYNC_SERVICE_ID == LEGBOT_SERVICE_SYNC,
+               "Sync must own its fixed service slot.");
 _Static_assert(EWF_BSP_RGB_DATA_GPIO == GPIO_NUM_3, "RGB_DATA must be IO3.");
 _Static_assert(RGB_BSP_DATA_GPIO_ID == (int)EWF_BSP_RGB_DATA_GPIO,
                "RGB BSP must consume the authoritative RGB_DATA pin.");
@@ -153,6 +163,27 @@ _Static_assert(EWF_POWER_BOOT_DEBOUNCE_MS == 20U,
                "PWR/BOOT debounce threshold is fixed by Story 1.1.");
 _Static_assert(EWF_POWER_BOOT_RUNTIME_TAP_MAX_MS == 3000U,
                "BOOT0 runtime tap boundary is fixed by Story 1.1.");
+_Static_assert(EWF_POWER_AUTO_MODE_PERIOD_MS == 3000U,
+               "BOOT0 auto-mode period is fixed by Story 2.6 / FR-E-011.");
+_Static_assert(EWF_POWER_AUTO_MODE_PERIOD_TOLERANCE_MS == 100U,
+               "BOOT0 auto-mode period tolerance is fixed by Story 2.6.");
+_Static_assert(EWF_POWER_SOC_WARN_ENTER_PERCENT == 20U &&
+                   EWF_POWER_SOC_WARN_EXIT_PERCENT == 23U &&
+                   EWF_POWER_SOC_CRITICAL_ENTER_PERCENT == 10U &&
+                   EWF_POWER_SOC_CRITICAL_EXIT_PERCENT == 13U,
+               "Low-battery hysteresis thresholds are fixed by Story 2.7 "
+               "(hardware_pending calibration, not a product promise).");
+_Static_assert(EWF_FAULT_GATE_PERSIST_FAIL_THRESHOLD == 3U,
+               "fault_locked persist-failure threshold is fixed by Story 2.7.");
+_Static_assert(EWF_POWER_BATTERY_POLL_PERIOD_MS >= 30000U &&
+                   EWF_POWER_BATTERY_POLL_PERIOD_MS <= 60000U,
+               "CW2015 product poll period must stay in the 30-60s band.");
+_Static_assert(EWF_POWER_CORE_ACTION_FLUSH_PROGRESS == 0 &&
+                   EWF_POWER_CORE_ACTION_ALLOW_FEEDBACK == 1 &&
+                   EWF_POWER_CORE_ACTION_ALLOW_SYNC == 2 &&
+                   EWF_POWER_CORE_ACTION_DEFER_NONCRITICAL == 3,
+               "core path action enum order is fixed by Story 2.7.");
+/* PRD final：三种供电同一路径；生产源不得引入充电门控符号（见 test_bsp_contract）。 */
 _Static_assert(SELFTEST_EVIDENCE_DESIGN_INPUT == 0 &&
                    SELFTEST_EVIDENCE_SOFTWARE_OBSERVED == 1 &&
                    SELFTEST_EVIDENCE_HARDWARE_PENDING == 2 &&

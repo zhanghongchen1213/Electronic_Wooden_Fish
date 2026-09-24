@@ -42,6 +42,8 @@ uint32_t host_audio_store_save_count(void);
 bool host_audio_store_has_stored(void);
 const ewf_feedback_volume_record_t *host_audio_store_stored(void);
 void host_audio_store_preload(uint8_t volume);
+void host_nav_settings_reset(void);
+void host_feedback_set_persist_status(bool pending, bool inflight);
 
 static uint32_t s_event_sequence;
 
@@ -68,6 +70,8 @@ static void reset_service(void)
     host_feedback_audio_reset();
     host_rgb_reset();
     host_audio_store_reset();
+    host_nav_settings_reset();
+    host_feedback_set_persist_status(false, false);
     s_event_sequence = 0U;
     assert(feedback_service_init_contracts() == ESP_OK);
     assert(feedback_service_prepare_run() == ESP_OK);
@@ -307,6 +311,7 @@ static void test_volume_media_error_fail_closed(void)
     host_feedback_audio_reset();
     host_rgb_reset();
     host_audio_store_reset();
+    host_nav_settings_reset();
     host_audio_store_fail_load_media(true);
     assert(feedback_service_init_contracts() == ESP_OK);
     assert(feedback_service_prepare_run() == ESP_OK);
@@ -362,6 +367,21 @@ static void test_progress_path_not_blocked_by_feedback_failure(void)
     printf("PASS progress_path_not_blocked_by_feedback_failure\n");
 }
 
+static void test_persist_busy_defers_feedback_without_rollback(void)
+{
+    reset_service();
+    host_feedback_set_persist_status(true, false);
+    tap_once();
+    /* 落盘冲突：跳过音频/RGB，事件仍消费并发布事实，绝不回滚计数合同。 */
+    assert(host_feedback_audio_play_count() == 0U);
+    assert(host_rgb_flash_count() == 0U);
+    const watch_feedback_update_t snapshot = feedback_snapshot();
+    assert(snapshot.last_event_sequence == 1U);
+    assert(snapshot.merged_count >= 1U);
+    assert(!read_fault_locked());
+    printf("PASS persist_busy_defers_feedback_without_rollback\n");
+}
+
 int main(void)
 {
     test_first_boot_default_volume();
@@ -376,6 +396,7 @@ int main(void)
     test_volume_media_error_fail_closed();
     test_sources_get_identical_feedback();
     test_progress_path_not_blocked_by_feedback_failure();
+    test_persist_busy_defers_feedback_without_rollback();
     printf("feedback-runtime: 全部通过\n");
     return 0;
 }

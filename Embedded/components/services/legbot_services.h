@@ -37,6 +37,8 @@ extern "C"
         LEGBOT_SERVICE_TAP_INPUT,    /**< 三类来源统一有效敲击队列服务。 */
         LEGBOT_SERVICE_PROGRESS,     /**< 本地高水位/轮次事实 owner 服务。 */
         LEGBOT_SERVICE_FEEDBACK,     /**< 统一反馈服务（木鱼音 + RGB + 反馈状态）。 */
+        LEGBOT_SERVICE_DEVICE_NAV,   /**< 导航/熄亮屏/设置持久化/立即同步请求服务。 */
+        LEGBOT_SERVICE_SYNC,         /**< Air780EGP 活动窗口 HTTPS 同步服务。 */
         LEGBOT_SERVICE_COUNT         /**< 服务数量。 */
     } legbot_service_id_t;
 

@@ -13,6 +13,8 @@
 
 #include "app_state.h"
 #include "audio_volume_store.h"
+#include "device_nav_service.h"
+#include "device_settings_policy.h"
 #include "esp_err.h"
 #include "feedback_audio.h"
 #include "feedback_policy.h"
@@ -228,3 +230,115 @@ esp_err_t ewf_audio_volume_store_save(const ewf_feedback_volume_record_t *record
     ++s_save_count;
     return ESP_OK;
 }
+
+/* ==================== 统一设置/导航音量替身（Story 2.4） ==================== */
+
+static ewf_device_settings_record_t s_nav_settings;
+static bool s_nav_settings_loaded;
+
+static void ensure_nav_settings(void)
+{
+    if (s_nav_settings_loaded)
+    {
+        return;
+    }
+    ewf_device_settings_defaults(&s_nav_settings);
+    if (s_has_stored)
+    {
+        s_nav_settings.volume = s_stored.volume;
+        s_nav_settings.schema_version = s_stored.schema_version == 0U
+                                            ? EWF_DEVICE_SETTINGS_SCHEMA_VERSION
+                                            : s_stored.schema_version;
+    }
+    else if (!s_fail_load_media)
+    {
+        /* 镜像首启：默认音量落盘一次，供 host_audio_store 断言观测。 */
+        ewf_feedback_volume_record_t initial = {
+            .schema_version = EWF_FEEDBACK_VOLUME_SCHEMA_VERSION,
+            .volume = EWF_FEEDBACK_VOLUME_DEFAULT,
+        };
+        (void)ewf_audio_volume_store_save(&initial);
+        s_nav_settings.volume = EWF_FEEDBACK_VOLUME_DEFAULT;
+    }
+    s_nav_settings_loaded = true;
+}
+
+esp_err_t device_nav_service_get_settings(ewf_device_settings_record_t *record)
+{
+    if (record == NULL)
+    {
+        return ESP_ERR_INVALID_ARG;
+    }
+    if (s_fail_load_media)
+    {
+        return ESP_FAIL;
+    }
+    ensure_nav_settings();
+    *record = s_nav_settings;
+    return ESP_OK;
+}
+
+esp_err_t device_nav_service_set_volume(uint8_t volume, TickType_t timeout_ticks)
+{
+    (void)timeout_ticks;
+    if (!ewf_device_settings_volume_valid(volume))
+    {
+        return ESP_ERR_INVALID_ARG;
+    }
+    ensure_nav_settings();
+    if (volume == s_nav_settings.volume && s_has_stored)
+    {
+        return ESP_OK;
+    }
+    ewf_feedback_volume_record_t record = {
+        .schema_version = EWF_FEEDBACK_VOLUME_SCHEMA_VERSION,
+        .volume = volume,
+    };
+    const esp_err_t save_error = ewf_audio_volume_store_save(&record);
+    if (save_error != ESP_OK)
+    {
+        return save_error;
+    }
+    s_nav_settings.volume = volume;
+    return ESP_OK;
+}
+
+void host_nav_settings_reset(void)
+{
+    memset(&s_nav_settings, 0, sizeof(s_nav_settings));
+    s_nav_settings_loaded = false;
+}
+
+/* feedback_service 查询 core_path 时需要落盘事实；运行时默认可注入。 */
+static bool s_host_persist_pending;
+static bool s_host_persist_inflight;
+static bool s_host_persist_status_fail;
+
+void host_feedback_set_persist_status(bool pending, bool inflight)
+{
+    s_host_persist_pending = pending;
+    s_host_persist_inflight = inflight;
+    s_host_persist_status_fail = false;
+}
+
+void host_feedback_fail_persist_status(bool fail)
+{
+    s_host_persist_status_fail = fail;
+}
+
+esp_err_t progress_service_get_persist_status(bool *persist_pending,
+                                              bool *persist_inflight)
+{
+    if (persist_pending == NULL || persist_inflight == NULL)
+    {
+        return ESP_ERR_INVALID_ARG;
+    }
+    if (s_host_persist_status_fail)
+    {
+        return ESP_ERR_INVALID_STATE;
+    }
+    *persist_pending = s_host_persist_pending;
+    *persist_inflight = s_host_persist_inflight;
+    return ESP_OK;
+}
+

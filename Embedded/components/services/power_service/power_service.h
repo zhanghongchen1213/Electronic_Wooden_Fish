@@ -16,7 +16,9 @@
 #include "esp_err.h"
 #include "freertos/FreeRTOS.h"
 #include "legbot_services.h"
+#include "power_auto_mode_policy.h"
 #include "power_boot_policy.h"
+#include "power_core_path_policy.h"
 
 #ifdef __cplusplus
 extern "C"
@@ -42,6 +44,11 @@ extern "C"
         uint32_t last_event_duration_ms;         /**< 最近一次结论的区间时长。 */
         bool boot0_runtime_armed;                /**< 启动采样窗口是否已结束。 */
         bool isr_registered;                     /**< PWR/BOOT 边沿中断是否已登记。 */
+        bool auto_mode_enabled;                  /**< 运行内存态自动模式是否开启（不落盘）。 */
+        uint32_t auto_mode_anchor_ms;            /**< 进入自动模式时的释放确认锚点。 */
+        uint32_t auto_period_emit_count;         /**< 已投递 automatic_tap 诊断计数。 */
+        bool critical_brightness_cap_active;     /**< CRITICAL 亮度上限建议是否生效（只读建议位）。 */
+        uint8_t critical_brightness_cap;         /**< 建议亮度上限 0–100；未建议时为 100。 */
     } power_service_snapshot_t;
 
     /**

@@ -151,6 +151,20 @@ esp_err_t event_bus_subscribe(QueueHandle_t queue)
     return ESP_ERR_NO_MEM;
 }
 
+esp_err_t event_bus_unsubscribe(QueueHandle_t queue)
+{
+    if (queue == NULL) { return ESP_ERR_INVALID_ARG; }
+    for (unsigned index = 0; index < 2U; ++index)
+    {
+        if (s_subscribers[index] == queue)
+        {
+            s_subscribers[index] = NULL;
+            return ESP_OK;
+        }
+    }
+    return ESP_ERR_NOT_FOUND;
+}
+
 static QueueHandle_t s_event_bus_queue;
 bool event_bus_is_initialized(void) { return true; }
 QueueHandle_t event_bus_queue(void)
@@ -167,6 +181,7 @@ void host_platform_init(void)
     xQueueReset(s_state_queue);
     if (s_event_bus_queue == NULL) { event_bus_queue(); }
     xQueueReset(s_event_bus_queue);
+    memset(s_subscribers, 0, sizeof(s_subscribers));
     s_publish_error = ESP_OK;
     s_published_count = 0U;
 }

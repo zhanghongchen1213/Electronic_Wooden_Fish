@@ -48,6 +48,7 @@ typedef enum
     STATE_SERVICE_UPDATE_TAP_GATE,         /**< 统一敲击完成/积压/故障 gate owner 更新。 */
     STATE_SERVICE_UPDATE_TAP_PROGRESS,     /**< 高水位/轮次 owner 的 typed 快照更新。 */
     STATE_SERVICE_UPDATE_FEEDBACK,         /**< 统一反馈服务的通道事实与音量事实更新。 */
+    STATE_SERVICE_UPDATE_NAV,              /**< 导航/熄亮屏/设置/立即同步 owner 更新。 */
 } state_service_update_type_t;
 
 typedef struct
@@ -74,6 +75,7 @@ typedef struct
         watch_tap_gate_update_t tap_gate;             /**< 统一敲击 gate owner 小载荷。 */
         watch_tap_progress_update_t tap_progress;     /**< 高水位/轮次 owner 小载荷。 */
         watch_feedback_update_t feedback;             /**< 统一反馈服务 owner 小载荷。 */
+        watch_nav_update_t nav;                       /**< 导航/设置/立即同步 owner 小载荷。 */
     } payload;                                          /**< 按 type 解释的更新载荷。 */
     TaskHandle_t apply_ack_task;                        /**< 需要确认时的稳定任务目标，其他更新为 NULL。 */
     uint32_t apply_ack_id;                              /**< apply 确认序号，不需确认时为 0。 */
@@ -278,11 +280,22 @@ esp_err_t state_service_publish_tap_gate(
 /**
  * @brief 由高水位/轮次事实 owner 发布最新敲击 gate 事实
  * @details owner 不直接写 watch_state；该入口分配单调序号并通过 state_task 应用。
- *          fault_locked 当前无生产 owner，恒为 false（生产者属 Story 2.3/2.7）。
+ *          只更新 completed/queue_full，保留既有 fault_locked（不得覆盖 fault owner）。
  */
 esp_err_t state_service_update_tap_gate_owner(bool completed,
                                               bool queue_full,
                                               TickType_t timeout_ticks);
+
+/**
+ * @brief 由 fault_locked 单一 owner 发布故障锁定事实
+ * @details 只更新 fault_locked，保留既有 completed/queue_full。
+ *          音频/RGB/同步失败不得调用本入口（AD-12）；persist 连续失败与显示注入走此路径。
+ * @param fault_locked 是否锁定输入
+ * @param timeout_ticks 等待状态队列空间的有界 tick 数
+ * @return ESP_OK 已入队，其他值表示参数、状态或队列超时
+ */
+esp_err_t state_service_update_tap_fault_lock_owner(bool fault_locked,
+                                                    TickType_t timeout_ticks);
 
 /**
  * @brief 读取统一敲击 gate 所需的状态服务只读快照
@@ -340,6 +353,24 @@ esp_err_t state_service_publish_feedback(
 esp_err_t state_service_update_feedback_owner(
     const watch_feedback_update_t *facts,
     TickType_t timeout_ticks);
+
+/**
+ * @brief 向 state_task 发布导航/设置/立即同步 typed 更新
+ * @param update 单调序号与导航事实
+ * @param timeout_ticks 等待状态队列空间的有界 tick 数
+ * @return ESP_OK 已入队，其他值表示参数、状态或队列超时
+ */
+esp_err_t state_service_publish_nav(const watch_nav_update_t *update,
+                                    TickType_t timeout_ticks);
+
+/**
+ * @brief 由导航/设置 owner 发布最新导航事实
+ * @param facts 不含有效序号的导航事实载荷
+ * @param timeout_ticks 等待状态队列空间的有界 tick 数
+ * @return ESP_OK 已入队，其他值表示参数、状态或队列超时
+ */
+esp_err_t state_service_update_nav_owner(const watch_nav_update_t *facts,
+                                         TickType_t timeout_ticks);
 
 /**
  * @brief 进入固定 state_task 的类型化更新循环

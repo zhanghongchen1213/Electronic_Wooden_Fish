@@ -8,6 +8,8 @@
 
 #include "event_bus.h"
 
+#include <string.h>
+
 /** 事件队列深度，覆盖早期服务骨架的轻量事件流。 */
 #define EVENT_BUS_QUEUE_DEPTH 16
 
@@ -48,6 +50,7 @@ esp_err_t event_bus_init(void)
         return ESP_ERR_NO_MEM;
     }
 
+    memset(s_subscribers, 0, sizeof(s_subscribers));
     s_initialized = true;
     return ESP_OK;
 }
@@ -79,12 +82,16 @@ esp_err_t event_bus_publish(const legbot_event_t *event, TickType_t timeout_tick
     }
     const esp_err_t main_result =
         xQueueSend(s_event_queue, event, timeout_ticks) == pdTRUE ? ESP_OK : ESP_ERR_TIMEOUT;
-    /* 扇出投递为非阻塞：订阅队列满时丢弃本次副本（可合并型），不影响主队列结论。 */
-    for (size_t index = 0; index < EVENT_BUS_SUBSCRIBER_MAX; ++index)
+    /* 仅主队列投递成功时才扇出：避免 progress 未接受而反馈仍播放/闪灯。 */
+    if (main_result == ESP_OK)
     {
-        if (s_subscribers[index] != NULL)
+        /* 扇出投递为非阻塞：订阅队列满时丢弃本次副本（可合并型），不影响主队列结论。 */
+        for (size_t index = 0; index < EVENT_BUS_SUBSCRIBER_MAX; ++index)
         {
-            (void)xQueueSend(s_subscribers[index], event, 0);
+            if (s_subscribers[index] != NULL)
+            {
+                (void)xQueueSend(s_subscribers[index], event, 0);
+            }
         }
     }
     return main_result;
@@ -116,6 +123,27 @@ esp_err_t event_bus_subscribe(QueueHandle_t queue)
         }
     }
     return ESP_ERR_NO_MEM;
+}
+
+esp_err_t event_bus_unsubscribe(QueueHandle_t queue)
+{
+    if (!s_initialized)
+    {
+        return ESP_ERR_INVALID_STATE;
+    }
+    if (queue == NULL)
+    {
+        return ESP_ERR_INVALID_ARG;
+    }
+    for (size_t index = 0; index < EVENT_BUS_SUBSCRIBER_MAX; ++index)
+    {
+        if (s_subscribers[index] == queue)
+        {
+            s_subscribers[index] = NULL;
+            return ESP_OK;
+        }
+    }
+    return ESP_ERR_NOT_FOUND;
 }
 
 esp_err_t event_bus_publish_from_isr(const legbot_event_t *event, BaseType_t *higher_priority_woken)

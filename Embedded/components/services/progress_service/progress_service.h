@@ -72,4 +72,21 @@ esp_err_t progress_service_request_stop(TickType_t timeout_ticks);
 esp_err_t progress_service_advance_acked_total(uint32_t new_acked_total,
                                                TickType_t timeout_ticks);
 
+/**
+ * @brief 读取事务组落盘中/待落盘只读事实（供 core_path_policy）
+ * @param persist_pending 输出：上次失败待重试或仍有待落盘意图
+ * @param persist_inflight 输出：当前是否正在执行落盘
+ * @return ESP_OK 成功，ESP_ERR_INVALID_ARG 空指针，ESP_ERR_INVALID_STATE 未初始化
+ */
+esp_err_t progress_service_get_persist_status(bool *persist_pending,
+                                              bool *persist_inflight);
+
+/**
+ * @brief 显示链路故障注入入口（Epic 3 预留；主机可测）
+ * @details 经 fault_gate_policy 裁决后由 fault lock owner 发布；不实现 LVGL。
+ * @param display_fault true 置故障锁定，false 尝试清除（仍受连续 persist 失败约束）
+ * @return ESP_OK 已处理，其他值表示未初始化或发布失败
+ */
+esp_err_t progress_service_set_display_fault(bool display_fault);
+
 #endif /* EWF_PROGRESS_SERVICE_H */

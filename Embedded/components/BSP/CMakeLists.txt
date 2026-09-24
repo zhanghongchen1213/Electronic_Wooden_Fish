@@ -10,6 +10,7 @@ set(src_dirs
             PVDF
             QMI8658C
             RGB
+            AIR780EGP
             )
 
 set(include_dirs
@@ -23,6 +24,7 @@ set(include_dirs
             PVDF
             QMI8658C
             RGB
+            AIR780EGP
             )
 
 set(requires
@@ -32,6 +34,7 @@ set(requires
             esp_driver_i2c
             esp_driver_i2s
             esp_driver_ledc
+            esp_driver_uart
             esp_pm
             espressif__esp_codec_dev
             esp_lcd

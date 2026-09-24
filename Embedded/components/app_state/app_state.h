@@ -353,6 +353,81 @@ extern "C"
         uint32_t screen_transition_sequence; /**< 最近成功采用的显示转换序号。 */
     } watch_power_snapshot_t;
 
+    /**
+     * @brief 设备导航主页闭集（对应 EXPERIENCE 三主页循环）
+     * @details 设置是按需浮层，不是第四个循环页。
+     */
+    typedef enum
+    {
+        WATCH_NAV_PAGE_MUYU = 0, /**< 木鱼主页。 */
+        WATCH_NAV_PAGE_JINGWEN,  /**< 经文主页。 */
+        WATCH_NAV_PAGE_TONGJI,   /**< 统计主页。 */
+        WATCH_NAV_PAGE_COUNT     /**< 主页数量，不是有效页。 */
+    } watch_nav_page_t;
+
+    /**
+     * @brief 立即同步可观察状态（无网络客户端时停在 pending/fail）
+     */
+    typedef enum
+    {
+        WATCH_SYNC_STATUS_IDLE = 0, /**< 尚无立即同步请求。 */
+        WATCH_SYNC_STATUS_PENDING,  /**< 已请求，等待 Story 2.5 通信客户端。 */
+        WATCH_SYNC_STATUS_BUSY,     /**< 通信客户端活动中。 */
+        WATCH_SYNC_STATUS_OK,       /**< 客户端回报成功。 */
+        WATCH_SYNC_STATUS_FAIL,     /**< 客户端回报失败。 */
+        WATCH_SYNC_STATUS_COUNT
+    } watch_sync_status_t;
+
+    /**
+     * @brief 最近一次导航原因（消费者只读）
+     */
+    typedef enum
+    {
+        WATCH_NAV_REASON_NONE = 0,
+        WATCH_NAV_REASON_PWR_CYCLE_PAGE,
+        WATCH_NAV_REASON_PWR_CLOSE_SETTINGS,
+        WATCH_NAV_REASON_PWR_WAKE,
+        WATCH_NAV_REASON_SWIPE_PAGE,
+        WATCH_NAV_REASON_OPEN_SETTINGS,
+        WATCH_NAV_REASON_CLOSE_SETTINGS,
+        WATCH_NAV_REASON_TOUCH_WAKE,
+        WATCH_NAV_REASON_IDLE_OFF,
+        WATCH_NAV_REASON_ACTIVITY,
+        WATCH_NAV_REASON_SETTINGS_WRITE,
+        WATCH_NAV_REASON_SYNC_REQUEST,
+        WATCH_NAV_REASON_COUNT
+    } watch_nav_reason_t;
+
+    /**
+     * @brief 亮度 wire 枚举（契约冻结 mid，不得写入 medium）
+     */
+    typedef enum
+    {
+        WATCH_BRIGHTNESS_LOW = 0,
+        WATCH_BRIGHTNESS_MID,
+        WATCH_BRIGHTNESS_HIGH,
+        WATCH_BRIGHTNESS_COUNT
+    } watch_brightness_t;
+
+    /**
+     * @brief 导航/显示/设置/立即同步 owner 的 typed 快照
+     */
+    typedef struct
+    {
+        uint32_t update_sequence;          /**< owner 单调序号，从 1 递增。 */
+        watch_screen_state_t screen_state; /**< 屏幕 on/off 事实。 */
+        watch_nav_page_t active_page;      /**< 当前主页。 */
+        bool settings_open;                /**< 设置浮层是否打开。 */
+        watch_nav_reason_t last_reason;    /**< 最近导航原因。 */
+        uint8_t volume;                    /**< 设置存储中的音量 0–100。 */
+        watch_brightness_t brightness;     /**< 亮度档。 */
+        uint32_t timeout_s;                /**< 熄屏秒数 5|15|30。 */
+        uint32_t applied_revision;         /**< 本地设置高水位。 */
+        watch_sync_status_t sync_status;   /**< 立即同步状态。 */
+        uint32_t sync_request_id;          /**< 本地单调同步请求号。 */
+        bool settings_persist_error;       /**< 最近设置落盘是否失败。 */
+    } watch_nav_update_t;
+
     typedef enum
     {
         WATCH_AUDIO_STATE_IDLE = 0,  /**< audio_task 空闲且尚未准备资源。 */
@@ -910,6 +985,7 @@ extern "C"
         uint32_t tap_backlog_count;                                       /**< 离线积压差值快照。 */
         bool tap_persist_error;                                           /**< 最近一次进度事务落盘失败事实。 */
         watch_feedback_update_t feedback;                                  /**< 统一反馈服务最近一次 typed 事实。 */
+        watch_nav_update_t nav;                                            /**< 导航/设置/立即同步 owner 最近一次 typed 事实。 */
         watch_selftest_summary_t selftest;                               /**< 当前启动周期的最近一次自检摘要。 */
     } watch_state_snapshot_t;
 
@@ -970,6 +1046,24 @@ extern "C"
      */
     esp_err_t watch_state_feedback_snapshot(watch_feedback_update_t *snapshot,
                                             TickType_t timeout_ticks);
+
+    /**
+     * @brief 原子应用导航/设置/立即同步 owner 的类型化事实更新
+     * @param update 导航页、熄亮屏、设置字段与同步状态
+     * @param timeout_ticks 等待状态互斥锁的超时时间
+     * @return ESP_OK 成功；ESP_ERR_INVALID_STATE/ARG；ESP_ERR_TIMEOUT
+     */
+    esp_err_t watch_state_apply_nav_update(const watch_nav_update_t *update,
+                                           TickType_t timeout_ticks);
+
+    /**
+     * @brief 获取导航/设置只读快照
+     * @param snapshot 输出
+     * @param timeout_ticks 等待互斥锁
+     * @return ESP_OK 成功，其他值表示未初始化、参数非法或互斥超时
+     */
+    esp_err_t watch_state_nav_snapshot(watch_nav_update_t *snapshot,
+                                       TickType_t timeout_ticks);
 
     /**
      * @brief 原子应用一条类型化手环电量更新

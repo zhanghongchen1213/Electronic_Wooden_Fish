@@ -48,8 +48,10 @@ static atomic_int s_last_error;
 static atomic_int s_typed_error;
 /** 播放链是否已完成初始化（挂载、资源与 codec 全部就绪）。 */
 static bool s_audio_ready;
-/** 木鱼音 PCM 静态缓冲；初始化时一次加载，播放时原地做数字增益缩放。 */
+/** 木鱼音 PCM 源缓冲；初始化时一次加载，保持未缩放原样。 */
 static uint8_t s_pcm[FEEDBACK_AUDIO_PCM_CAPACITY];
+/** 单次播放用 PCM 工作缓冲；每次播放由源缓冲复制后再做数字增益。 */
+static uint8_t s_pcm_play[FEEDBACK_AUDIO_PCM_CAPACITY];
 /** 已加载 PCM 字节数；未加载时为 0。 */
 static size_t s_pcm_size;
 
@@ -145,15 +147,28 @@ esp_err_t ewf_feedback_audio_backend_play(uint8_t volume_percent)
         ESP_LOGE(TAG, "功放使能失败，稳定错误码=%s，错误=%s",
                  ns4150_bsp_error_code(error), esp_err_to_name(error));
         (void)ns4150_bsp_safe_off();
+        /* PA 失败时停掉已启动的 codec/I2S，避免 TX 链悬挂。 */
+        (void)es8311_bsp_stop();
         record_error(error);
         record_typed_error(WATCH_FEEDBACK_ERROR_PA_FAILED);
         return error;
     }
     vTaskDelay(pdMS_TO_TICKS(NS4150_BSP_STARTUP_SETTLE_MS));
 
-    /* PCM 数字增益缩放（选择依据：host 可测、纯软件，不动自检固定 dB 合同）。 */
+    /* PCM 数字增益缩放（选择依据：host 可测、纯软件，不动自检固定 dB 合同）。
+     * 必须在工作缓冲上缩放，禁止原地改写源缓冲，否则非 100 音量会指数衰减。 */
+    if ((s_pcm_size % sizeof(int16_t)) != 0U)
+    {
+        ESP_LOGE(TAG, "木鱼音 PCM 字节数非偶数：size=%u", (unsigned)s_pcm_size);
+        (void)ns4150_bsp_safe_off();
+        (void)es8311_bsp_stop();
+        record_error(ESP_ERR_INVALID_STATE);
+        record_typed_error(WATCH_FEEDBACK_ERROR_RESOURCE_MISSING);
+        return ESP_ERR_INVALID_STATE;
+    }
+    memcpy(s_pcm_play, s_pcm, s_pcm_size);
     const size_t sample_count = s_pcm_size / sizeof(int16_t);
-    int16_t *samples = (int16_t *)s_pcm;
+    int16_t *samples = (int16_t *)s_pcm_play;
     for (size_t index = 0; index < sample_count; ++index)
     {
         int32_t scaled = ((int32_t)samples[index] * (int32_t)volume_percent) / 100;
@@ -161,7 +176,7 @@ esp_err_t ewf_feedback_audio_backend_play(uint8_t volume_percent)
     }
 
     size_t bytes_written = 0U;
-    error = es8311_bsp_write(s_pcm,
+    error = es8311_bsp_write(s_pcm_play,
                              s_pcm_size,
                              &bytes_written,
                              FEEDBACK_AUDIO_WRITE_TIMEOUT_MS);
@@ -314,9 +329,10 @@ static esp_err_t load_wav_resource(void)
     s_pcm_size = fread(s_pcm, 1U, FEEDBACK_AUDIO_PCM_CAPACITY, file);
     const bool read_error = ferror(file) != 0;
     (void)fclose(file);
-    if (read_error || s_pcm_size == 0U)
+    if (read_error || s_pcm_size == 0U || (s_pcm_size % sizeof(int16_t)) != 0U)
     {
         ESP_LOGE(TAG, "木鱼音资源读取失败：%s", FEEDBACK_AUDIO_WAV_PATH);
+        s_pcm_size = 0U;
         return ESP_ERR_INVALID_STATE;
     }
     return ESP_OK;

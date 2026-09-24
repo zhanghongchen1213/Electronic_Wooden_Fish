@@ -119,6 +119,26 @@ static bool read_gate(bool *queue_full)
     return completed;
 }
 
+static bool read_fault_locked(void)
+{
+    bool ready = false;
+    bool completed = false;
+    bool fault_locked = false;
+    bool queue_full = false;
+    assert(state_service_read_tap_gate(&ready, &completed, &fault_locked,
+                                       &queue_full) == ESP_OK);
+    return fault_locked;
+}
+
+static void pump_idle_recovery(void)
+{
+    /* 空闲超时触发落盘健康探测后退出。 */
+    ensure_prepared();
+    assert(progress_service_request_stop(0) == ESP_OK);
+    assert(progress_service_run() == ESP_OK);
+    drain_state_updates();
+}
+
 static void test_first_boot_zero_values(void)
 {
     reset_owner();
@@ -279,11 +299,57 @@ static void test_persist_failure_typed_and_no_silent_loss(void)
     watch_state_snapshot_t snap = snapshot();
     assert(snap.tap_local_total == 1U);
     assert(snap.tap_persist_error);
+    bool pending = false;
+    bool inflight = false;
+    assert(progress_service_get_persist_status(&pending, &inflight) == ESP_OK);
+    assert(pending);
+    assert(!inflight);
     host_progress_store_fail_save(false);
     tap_once();
     snap = snapshot();
     assert(snap.tap_local_total == 2U);
     assert(!snap.tap_persist_error);
+    assert(progress_service_get_persist_status(&pending, &inflight) == ESP_OK);
+    assert(!pending);
+}
+
+static void test_fault_lock_after_persist_failures_and_idle_unlock(void)
+{
+    reset_owner();
+    tap_once();
+    assert(!read_fault_locked());
+
+    /* 同一 prepared 会话内连续三次落盘失败，避免 prepare_run 复位 fault 计数。 */
+    host_progress_store_fail_save(true);
+    ensure_prepared();
+    submit_valid_event();
+    submit_valid_event();
+    submit_valid_event();
+    pump_owner();
+    assert(read_fault_locked());
+    bool pending = false;
+    bool inflight = false;
+    assert(progress_service_get_persist_status(&pending, &inflight) == ESP_OK);
+    assert(pending);
+
+    /* gate owner 更新 completed/queue_full 不得清掉 fault_locked。 */
+    assert(state_service_update_tap_gate_owner(true, false, 0) == ESP_OK);
+    drain_state_updates();
+    assert(read_fault_locked());
+    bool ready = false;
+    bool completed = false;
+    bool fault_locked = false;
+    bool queue_full = false;
+    assert(state_service_read_tap_gate(&ready, &completed, &fault_locked,
+                                       &queue_full) == ESP_OK);
+    assert(completed);
+
+    /* 介质恢复后空闲探测成功落盘 → unlock + clear pending。 */
+    host_progress_store_fail_save(false);
+    pump_idle_recovery();
+    assert(!read_fault_locked());
+    assert(progress_service_get_persist_status(&pending, &inflight) == ESP_OK);
+    assert(!pending);
 }
 
 static void test_write_set_has_no_automatic_mode_flag(void)
@@ -307,6 +373,7 @@ int main(void)
     test_end_of_round_pending_completion();
     test_acked_advance_contract();
     test_persist_failure_typed_and_no_silent_loss();
+    test_fault_lock_after_persist_failures_and_idle_unlock();
     test_write_set_has_no_automatic_mode_flag();
     printf("progress runtime: 全部通过\n");
     return 0;

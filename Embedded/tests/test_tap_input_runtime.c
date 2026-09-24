@@ -10,6 +10,8 @@
 #include "state_service.h"
 #include "tap_input_service.h"
 #include "pvdf_input_service.h"
+#include "device_nav_policy.h"
+#include "device_nav_service.h"
 
 void host_platform_init(void);
 void host_state_owner_start(void);
@@ -22,7 +24,14 @@ void host_fail_next_send(void);
 uint32_t host_published_count(void);
 uint32_t host_published_sequence(uint32_t index);
 void host_cst9217_set_point(uint16_t x, uint16_t y, bool pressed);
+void host_cst9217_reset_points(void);
 void host_cst9217_interrupt(void);
+void host_device_nav_reset(void);
+void host_device_nav_set_page(ewf_nav_page_t page);
+void host_device_nav_set_screen_on(bool on);
+void host_device_nav_set_settings_open(bool open);
+unsigned host_device_nav_input_calls(void);
+ewf_nav_input_kind_t host_device_nav_last_kind(void);
 
 static uint32_t s_state_sequence;
 static void update_gate(bool completed, bool fault_locked)
@@ -39,6 +48,8 @@ static void reset_services(void)
 {
     assert(tap_input_service_deinit_contracts() == ESP_OK);
     host_platform_init();
+    host_device_nav_reset();
+    host_cst9217_reset_points();
     assert(watch_state_init() == ESP_OK);
     host_state_owner_start();
     update_gate(false, false);
@@ -140,11 +151,61 @@ static void test_pvdf_transfer_and_diagnostics(void)
 static void test_device_touch_production_bridge(void)
 {
     reset_services();
+    /* 按下 + 抬起（同坐标）：点按计数；stub 第二次读点为抬起。 */
     host_cst9217_set_point(205U, 250U, true);
+    host_cst9217_interrupt();
     host_cst9217_interrupt();
     consume();
     assert(host_published_count() == 1U);
     assert(snapshot().by_source[EWF_TAP_SOURCE_DEVICE_TOUCH].accepted_count == 1U);
+}
+
+static void test_device_touch_page_and_wake_gates(void)
+{
+    reset_services();
+    host_device_nav_set_page(EWF_NAV_PAGE_JINGWEN);
+    host_cst9217_set_point(205U, 250U, true);
+    host_cst9217_interrupt();
+    host_cst9217_interrupt();
+    consume();
+    assert(host_published_count() == 0U);
+
+    reset_services();
+    host_device_nav_set_settings_open(true);
+    host_cst9217_set_point(205U, 250U, true);
+    host_cst9217_interrupt();
+    host_cst9217_interrupt();
+    consume();
+    assert(host_published_count() == 0U);
+
+    reset_services();
+    host_device_nav_set_screen_on(false);
+    const unsigned before = host_device_nav_input_calls();
+    host_cst9217_set_point(205U, 250U, true);
+    host_cst9217_interrupt();
+    host_cst9217_interrupt();
+    consume();
+    assert(host_device_nav_last_kind() == EWF_NAV_INPUT_TOUCH_WAKE);
+    assert(host_device_nav_input_calls() == before + 1U);
+    /* 熄屏首触只唤醒，不产生正式敲击 accepted。 */
+    assert(snapshot().by_source[EWF_TAP_SOURCE_DEVICE_TOUCH].accepted_count ==
+           0U);
+}
+
+static void test_device_touch_swipe_navigates_without_count(void)
+{
+    reset_services();
+    host_cst9217_set_point(205U, 250U, true);
+    host_cst9217_interrupt();
+    /* 滑动过程中的按下采样（真实驱动会在抬起前上报轨迹）。 */
+    host_cst9217_set_point(40U, 250U, true);
+    host_cst9217_interrupt();
+    host_cst9217_set_point(40U, 250U, false);
+    host_cst9217_interrupt();
+    consume();
+    assert(host_device_nav_last_kind() == EWF_NAV_INPUT_SWIPE_LEFT);
+    assert(host_published_count() == 0U);
+    assert(device_nav_service_active_page() == EWF_NAV_PAGE_JINGWEN);
 }
 static void test_three_sources_backpressure_and_downstream(void)
 {
@@ -182,6 +243,8 @@ int main(void)
     test_consumer_second_gate();
     test_pvdf_transfer_and_diagnostics();
     test_device_touch_production_bridge();
+    test_device_touch_page_and_wake_gates();
+    test_device_touch_swipe_navigates_without_count();
     test_three_sources_backpressure_and_downstream();
     assert(tap_input_service_deinit_contracts() == ESP_OK);
     assert(pvdf_input_service_deinit_contracts() == ESP_OK);

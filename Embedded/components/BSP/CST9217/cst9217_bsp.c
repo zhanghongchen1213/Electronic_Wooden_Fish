@@ -134,7 +134,17 @@ esp_err_t cst9217_bsp_read_point(cst9217_bsp_point_t *point)
     {
         return ESP_ERR_INVALID_ARG;
     }
-    *point = (cst9217_bsp_point_t){0};
+    /*
+     * 无触点时保留最近一次有效坐标，pressed=false。
+     * 若整点清零，上层会把抬起误判为向 (0,0) 的大幅滑动。
+     */
+    static uint16_t s_last_x;
+    static uint16_t s_last_y;
+    *point = (cst9217_bsp_point_t){
+        .x = s_last_x,
+        .y = s_last_y,
+        .pressed = false,
+    };
     if (!s_initialized || s_touch == NULL)
     {
         return ESP_ERR_INVALID_STATE;
@@ -153,6 +163,8 @@ esp_err_t cst9217_bsp_read_point(cst9217_bsp_point_t *point)
         point->y = data.y;
         point->strength = data.strength;
         point->pressed = true;
+        s_last_x = data.x;
+        s_last_y = data.y;
     }
     const esp_err_t rearm_error = rearm_touch_interrupt();
     return err != ESP_OK ? err : rearm_error;

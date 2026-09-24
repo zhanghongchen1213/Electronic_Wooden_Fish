@@ -47,6 +47,8 @@ static atomic_uint s_next_tap_gate_update_sequence;
 static atomic_uint s_next_tap_progress_update_sequence;
 /** 统一反馈服务 owner 的单调发布序号。 */
 static atomic_uint s_next_feedback_update_sequence;
+/** 导航/设置 owner 的单调发布序号。 */
+static atomic_uint s_next_nav_update_sequence;
 /** 当前 state_task 句柄，仅供发布成功后直接唤醒 owner。 */
 static _Atomic(TaskHandle_t) s_owner_task;
 /** 保护 BLE latest-value mailbox 按值副本的短临界区。 */
@@ -627,6 +629,16 @@ esp_err_t state_service_update_tap_gate_owner(bool completed,
                                               bool queue_full,
                                               TickType_t timeout_ticks)
 {
+    /* 保留 fault owner 已发布的 fault_locked，progress 不得覆盖。 */
+    bool prior_fault_locked = false;
+    watch_state_snapshot_t snapshot = {0};
+    if (watch_state_snapshot(&snapshot, 0) != ESP_OK)
+    {
+        /* fail-closed：快照不可读时不发布，避免把 fault_locked 默认为 false 清锁。 */
+        return ESP_ERR_INVALID_STATE;
+    }
+    prior_fault_locked = snapshot.tap_fault_locked;
+
     uint32_t sequence = atomic_fetch_add(&s_next_tap_gate_update_sequence, 1U) + 1U;
     if (sequence == 0U)
     {
@@ -635,8 +647,37 @@ esp_err_t state_service_update_tap_gate_owner(bool completed,
     const watch_tap_gate_update_t update = {
         .update_sequence = sequence,
         .completed = completed,
-        .fault_locked = false,
+        .fault_locked = prior_fault_locked,
         .queue_full = queue_full,
+    };
+    return state_service_publish_tap_gate(&update, timeout_ticks);
+}
+
+esp_err_t state_service_update_tap_fault_lock_owner(bool fault_locked,
+                                                    TickType_t timeout_ticks)
+{
+    /* 保留 progress owner 的 completed/queue_full，只翻转 fault 位。 */
+    bool prior_completed = false;
+    bool prior_queue_full = false;
+    watch_state_snapshot_t snapshot = {0};
+    if (watch_state_snapshot(&snapshot, 0) != ESP_OK)
+    {
+        /* fail-closed：快照不可读时不发布，避免把 completed/queue_full 默认为 false。 */
+        return ESP_ERR_INVALID_STATE;
+    }
+    prior_completed = snapshot.tap_completed;
+    prior_queue_full = snapshot.tap_queue_full;
+
+    uint32_t sequence = atomic_fetch_add(&s_next_tap_gate_update_sequence, 1U) + 1U;
+    if (sequence == 0U)
+    {
+        sequence = atomic_fetch_add(&s_next_tap_gate_update_sequence, 1U) + 1U;
+    }
+    const watch_tap_gate_update_t update = {
+        .update_sequence = sequence,
+        .completed = prior_completed,
+        .fault_locked = fault_locked,
+        .queue_full = prior_queue_full,
     };
     return state_service_publish_tap_gate(&update, timeout_ticks);
 }
@@ -751,6 +792,42 @@ esp_err_t state_service_update_feedback_owner(
     watch_feedback_update_t update = *facts;
     update.update_sequence = sequence;
     return state_service_publish_feedback(&update, timeout_ticks);
+}
+
+esp_err_t state_service_publish_nav(const watch_nav_update_t *update,
+                                    TickType_t timeout_ticks)
+{
+    if (update == NULL || update->update_sequence == 0U)
+    {
+        return ESP_ERR_INVALID_ARG;
+    }
+    QueueHandle_t queue = legbot_state_service_queue();
+    if (queue == NULL)
+    {
+        return ESP_ERR_INVALID_STATE;
+    }
+    const state_service_update_t message = {
+        .type = STATE_SERVICE_UPDATE_NAV,
+        .payload.nav = *update,
+    };
+    return publish_queue_update(queue, &message, timeout_ticks);
+}
+
+esp_err_t state_service_update_nav_owner(const watch_nav_update_t *facts,
+                                         TickType_t timeout_ticks)
+{
+    if (facts == NULL)
+    {
+        return ESP_ERR_INVALID_ARG;
+    }
+    uint32_t sequence = atomic_fetch_add(&s_next_nav_update_sequence, 1U) + 1U;
+    if (sequence == 0U)
+    {
+        sequence = atomic_fetch_add(&s_next_nav_update_sequence, 1U) + 1U;
+    }
+    watch_nav_update_t update = *facts;
+    update.update_sequence = sequence;
+    return state_service_publish_nav(&update, timeout_ticks);
 }
 
 void state_service_run(void)
@@ -1110,6 +1187,12 @@ static esp_err_t apply_update(const state_service_update_t *update)
     {
         return watch_state_apply_feedback_update(
             &update->payload.feedback,
+            pdMS_TO_TICKS(STATE_SERVICE_APPLY_TIMEOUT_MS));
+    }
+    if (update->type == STATE_SERVICE_UPDATE_NAV)
+    {
+        return watch_state_apply_nav_update(
+            &update->payload.nav,
             pdMS_TO_TICKS(STATE_SERVICE_APPLY_TIMEOUT_MS));
     }
     return ESP_ERR_INVALID_ARG;

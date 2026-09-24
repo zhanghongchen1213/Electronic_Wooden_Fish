@@ -215,3 +215,33 @@ def test_power_boot_policy_is_a_pure_host_testable_module():
     assert "esp_log.h" not in policy
     assert "freertos/" not in policy
     assert "driver/gpio.h" not in policy
+
+
+def test_power_auto_mode_runtime_tap_does_not_submit_immediately():
+    """FR-E-011：RUNTIME_TAP 只 toggle；submit 仅出现在 EMIT_TAP 周期路径。"""
+    power = _read(POWER_C)
+    assert "power_service_handle_runtime_tap" in power
+    assert "ewf_power_auto_mode_on_runtime_tap" in power
+    assert "EWF_POWER_AUTO_ACTION_EMIT_TAP" in power
+    assert "esp_timer_get_time" in power
+
+    tap_marker = "EWF_POWER_BOOT_EVENT_BOOT0_RUNTIME_TAP"
+    assert tap_marker in power
+    after_tap = power.split(tap_marker, 1)[1]
+    # RUNTIME_TAP 分支到下一个顶层 else/结束前，不得直接 submit。
+    branch = after_tap.split("else if", 1)[0].split("snapshot.pwr_low", 1)[0]
+    assert "power_service_handle_runtime_tap" in branch
+    assert "tap_input_service_submit_automatic_tap" not in branch
+    assert "power_service_submit_automatic_tap" not in branch
+
+    emit_block = power.split("EWF_POWER_AUTO_ACTION_EMIT_TAP", 1)[1]
+    emit_body = emit_block.split("power_service_fill_auto_snapshot", 1)[0]
+    assert "power_service_submit_automatic_tap" in emit_body
+
+    cmake = _read(SERVICES_CMAKE)
+    assert "power_service/power_auto_mode_policy.c" in cmake
+    assert "skip_unhandled_events = false" in power
+    assert "s_auto_period_queue_drops" in power
+    assert "ewf_power_auto_mode_force_disable" in power.split(
+        "读取敲击 gate 失败", 1
+    )[1].split("ewf_power_auto_mode_on_period_due", 1)[0]

@@ -13,6 +13,8 @@
 #include "esp_log.h"
 #include "event_bus.h"
 #include "cst9217_bsp.h"
+#include "device_nav_service.h"
+#include "device_nav_policy.h"
 #include "legbot_services.h"
 #include "freertos/semphr.h"
 #include "state_service.h"
@@ -42,6 +44,14 @@ static bool s_has_sequence;
 static bool s_prepared;
 static bool s_running;
 static uint32_t s_next_producer_sequence;
+/** 手势起点/最近按下点（任务上下文采样；ISR 只投递 TOUCH 消息）。 */
+static bool s_gesture_armed;
+static int16_t s_gesture_x0;
+static int16_t s_gesture_y0;
+static int16_t s_gesture_last_x;
+static int16_t s_gesture_last_y;
+/** 本接触始于熄屏：抬起只收尾，不得手势导航或计数。 */
+static bool s_wake_only_contact;
 
 static esp_err_t submit_from_source(ewf_tap_source_t source,
                                     const ewf_tap_event_t *event,
@@ -245,32 +255,133 @@ esp_err_t tap_input_service_run(void)
         if (message.kind == TAP_INPUT_MESSAGE_TOUCH)
         {
             cst9217_bsp_point_t point = {0};
-            if (cst9217_bsp_read_point(&point) != ESP_OK || !point.pressed)
+            if (cst9217_bsp_read_point(&point) != ESP_OK)
             {
-                ESP_LOGW(TAG, "CST9217 触摸点读取失败或无有效触点");
+                ESP_LOGW(TAG, "CST9217 触摸点读取失败");
                 message = (tap_input_message_t){0};
                 continue;
             }
-            watch_power_snapshot_t power = {0};
-            if (watch_state_power_snapshot(&power, 0) != ESP_OK)
-            {
-                ESP_LOGW(TAG, "触摸生产路径读取显示状态失败");
+            const uint32_t touch_ms = (uint32_t)pdTICKS_TO_MS(xTaskGetTickCount());
+            if (!point.pressed) {
+                /*
+                 * 抬起：使用 BSP 保留的抬起坐标（见 cst9217_bsp_read_point）；
+                 * 若仍为全零则回退最近按下采样，避免误判为向原点滑动。
+                 */
+                if (s_gesture_armed) {
+                    const bool wake_only = s_wake_only_contact;
+                    const int16_t end_x =
+                        (point.x == 0U && point.y == 0U)
+                            ? s_gesture_last_x
+                            : (int16_t)point.x;
+                    const int16_t end_y =
+                        (point.x == 0U && point.y == 0U)
+                            ? s_gesture_last_y
+                            : (int16_t)point.y;
+                    const ewf_nav_input_kind_t gesture = ewf_nav_classify_gesture(
+                        s_gesture_x0, s_gesture_y0, end_x, end_y);
+                    s_gesture_armed = false;
+                    s_wake_only_contact = false;
+                    if (wake_only) {
+                        /* 熄屏首触抬起：只收尾，不导航不计数。 */
+                        message = (tap_input_message_t){0};
+                        if (stop_requested &&
+                            uxQueueMessagesWaiting(s_queue) == 0U) {
+                            break;
+                        }
+                        continue;
+                    }
+                    if (gesture != EWF_NAV_INPUT_NONE) {
+                        const esp_err_t nav_error =
+                            device_nav_service_on_nav_input(gesture, touch_ms);
+                        if (nav_error != ESP_OK) {
+                            ESP_LOGW(TAG, "手势导航投递失败：kind=%d，错误=%s",
+                                     (int)gesture, esp_err_to_name(nav_error));
+                        }
+                        message = (tap_input_message_t){0};
+                        if (stop_requested &&
+                            uxQueueMessagesWaiting(s_queue) == 0U) {
+                            break;
+                        }
+                        continue;
+                    }
+                    /* 无滑动 = 点按：仅木鱼页触区才正式计数。 */
+                    cst9217_bsp_point_t tap_point = {
+                        .x = (uint16_t)s_gesture_last_x,
+                        .y = (uint16_t)s_gesture_last_y,
+                        .pressed = false,
+                    };
+                    const bool on_muyu =
+                        device_nav_service_active_page() == EWF_NAV_PAGE_MUYU;
+                    const bool wood_hit =
+                        device_nav_service_screen_on() && on_muyu &&
+                        touch_is_wood_fish_region(&tap_point) &&
+                        !device_nav_service_settings_open();
+                    if (wood_hit) {
+                        const ewf_tap_event_t touch = {
+                            .source = EWF_TAP_SOURCE_DEVICE_TOUCH,
+                            .sequence = tap_input_service_next_sequence(),
+                            .at_ms = touch_ms,
+                            .candidate_confirmed = true,
+                            .screen_on = true,
+                            .wood_fish_hit = true,
+                            .wake_only = false,
+                        };
+                        ewf_tap_decision_t decision = {0};
+                        (void)tap_input_service_submit_device_touch(
+                            &touch,
+                            pdMS_TO_TICKS(EWF_TAP_VALID_EVENT_PUBLISH_TIMEOUT_MS),
+                            &decision);
+                        if (decision.accepted) {
+                            (void)device_nav_service_note_activity(touch_ms);
+                        }
+                    } else {
+                        (void)device_nav_service_note_activity(touch_ms);
+                    }
+                }
                 message = (tap_input_message_t){0};
                 continue;
             }
-            const bool screen_on = power.screen_state == WATCH_SCREEN_STATE_ON;
-            const ewf_tap_event_t touch = {
-                .source = EWF_TAP_SOURCE_DEVICE_TOUCH,
-                .sequence = tap_input_service_next_sequence(),
-                .at_ms = (uint32_t)pdTICKS_TO_MS(xTaskGetTickCount()),
-                .candidate_confirmed = true,
-                .screen_on = screen_on,
-                .wood_fish_hit = screen_on && touch_is_wood_fish_region(&point),
-                .wake_only = !screen_on,
-            };
-            ewf_tap_decision_t decision = {0};
-            (void)tap_input_service_submit_device_touch(
-                &touch, pdMS_TO_TICKS(EWF_TAP_VALID_EVENT_PUBLISH_TIMEOUT_MS), &decision);
+            if (!s_gesture_armed) {
+                s_gesture_armed = true;
+                s_gesture_x0 = (int16_t)point.x;
+                s_gesture_y0 = (int16_t)point.y;
+                s_gesture_last_x = s_gesture_x0;
+                s_gesture_last_y = s_gesture_y0;
+            } else {
+                s_gesture_last_x = (int16_t)point.x;
+                s_gesture_last_y = (int16_t)point.y;
+            }
+            const bool screen_on = device_nav_service_screen_on();
+            if (!screen_on) {
+                /* 熄屏首触：只唤醒，不计数；抬起时禁止手势导航。 */
+                s_wake_only_contact = true;
+                const esp_err_t wake_error = device_nav_service_on_nav_input(
+                    EWF_NAV_INPUT_TOUCH_WAKE, touch_ms);
+                if (wake_error != ESP_OK) {
+                    ESP_LOGW(TAG, "熄屏唤醒投递失败：错误=%s",
+                             esp_err_to_name(wake_error));
+                }
+                const ewf_tap_event_t wake = {
+                    .source = EWF_TAP_SOURCE_DEVICE_TOUCH,
+                    .sequence = tap_input_service_next_sequence(),
+                    .at_ms = touch_ms,
+                    .candidate_confirmed = true,
+                    .screen_on = false,
+                    .wood_fish_hit = false,
+                    .wake_only = true,
+                };
+                ewf_tap_decision_t decision = {0};
+                (void)tap_input_service_submit_device_touch(
+                    &wake, pdMS_TO_TICKS(EWF_TAP_VALID_EVENT_PUBLISH_TIMEOUT_MS),
+                    &decision);
+                message = (tap_input_message_t){0};
+                if (stop_requested && uxQueueMessagesWaiting(s_queue) == 0U) {
+                    break;
+                }
+                continue;
+            }
+            /* 亮屏按下：只跟踪轨迹并重置空闲；正式敲击延后到抬起确认非滑动。 */
+            (void)device_nav_service_note_activity(touch_ms);
             message = (tap_input_message_t){0};
             if (stop_requested && uxQueueMessagesWaiting(s_queue) == 0U)
             {
@@ -308,6 +419,8 @@ esp_err_t tap_input_service_run(void)
                 ++s_snapshot.accepted_count;
                 s_snapshot.last_reason = EWF_TAP_REASON_ACCEPTED;
                 record_acceptance(message.event.source);
+                /* 有效敲击（含 PVDF）重置自动熄屏空闲计时。 */
+                (void)device_nav_service_note_activity(message.event.at_ms);
             } else {
                 const ewf_tap_reason_t reason =
                     error == ESP_ERR_TIMEOUT ? EWF_TAP_REASON_QUEUE_FULL
@@ -423,7 +536,10 @@ static bool touch_is_wood_fish_region(const cst9217_bsp_point_t *point)
     {
         return false;
     }
-    /* 触摸页中央木鱼触区：仅该区域可生成正式 device_touch。 */
+    /*
+     * 木鱼触区初值矩形（≥96×96 下限）；仅与 active_page==MUYU 合取后可计数。
+     * Epic 3 对拍后可收紧坐标，不得在非木鱼页放宽。
+     */
     return point->x >= 80U && point->x <= 330U &&
            point->y >= 110U && point->y <= 390U;
 }

@@ -571,6 +571,58 @@ esp_err_t watch_state_feedback_snapshot(watch_feedback_update_t *snapshot,
     return ESP_OK;
 }
 
+esp_err_t watch_state_apply_nav_update(const watch_nav_update_t *update,
+                                       TickType_t timeout_ticks)
+{
+    if (s_state_mutex == NULL)
+    {
+        return ESP_ERR_INVALID_STATE;
+    }
+    if (update == NULL || update->update_sequence == 0U ||
+        update->volume > 100U ||
+        (unsigned)update->active_page >= (unsigned)WATCH_NAV_PAGE_COUNT ||
+        (unsigned)update->brightness >= (unsigned)WATCH_BRIGHTNESS_COUNT ||
+        (update->timeout_s != 5U && update->timeout_s != 15U &&
+         update->timeout_s != 30U) ||
+        (unsigned)update->sync_status >= (unsigned)WATCH_SYNC_STATUS_COUNT ||
+        (unsigned)update->screen_state >= (unsigned)WATCH_SCREEN_STATE_COUNT ||
+        (unsigned)update->last_reason >= (unsigned)WATCH_NAV_REASON_COUNT)
+    {
+        return ESP_ERR_INVALID_ARG;
+    }
+    if (xSemaphoreTake(s_state_mutex, timeout_ticks) != pdTRUE)
+    {
+        return ESP_ERR_TIMEOUT;
+    }
+    if (s_state.nav.update_sequence != 0U &&
+        update->update_sequence <= s_state.nav.update_sequence)
+    {
+        xSemaphoreGive(s_state_mutex);
+        return ESP_ERR_INVALID_STATE;
+    }
+    s_state.nav = *update;
+    /* 导航 owner 同时维护正交 screen_state，避免多处私写。 */
+    s_state.screen_state = update->screen_state;
+    xSemaphoreGive(s_state_mutex);
+    return ESP_OK;
+}
+
+esp_err_t watch_state_nav_snapshot(watch_nav_update_t *snapshot,
+                                   TickType_t timeout_ticks)
+{
+    if (s_state_mutex == NULL || snapshot == NULL)
+    {
+        return ESP_ERR_INVALID_STATE;
+    }
+    if (xSemaphoreTake(s_state_mutex, timeout_ticks) != pdTRUE)
+    {
+        return ESP_ERR_TIMEOUT;
+    }
+    *snapshot = s_state.nav;
+    xSemaphoreGive(s_state_mutex);
+    return ESP_OK;
+}
+
 esp_err_t watch_state_apply_battery_update(const watch_battery_update_t *update,
                                            TickType_t timeout_ticks)
 {

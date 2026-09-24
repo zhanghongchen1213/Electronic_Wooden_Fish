@@ -17,6 +17,7 @@
 #include "esp_log.h"
 #include "event_bus.h"
 #include "ewf_scripture_canonical.h"
+#include "fault_gate_policy.h"
 #include "freertos/semphr.h"
 #include "progress_store.h"
 #include "progress_transaction.h"
@@ -24,6 +25,7 @@
 #include "tap_input_service.h"
 
 static const char *TAG = "SVC_PROGRESS";
+static const char *TAG_FAULT = "FAULT_GATE";
 
 /** 事件消费空队列时的有界轮询等待。 */
 #define PROGRESS_CONSUME_TIMEOUT_MS 50U
@@ -43,12 +45,21 @@ static bool s_degraded;
 /** 最近一次发布的 gate 完成/积压事实，用于仅在变化时发布。 */
 static bool s_last_completed;
 static bool s_last_queue_full;
+/** 事务组正在落盘（供 core_path_policy 只读）。 */
+static atomic_bool s_persist_inflight;
+/** 上次落盘失败、待重试（供 core_path_policy 只读）。 */
+static atomic_bool s_persist_pending;
+/** fault_locked 生产策略态（progress 介质失败 + 显示注入）。 */
+static ewf_fault_gate_state_t s_fault_gate;
 
 static esp_err_t persist_transaction_locked(ewf_progress_transaction_t *candidate);
 static esp_err_t publish_progress_facts_locked(TickType_t timeout_ticks,
                                                bool persist_error);
 static esp_err_t publish_gate_facts_locked(TickType_t timeout_ticks);
+static void apply_fault_gate_locked(const ewf_fault_gate_decision_t *decision,
+                                    TickType_t timeout_ticks);
 static void handle_valid_event(uint32_t sequence);
+static void probe_persist_recovery_idle(void);
 
 esp_err_t progress_service_init_contracts(void)
 {
@@ -67,6 +78,9 @@ esp_err_t progress_service_init_contracts(void)
     s_last_completed = false;
     s_last_queue_full = false;
     atomic_store(&s_stop_requested, false);
+    atomic_store(&s_persist_inflight, false);
+    atomic_store(&s_persist_pending, false);
+    ewf_fault_gate_reset(&s_fault_gate);
     return ESP_OK;
 }
 
@@ -84,6 +98,7 @@ esp_err_t progress_service_prepare_run(void)
     s_last_completed = false;
     s_last_queue_full = false;
     atomic_store(&s_stop_requested, false);
+    /* 不复位 persist_pending / fault_gate：任务停启不得静默清锁或丢待重试意图。 */
 
     ewf_progress_transaction_t recovered = {0};
     ewf_progress_store_status_t status = EWF_PROGRESS_STORE_ERROR;
@@ -204,6 +219,8 @@ esp_err_t progress_service_run(void)
             }
             continue;
         }
+        /* 空闲轮询：介质恢复探测，打破 fault_locked + persist_pending 死锁。 */
+        probe_persist_recovery_idle();
         /* 空轮询超时后才检查停止请求：先消费完既有事件再退出，不丢事件。 */
         if (atomic_load(&s_stop_requested))
         {
@@ -346,12 +363,138 @@ static void handle_valid_event(uint32_t sequence)
 static esp_err_t persist_transaction_locked(ewf_progress_transaction_t *candidate)
 {
     /* 先持久化成功再提交内存：掉电后介质与内存高水位、轮次与游标保持一致。 */
+    atomic_store(&s_persist_inflight, true);
     const esp_err_t save_error = progress_store_save(candidate);
+    atomic_store(&s_persist_inflight, false);
     if (save_error == ESP_OK)
     {
         s_transaction = *candidate;
+        atomic_store(&s_persist_pending, false);
+        const ewf_fault_gate_decision_t fault =
+            ewf_fault_gate_on_persist_result(&s_fault_gate, true);
+        apply_fault_gate_locked(&fault, pdMS_TO_TICKS(PROGRESS_PUBLISH_TIMEOUT_MS));
+    }
+    else
+    {
+        atomic_store(&s_persist_pending, true);
+        const ewf_fault_gate_decision_t fault =
+            ewf_fault_gate_on_persist_result(&s_fault_gate, false);
+        apply_fault_gate_locked(&fault, pdMS_TO_TICKS(PROGRESS_PUBLISH_TIMEOUT_MS));
+        if (fault.locked && fault.locked_changed)
+        {
+            ESP_LOGE(TAG_FAULT,
+                     "进度介质连续失败达到阈值，输入进入 fault_locked：连续失败=%lu",
+                     (unsigned long)s_fault_gate.consecutive_persist_errors);
+        }
     }
     return save_error;
+}
+
+static void apply_fault_gate_locked(const ewf_fault_gate_decision_t *decision,
+                                    TickType_t timeout_ticks)
+{
+    if (decision == NULL || !decision->locked_changed)
+    {
+        return;
+    }
+    const esp_err_t error =
+        state_service_update_tap_fault_lock_owner(decision->locked, timeout_ticks);
+    if (error != ESP_OK)
+    {
+        ESP_LOGW(TAG_FAULT, "fault_locked 事实发布失败，错误=%s", esp_err_to_name(error));
+    }
+    else if (decision->locked)
+    {
+        ESP_LOGW(TAG_FAULT, "已发布 fault_locked=true，拒绝新输入直至落盘恢复或清除显示故障");
+    }
+    else
+    {
+        ESP_LOGI(TAG_FAULT, "已发布 fault_locked=false，输入闸门恢复");
+    }
+}
+
+/**
+ * @brief 空闲探测：对当前已一致事务做健康落盘，清除 pending 并解锁 persist 触发的 fault。
+ * @details 落盘失败时内存未提交，但 pending/fault 仍闩住同步与新输入；无新敲击时
+ *          只能通过对已一致事务重试落盘自愈（AD-13 / Task 4）。
+ */
+static void probe_persist_recovery_idle(void)
+{
+    if (xSemaphoreTake(s_mutex, 0) != pdTRUE)
+    {
+        return;
+    }
+    const bool pending = atomic_load(&s_persist_pending);
+    const bool need_unlock =
+        s_fault_gate.locked && !s_fault_gate.display_fault;
+    if ((!pending && !need_unlock) || s_degraded)
+    {
+        xSemaphoreGive(s_mutex);
+        return;
+    }
+    ewf_progress_transaction_t candidate = s_transaction;
+    const esp_err_t save_error = persist_transaction_locked(&candidate);
+    if (save_error == ESP_OK)
+    {
+        ESP_LOGI(TAG_FAULT, "落盘健康探测成功，persist_pending/fault 已按策略恢复");
+    }
+    xSemaphoreGive(s_mutex);
+}
+
+esp_err_t progress_service_get_persist_status(bool *persist_pending,
+                                              bool *persist_inflight)
+{
+    if (persist_pending == NULL || persist_inflight == NULL)
+    {
+        return ESP_ERR_INVALID_ARG;
+    }
+    if (s_mutex == NULL)
+    {
+        return ESP_ERR_INVALID_STATE;
+    }
+    *persist_pending = atomic_load(&s_persist_pending);
+    *persist_inflight = atomic_load(&s_persist_inflight);
+    return ESP_OK;
+}
+
+esp_err_t progress_service_set_display_fault(bool display_fault)
+{
+    if (s_mutex == NULL)
+    {
+        return ESP_ERR_INVALID_STATE;
+    }
+    if (xSemaphoreTake(s_mutex, portMAX_DELAY) != pdTRUE)
+    {
+        return ESP_ERR_TIMEOUT;
+    }
+    const ewf_fault_gate_decision_t decision =
+        ewf_fault_gate_on_display_fault(&s_fault_gate, display_fault);
+    esp_err_t publish_error = ESP_OK;
+    if (decision.locked_changed)
+    {
+        publish_error = state_service_update_tap_fault_lock_owner(
+            decision.locked, pdMS_TO_TICKS(PROGRESS_PUBLISH_TIMEOUT_MS));
+        if (publish_error != ESP_OK)
+        {
+            ESP_LOGW(TAG_FAULT, "显示故障 fault_locked 发布失败，错误=%s",
+                     esp_err_to_name(publish_error));
+        }
+        else if (decision.locked)
+        {
+            ESP_LOGW(TAG_FAULT, "已发布 fault_locked=true，拒绝新输入直至落盘恢复或清除显示故障");
+        }
+        else
+        {
+            ESP_LOGI(TAG_FAULT, "已发布 fault_locked=false，输入闸门恢复");
+        }
+    }
+    if (display_fault)
+    {
+        ESP_LOGW(TAG_FAULT, "显示故障注入：fault_locked=%d（Epic 3 预留入口）",
+                 (int)decision.locked);
+    }
+    xSemaphoreGive(s_mutex);
+    return publish_error;
 }
 
 static esp_err_t publish_progress_facts_locked(TickType_t timeout_ticks,

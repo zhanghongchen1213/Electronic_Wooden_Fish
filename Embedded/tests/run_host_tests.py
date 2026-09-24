@@ -20,6 +20,8 @@ POLICY_DIR = EMBEDDED_DIR / "components/services/power_service"
 TAP_POLICY_DIR = EMBEDDED_DIR / "components/services/tap_input_service"
 PROGRESS_DIR = EMBEDDED_DIR / "components/services/progress_service"
 FEEDBACK_DIR = EMBEDDED_DIR / "components/services/feedback_service"
+DEVICE_NAV_DIR = EMBEDDED_DIR / "components/services/device_nav_service"
+SYNC_DIR = EMBEDDED_DIR / "components/services/sync_service"
 CANONICAL_DIR = EMBEDDED_DIR.parent / "docs/contracts/canonical/generated"
 
 
@@ -83,6 +85,126 @@ def run_edge_policy_host_test() -> int:
         sys.stderr.write(run.stderr)
         if run.returncode != 0:
             print("FAIL edge-policy: PWR/BOOT 边沿语义用例未全部通过")
+            return 1
+    return 0
+
+
+def run_auto_mode_policy_host_test() -> int:
+    compiler = shutil.which("cc") or shutil.which("gcc") or shutil.which("clang")
+    if compiler is None:
+        print("FAIL auto-mode-policy: 未找到 cc/gcc/clang，无法构建主机测试")
+        return 1
+
+    with tempfile.TemporaryDirectory() as tmpdir:
+        binary = Path(tmpdir) / "test_power_auto_mode_policy"
+        build = subprocess.run(
+            [
+                compiler,
+                "-std=c17",
+                "-Wall",
+                "-Wextra",
+                "-Werror",
+                "-I",
+                str(POLICY_DIR),
+                str(TESTS_DIR / "test_power_auto_mode_policy.c"),
+                str(POLICY_DIR / "power_auto_mode_policy.c"),
+                "-o",
+                str(binary),
+            ],
+            capture_output=True,
+            text=True,
+            check=False,
+        )
+        if build.returncode != 0:
+            print("FAIL auto-mode-policy: 主机测试构建失败")
+            print(build.stdout)
+            print(build.stderr)
+            return 1
+        run = subprocess.run([str(binary)], capture_output=True, text=True, check=False)
+        sys.stdout.write(run.stdout)
+        sys.stderr.write(run.stderr)
+        if run.returncode != 0:
+            print("FAIL auto-mode-policy: 自动模式策略用例未全部通过")
+            return 1
+    return 0
+
+
+def run_core_path_policy_host_test() -> int:
+    compiler = shutil.which("cc") or shutil.which("gcc") or shutil.which("clang")
+    if compiler is None:
+        print("FAIL core-path-policy: 未找到 cc/gcc/clang，无法构建主机测试")
+        return 1
+
+    with tempfile.TemporaryDirectory() as tmpdir:
+        binary = Path(tmpdir) / "test_power_core_path_policy"
+        build = subprocess.run(
+            [
+                compiler,
+                "-std=c17",
+                "-Wall",
+                "-Wextra",
+                "-Werror",
+                "-I",
+                str(POLICY_DIR),
+                str(TESTS_DIR / "test_power_core_path_policy.c"),
+                str(POLICY_DIR / "power_core_path_policy.c"),
+                "-o",
+                str(binary),
+            ],
+            capture_output=True,
+            text=True,
+            check=False,
+        )
+        if build.returncode != 0:
+            print("FAIL core-path-policy: 主机测试构建失败")
+            print(build.stdout)
+            print(build.stderr)
+            return 1
+        run = subprocess.run([str(binary)], capture_output=True, text=True, check=False)
+        sys.stdout.write(run.stdout)
+        sys.stderr.write(run.stderr)
+        if run.returncode != 0:
+            print("FAIL core-path-policy: 核心路径策略用例未全部通过")
+            return 1
+    return 0
+
+
+def run_fault_gate_policy_host_test() -> int:
+    compiler = shutil.which("cc") or shutil.which("gcc") or shutil.which("clang")
+    if compiler is None:
+        print("FAIL fault-gate-policy: 未找到 cc/gcc/clang，无法构建主机测试")
+        return 1
+
+    with tempfile.TemporaryDirectory() as tmpdir:
+        binary = Path(tmpdir) / "test_fault_gate_policy"
+        build = subprocess.run(
+            [
+                compiler,
+                "-std=c17",
+                "-Wall",
+                "-Wextra",
+                "-Werror",
+                "-I",
+                str(PROGRESS_DIR),
+                str(TESTS_DIR / "test_fault_gate_policy.c"),
+                str(PROGRESS_DIR / "fault_gate_policy.c"),
+                "-o",
+                str(binary),
+            ],
+            capture_output=True,
+            text=True,
+            check=False,
+        )
+        if build.returncode != 0:
+            print("FAIL fault-gate-policy: 主机测试构建失败")
+            print(build.stdout)
+            print(build.stderr)
+            return 1
+        run = subprocess.run([str(binary)], capture_output=True, text=True, check=False)
+        sys.stdout.write(run.stdout)
+        sys.stderr.write(run.stderr)
+        if run.returncode != 0:
+            print("FAIL fault-gate-policy: 故障闸门策略用例未全部通过")
             return 1
     return 0
 
@@ -153,12 +275,16 @@ def run_tap_runtime_host_test() -> int:
                 str(EMBEDDED_DIR / "components/services/pvdf_input_service"),
                 "-I",
                 str(EMBEDDED_DIR / "components/platform/event_bus"),
+                "-I",
+                str(DEVICE_NAV_DIR),
                 str(TESTS_DIR / "test_tap_input_runtime.c"),
                 str(TAP_POLICY_DIR / "tap_input_policy.c"),
+                str(DEVICE_NAV_DIR / "device_nav_policy.c"),
                 str(TESTS_DIR / "host_stubs/host_platform.c"),
                 str(TESTS_DIR / "host_stubs/state_service_host.c"),
                 str(TESTS_DIR / "host_stubs/pvdf_service_host.c"),
                 str(TESTS_DIR / "host_stubs/cst9217_bsp_host.c"),
+                str(TESTS_DIR / "host_stubs/device_nav_host.c"),
                 str(EMBEDDED_DIR / "components/app_state/watch_state.c"),
                 str(EMBEDDED_DIR / "components/services/tap_input_service/tap_input_service.c"),
                 str(EMBEDDED_DIR / "components/services/pvdf_input_service/pvdf_confirm_policy.c"),
@@ -254,6 +380,7 @@ def run_progress_runtime_host_test() -> int:
                 str(CANONICAL_DIR),
                 str(TESTS_DIR / "test_progress_runtime.c"),
                 str(PROGRESS_DIR / "progress_transaction.c"),
+                str(PROGRESS_DIR / "fault_gate_policy.c"),
                 str(PROGRESS_DIR / "progress_service.c"),
                 str(TESTS_DIR / "host_stubs/progress_store_host.c"),
                 str(TESTS_DIR / "host_stubs/host_platform.c"),
@@ -345,9 +472,17 @@ def run_feedback_runtime_host_test() -> int:
                 str(EMBEDDED_DIR / "components/platform/event_bus"),
                 "-I",
                 str(EMBEDDED_DIR / "components/BSP/RGB"),
+                "-I",
+                str(DEVICE_NAV_DIR),
+                "-I",
+                str(PROGRESS_DIR),
+                "-I",
+                str(POLICY_DIR),
                 str(TESTS_DIR / "test_feedback_runtime.c"),
                 str(FEEDBACK_DIR / "feedback_policy.c"),
                 str(FEEDBACK_DIR / "feedback_service.c"),
+                str(POLICY_DIR / "power_core_path_policy.c"),
+                str(DEVICE_NAV_DIR / "device_settings_policy.c"),
                 str(TESTS_DIR / "host_stubs/feedback_host.c"),
                 str(TESTS_DIR / "host_stubs/host_platform.c"),
                 str(TESTS_DIR / "host_stubs/state_service_host.c"),
@@ -370,15 +505,338 @@ def run_feedback_runtime_host_test() -> int:
         return run.returncode
 
 
+def run_device_nav_policy_host_test() -> int:
+    compiler = shutil.which("cc") or shutil.which("gcc") or shutil.which("clang")
+    if compiler is None:
+        print("FAIL device-nav-policy: 未找到 cc/gcc/clang，无法构建主机测试")
+        return 1
+
+    with tempfile.TemporaryDirectory() as tmpdir:
+        binary = Path(tmpdir) / "test_device_nav_policy"
+        build = subprocess.run(
+            [
+                compiler,
+                "-std=c17",
+                "-Wall",
+                "-Wextra",
+                "-Werror",
+                "-I",
+                str(DEVICE_NAV_DIR),
+                str(TESTS_DIR / "test_device_nav_policy.c"),
+                str(DEVICE_NAV_DIR / "device_nav_policy.c"),
+                "-o",
+                str(binary),
+            ],
+            capture_output=True,
+            text=True,
+            check=False,
+        )
+        if build.returncode != 0:
+            print("FAIL device-nav-policy: 主机测试构建失败")
+            print(build.stdout)
+            print(build.stderr)
+            return 1
+        run = subprocess.run([str(binary)], capture_output=True, text=True, check=False)
+        sys.stdout.write(run.stdout)
+        sys.stderr.write(run.stderr)
+        return run.returncode
+
+
+def run_device_settings_policy_host_test() -> int:
+    compiler = shutil.which("cc") or shutil.which("gcc") or shutil.which("clang")
+    if compiler is None:
+        print("FAIL device-settings-policy: 未找到 cc/gcc/clang，无法构建主机测试")
+        return 1
+
+    with tempfile.TemporaryDirectory() as tmpdir:
+        binary = Path(tmpdir) / "test_device_settings_policy"
+        build = subprocess.run(
+            [
+                compiler,
+                "-std=c17",
+                "-Wall",
+                "-Wextra",
+                "-Werror",
+                "-I",
+                str(DEVICE_NAV_DIR),
+                str(TESTS_DIR / "test_device_settings_policy.c"),
+                str(DEVICE_NAV_DIR / "device_settings_policy.c"),
+                "-o",
+                str(binary),
+            ],
+            capture_output=True,
+            text=True,
+            check=False,
+        )
+        if build.returncode != 0:
+            print("FAIL device-settings-policy: 主机测试构建失败")
+            print(build.stdout)
+            print(build.stderr)
+            return 1
+        run = subprocess.run([str(binary)], capture_output=True, text=True, check=False)
+        sys.stdout.write(run.stdout)
+        sys.stderr.write(run.stderr)
+        return run.returncode
+
+
+def run_device_nav_runtime_host_test() -> int:
+    compiler = shutil.which("cc") or shutil.which("gcc") or shutil.which("clang")
+    if compiler is None:
+        print("FAIL device-nav-runtime: 未找到 cc/gcc/clang，无法构建主机测试")
+        return 1
+
+    with tempfile.TemporaryDirectory() as tmpdir:
+        binary = Path(tmpdir) / "test_device_nav_runtime"
+        build = subprocess.run(
+            [
+                compiler,
+                "-std=c17",
+                "-Wall",
+                "-Wextra",
+                "-Werror",
+                "-I",
+                str(DEVICE_NAV_DIR),
+                "-I",
+                str(TESTS_DIR / "host_stubs"),
+                "-I",
+                str(EMBEDDED_DIR / "components/app_state"),
+                "-I",
+                str(EMBEDDED_DIR / "components/services/state_service"),
+                "-I",
+                str(EMBEDDED_DIR / "components/services"),
+                "-I",
+                str(EMBEDDED_DIR / "components/platform/event_bus"),
+                str(TESTS_DIR / "test_device_nav_runtime.c"),
+                str(DEVICE_NAV_DIR / "device_nav_policy.c"),
+                str(DEVICE_NAV_DIR / "device_settings_policy.c"),
+                str(DEVICE_NAV_DIR / "device_nav_service.c"),
+                str(TESTS_DIR / "host_stubs/device_settings_store_host.c"),
+                str(TESTS_DIR / "host_stubs/co5300_bsp_host.c"),
+                str(TESTS_DIR / "host_stubs/host_platform.c"),
+                str(TESTS_DIR / "host_stubs/state_service_host.c"),
+                str(EMBEDDED_DIR / "components/app_state/watch_state.c"),
+                "-o",
+                str(binary),
+            ],
+            capture_output=True,
+            text=True,
+            check=False,
+        )
+        if build.returncode != 0:
+            print("FAIL device-nav-runtime: 主机测试构建失败")
+            print(build.stdout)
+            print(build.stderr)
+            return 1
+        run = subprocess.run([str(binary)], capture_output=True, text=True, check=False)
+        sys.stdout.write(run.stdout)
+        sys.stderr.write(run.stderr)
+        return run.returncode
+
+
+def run_sync_window_policy_host_test() -> int:
+    compiler = shutil.which("cc") or shutil.which("gcc") or shutil.which("clang")
+    if compiler is None:
+        print("FAIL sync-window-policy: 未找到 cc/gcc/clang，无法构建主机测试")
+        return 1
+
+    with tempfile.TemporaryDirectory() as tmpdir:
+        binary = Path(tmpdir) / "test_sync_window_policy"
+        build = subprocess.run(
+            [
+                compiler,
+                "-std=c17",
+                "-Wall",
+                "-Wextra",
+                "-Werror",
+                "-I",
+                str(SYNC_DIR),
+                str(TESTS_DIR / "test_sync_window_policy.c"),
+                str(SYNC_DIR / "sync_window_policy.c"),
+                "-o",
+                str(binary),
+            ],
+            capture_output=True,
+            text=True,
+            check=False,
+        )
+        if build.returncode != 0:
+            print("FAIL sync-window-policy: 主机测试构建失败")
+            print(build.stdout)
+            print(build.stderr)
+            return 1
+        run = subprocess.run([str(binary)], capture_output=True, text=True, check=False)
+        sys.stdout.write(run.stdout)
+        sys.stderr.write(run.stderr)
+        return run.returncode
+
+
+def run_sync_response_policy_host_test() -> int:
+    compiler = shutil.which("cc") or shutil.which("gcc") or shutil.which("clang")
+    if compiler is None:
+        print("FAIL sync-response-policy: 未找到 cc/gcc/clang，无法构建主机测试")
+        return 1
+
+    with tempfile.TemporaryDirectory() as tmpdir:
+        binary = Path(tmpdir) / "test_sync_response_policy"
+        build = subprocess.run(
+            [
+                compiler,
+                "-std=c17",
+                "-Wall",
+                "-Wextra",
+                "-Werror",
+                "-I",
+                str(SYNC_DIR),
+                str(TESTS_DIR / "test_sync_response_policy.c"),
+                str(SYNC_DIR / "sync_response_policy.c"),
+                "-o",
+                str(binary),
+            ],
+            capture_output=True,
+            text=True,
+            check=False,
+        )
+        if build.returncode != 0:
+            print("FAIL sync-response-policy: 主机测试构建失败")
+            print(build.stdout)
+            print(build.stderr)
+            return 1
+        run = subprocess.run([str(binary)], capture_output=True, text=True, check=False)
+        sys.stdout.write(run.stdout)
+        sys.stderr.write(run.stderr)
+        return run.returncode
+
+
+def run_sync_https_codec_host_test() -> int:
+    compiler = shutil.which("cc") or shutil.which("gcc") or shutil.which("clang")
+    if compiler is None:
+        print("FAIL sync-https-codec: 未找到 cc/gcc/clang，无法构建主机测试")
+        return 1
+
+    with tempfile.TemporaryDirectory() as tmpdir:
+        binary = Path(tmpdir) / "test_sync_https_codec"
+        build = subprocess.run(
+            [
+                compiler,
+                "-std=c17",
+                "-Wall",
+                "-Wextra",
+                "-Werror",
+                "-I",
+                str(SYNC_DIR),
+                str(TESTS_DIR / "test_sync_https_codec.c"),
+                str(SYNC_DIR / "sync_https_codec.c"),
+                str(SYNC_DIR / "sync_https_mock.c"),
+                "-o",
+                str(binary),
+            ],
+            capture_output=True,
+            text=True,
+            check=False,
+        )
+        if build.returncode != 0:
+            print("FAIL sync-https-codec: 主机测试构建失败")
+            print(build.stdout)
+            print(build.stderr)
+            return 1
+        run = subprocess.run([str(binary)], capture_output=True, text=True, check=False)
+        sys.stdout.write(run.stdout)
+        sys.stderr.write(run.stderr)
+        return run.returncode
+
+
+def run_sync_runtime_host_test() -> int:
+    compiler = shutil.which("cc") or shutil.which("gcc") or shutil.which("clang")
+    if compiler is None:
+        print("FAIL sync-runtime: 未找到 cc/gcc/clang，无法构建主机测试")
+        return 1
+
+    with tempfile.TemporaryDirectory() as tmpdir:
+        binary = Path(tmpdir) / "test_sync_runtime"
+        build = subprocess.run(
+            [
+                compiler,
+                "-std=c17",
+                "-Wall",
+                "-Wextra",
+                "-Werror",
+                "-DEWF_SYNC_TRANSPORT_MOCK=1",
+                "-DEWF_SYNC_TRANSPORT_AIR780=0",
+                "-I",
+                str(SYNC_DIR),
+                "-I",
+                str(DEVICE_NAV_DIR),
+                "-I",
+                str(PROGRESS_DIR),
+                "-I",
+                str(FEEDBACK_DIR),
+                "-I",
+                str(TESTS_DIR / "host_stubs"),
+                "-I",
+                str(EMBEDDED_DIR / "components/app_state"),
+                "-I",
+                str(EMBEDDED_DIR / "components/services/state_service"),
+                "-I",
+                str(EMBEDDED_DIR / "components/services"),
+                "-I",
+                str(EMBEDDED_DIR / "components/platform/event_bus"),
+                "-I",
+                str(CANONICAL_DIR),
+                "-I",
+                str(POLICY_DIR),
+                str(TESTS_DIR / "test_sync_runtime.c"),
+                str(SYNC_DIR / "sync_window_policy.c"),
+                str(SYNC_DIR / "sync_response_policy.c"),
+                str(SYNC_DIR / "sync_https_codec.c"),
+                str(SYNC_DIR / "sync_https_mock.c"),
+                str(SYNC_DIR / "sync_service.c"),
+                str(POLICY_DIR / "power_core_path_policy.c"),
+                str(DEVICE_NAV_DIR / "device_nav_policy.c"),
+                str(DEVICE_NAV_DIR / "device_settings_policy.c"),
+                str(DEVICE_NAV_DIR / "device_nav_service.c"),
+                str(TESTS_DIR / "host_stubs/device_settings_store_host.c"),
+                str(TESTS_DIR / "host_stubs/co5300_bsp_host.c"),
+                str(TESTS_DIR / "host_stubs/host_platform.c"),
+                str(TESTS_DIR / "host_stubs/state_service_host.c"),
+                str(TESTS_DIR / "host_stubs/sync_runtime_host.c"),
+                str(EMBEDDED_DIR / "components/app_state/watch_state.c"),
+                "-o",
+                str(binary),
+            ],
+            capture_output=True,
+            text=True,
+            check=False,
+        )
+        if build.returncode != 0:
+            print("FAIL sync-runtime: 主机测试构建失败")
+            print(build.stdout)
+            print(build.stderr)
+            return 1
+        run = subprocess.run([str(binary)], capture_output=True, text=True, check=False)
+        sys.stdout.write(run.stdout)
+        sys.stderr.write(run.stderr)
+        return run.returncode
+
+
 def main() -> int:
     failures = run_source_contracts()
     failures += run_edge_policy_host_test()
+    failures += run_auto_mode_policy_host_test()
+    failures += run_core_path_policy_host_test()
+    failures += run_fault_gate_policy_host_test()
     failures += run_tap_policy_host_test()
     failures += run_tap_runtime_host_test()
     failures += run_progress_transaction_host_test()
     failures += run_progress_runtime_host_test()
     failures += run_feedback_policy_host_test()
     failures += run_feedback_runtime_host_test()
+    failures += run_device_nav_policy_host_test()
+    failures += run_device_settings_policy_host_test()
+    failures += run_device_nav_runtime_host_test()
+    failures += run_sync_window_policy_host_test()
+    failures += run_sync_response_policy_host_test()
+    failures += run_sync_https_codec_host_test()
+    failures += run_sync_runtime_host_test()
     if failures != 0:
         print("host tests: 失败")
         return 1

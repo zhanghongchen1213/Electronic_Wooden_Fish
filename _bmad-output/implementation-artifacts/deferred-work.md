@@ -412,3 +412,40 @@
 
 - 设备页 `queueFull`/`lowBattery` 告警条可见性仅有源码 `toContain` + store getter，无 Vue 挂载运行时断言；要闭合需挂载试验架，超出当前门禁风格。
 - 14 态护栏以文案金句/相位表驱动为主（裁决 B）；多数态未断言组件分支可达；像素/挂载验证记 Epic 7 / 人工逐屏。
+
+## Deferred from: code review of 2-3-提供木鱼音频与低打扰反馈.md (2026-09-24)
+
+- ISR `event_bus_publish_from_isr` 无订阅扇出：有效敲击仅走任务态 publish；ISR 路径当前无本 Story 消费者。
+- 播放/灯效期间持有 `s_mutex`：`set_volume` 可能被整段反馈时长阻塞；释放锁再播放需额外并发设计。
+- Task 5「重触发」枚举未实现：AC3 由 PLAY/MERGE_SKIP + 播毕时间戳合并覆盖；完整 RETRIGGER 留给样机定标后增强。
+- 生产 `event_bus.c` 扇出未被主机测试链接：runtime 仅测 host stub；需独立接线测试钉住生产扇出。
+- 「不阻塞 progress」用例未驱动/观察 progress_service：当前只断言反馈失败事实与未置位 fault_locked。
+- 生产 PCM 增益路径无样本级主机断言：已修原地衰减；抽出纯函数断言可后续补。
+- 订阅队满丢弃未发布 `WATCH_FEEDBACK_ERROR_BUSY`：AD-7 可合并丢弃合法；BUSY 观测属增强。
+- 通道状态未进入 ACTIVE 进行中态：消费者当前依赖 OK/FAILED；ACTIVE 语义未在 AC 强制。
+
+## Deferred from: code review of 2-4-实现触摸-pwr-导航与设备设置持久化.md (2026-09-24)
+
+- CO5300 亮屏「先整帧再 DISPON」与熄屏 `co5300_bsp_suspend` 分阶段关断未接到 `device_nav_service`；当前仅 `co5300_bsp_set_display`。完整时序需 `ui_task` 首帧协调，记 Epic 3 / hardware_pending。
+- `tap_input` 经 `device_nav_service_*` getter 读导航态而非强制 `watch_state_nav_snapshot`；公开 API + UPDATE_NAV 已存在，是否收紧为只读快照留给后续 AD-9 边界统一。
+- `power_service`→`device_nav_service_on_pwr_interval`、`device_nav_service_run` 空闲轮询、生产 `device_settings_store_nvs` 迁移路径缺少会失败的主机断言；删接线主机仍可绿。
+- 手势 `s_gesture_armed` 后丢失抬起 IRQ 的超时清武装：缺样机丢中断证据（maybe-false）。
+
+## Deferred from: code review of 2-5-实现-air780egp-活动窗口客户端与-https-mock.md (2026-09-24)
+
+- `sync_service_poll_once` 将 `command_revision` 固定为 0，窗口策略的 `PENDING_COMMAND` 触发在运行时不可达；同窗已应用命令，完整「再开窗回传 applied_revision」自动路径留给后续收敛。
+- 响应仅含 volume/timeout 而无 brightness 时，`sync_service` 默认写入 mid，可能覆盖本地亮度；待 cloud 命令载荷部分字段语义（Epic 5）对齐后再收。
+- 单次 AT/传输超时只清 `transport_busy`、保留 `window_open`；依赖后续 `force_close`。与连续超时≥3 恢复语义一并整理更稳妥。
+- 主机 `test_sync_runtime` 未钉住 idempotent / below-watermark 运行时路径（codec/policy 已覆盖）；属补测债务，非阻断。
+- Air780 真机 UART/DTR/PDP/HTTPS/发射峰值仍 `hardware_pending`（BSP 返回 `NOT_SUPPORTED`），不得宣称通信可靠 verified。
+
+## Deferred from: code review of 2-6-实现-boot0-自动模式.md (2026-09-24)
+
+- 完成锁定仅在周期到期消息路径读 `state_service_read_tap_gate` 后停表；未订阅 progress/gate 变更做即时停。Task 3 明确允许「周期投递前」核对，故按 AC 可接受；若产品要求末字瞬间停表，需另加 gate 订阅或 progress 回调（增强，非本轮阻断）。
+- 完整 `power_service` FreeRTOS/esp_timer 主机接线替身测仍未另建；本轮已用 `test_bsp_contract.py` 源码合同钉死 RUNTIME_TAP≠立即 submit 与 EMIT→submit，策略单测覆盖 toggle/周期/完成停表。
+
+## Deferred from: code review of 2-7-保护低电和故障下的核心链路.md (2026-09-24)
+
+- gate 与 fault owner 交错 RMW：`state_service_update_tap_gate_owner` / `update_tap_fault_lock_owner` 各自读快照再写全量 gate；并发交错仍可能用陈旧副本互相覆盖。本轮已对快照失败 fail-closed，完整修复需单一合并发布者。
+- fault_locked 发布失败后无脏重试：`apply_fault_gate_locked` 在 `locked_changed` 时若 `state_service_update_tap_fault_lock_owner` 失败只打日志；后续成功落盘仍可再发 unlock。增加 dirty/retry 会扩展状态机面。
+- persist 失败路径上 `inflight` 先清再置 `pending` 的极窄空窗：并发读者可能短暂看到双 false；sync/feedback 已对读失败 fail-closed，完整原子打包属后续加固。

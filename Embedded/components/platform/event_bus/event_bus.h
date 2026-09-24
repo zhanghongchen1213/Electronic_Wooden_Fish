@@ -115,6 +115,17 @@ extern "C"
      */
     esp_err_t event_bus_subscribe(QueueHandle_t queue);
 
+    /**
+     * @brief 取消事件扇出订阅队列
+     * @details 在订阅方销毁自有队列前必须调用，避免 publish 向已释放队列投递。
+     * @param queue 先前经 event_bus_subscribe 登记的队列
+     * @return ESP_OK 成功取消
+     *         ESP_ERR_INVALID_STATE 事件总线尚未初始化
+     *         ESP_ERR_INVALID_ARG 参数无效
+     *         ESP_ERR_NOT_FOUND 队列未登记
+     */
+    esp_err_t event_bus_unsubscribe(QueueHandle_t queue);
+
 #ifdef __cplusplus
 }
 #endif
