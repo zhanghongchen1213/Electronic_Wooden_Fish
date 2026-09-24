@@ -24,6 +24,7 @@
 #include "tap_input_service.h"
 #include "device_nav_service.h"
 #include "sync_service.h"
+#include "ui_service.h"
 
 static const char *TAG = "SVC_CORE";
 
@@ -115,6 +116,13 @@ static const legbot_service_descriptor_t s_descriptors[LEGBOT_SERVICE_COUNT] = {
         .id = LEGBOT_SERVICE_SYNC,
         .task_name = "sync_task",
         .owner_component = "components/services/sync_service",
+        .input_mask = LEGBOT_SERVICE_INPUT_TYPED_UPDATE,
+        .starts_by_default = true,
+    },
+    [LEGBOT_SERVICE_UI] = {
+        .id = LEGBOT_SERVICE_UI,
+        .task_name = "ui_task",
+        .owner_component = "components/services/ui_service",
         .input_mask = LEGBOT_SERVICE_INPUT_TYPED_UPDATE,
         .starts_by_default = true,
     },
@@ -288,6 +296,16 @@ esp_err_t legbot_services_init_contracts(void)
         cleanup_service_contracts();
         return err;
     }
+    err = ui_service_init_contracts();
+    if (err != ESP_OK)
+    {
+        ESP_LOGE(TAG,
+                 "服务契约初始化失败：服务=%s，错误=%s",
+                 s_descriptors[LEGBOT_SERVICE_UI].task_name,
+                 esp_err_to_name(err));
+        cleanup_service_contracts();
+        return err;
+    }
 
     s_contracts_initialized = true;
     return ESP_OK;
@@ -446,10 +464,37 @@ esp_err_t legbot_services_start_all(void)
         (void)stop_service(LEGBOT_SERVICE_STATE);
         return err;
     }
+    err = ui_service_prepare_run();
+    if (err != ESP_OK)
+    {
+        (void)stop_service(LEGBOT_SERVICE_SYNC);
+        (void)stop_service(LEGBOT_SERVICE_FEEDBACK);
+        (void)stop_service(LEGBOT_SERVICE_DEVICE_NAV);
+        (void)stop_service(LEGBOT_SERVICE_PROGRESS);
+        (void)stop_service(LEGBOT_SERVICE_TAP_INPUT);
+        (void)stop_service(LEGBOT_SERVICE_PVDF);
+        (void)stop_service(LEGBOT_SERVICE_POWER);
+        (void)stop_service(LEGBOT_SERVICE_STATE);
+        return err;
+    }
+    err = start_service(LEGBOT_SERVICE_UI);
+    if (err != ESP_OK)
+    {
+        ui_service_cancel_prepared_run();
+        (void)stop_service(LEGBOT_SERVICE_SYNC);
+        (void)stop_service(LEGBOT_SERVICE_FEEDBACK);
+        (void)stop_service(LEGBOT_SERVICE_DEVICE_NAV);
+        (void)stop_service(LEGBOT_SERVICE_PROGRESS);
+        (void)stop_service(LEGBOT_SERVICE_TAP_INPUT);
+        (void)stop_service(LEGBOT_SERVICE_PVDF);
+        (void)stop_service(LEGBOT_SERVICE_POWER);
+        (void)stop_service(LEGBOT_SERVICE_STATE);
+        return err;
+    }
 
     ESP_LOGI(TAG,
              "默认服务已启动：state_task、power_task、pvdf_task、tap_input_task、"
-             "progress_task、device_nav_task、feedback_task 与 sync_task；"
+             "progress_task、device_nav_task、feedback_task、sync_task 与 ui_task；"
              "BLE/GPS/ML307R/cloud/voice 旧链路不在启动图中");
     return ESP_OK;
 }
@@ -460,6 +505,7 @@ esp_err_t legbot_services_stop_all(void)
      * 进度 owner 与反馈 owner 是有效敲击消费者，先于输入边界停止。 */
     static const legbot_service_id_t stop_order[LEGBOT_SERVICE_COUNT] = {
         LEGBOT_SERVICE_SELFTEST,
+        LEGBOT_SERVICE_UI,
         LEGBOT_SERVICE_SYNC,
         LEGBOT_SERVICE_PVDF,
         LEGBOT_SERVICE_FEEDBACK,
@@ -552,6 +598,9 @@ static esp_err_t stop_service(legbot_service_id_t id)
     case LEGBOT_SERVICE_SYNC:
         return sync_service_request_stop(
             pdMS_TO_TICKS(LEGBOT_SERVICE_STOP_ENQUEUE_TIMEOUT_MS));
+    case LEGBOT_SERVICE_UI:
+        return ui_service_request_stop(
+            pdMS_TO_TICKS(LEGBOT_SERVICE_STOP_ENQUEUE_TIMEOUT_MS));
     default:
         return ESP_ERR_INVALID_ARG;
     }
@@ -622,19 +671,37 @@ static esp_err_t start_service(legbot_service_id_t id)
         stack_bytes = LEGBOT_SYNC_SERVICE_STACK_BYTES;
         priority = tskIDLE_PRIORITY + 2;
         break;
+    case LEGBOT_SERVICE_UI:
+        stack_bytes = EWF_UI_TASK_STACK_BYTES;
+        priority = EWF_UI_TASK_PRIORITY;
+        break;
     default:
         break;
     }
 
     atomic_store(&s_task_exit_errors[id], ESP_OK);
     atomic_store(&s_task_running[id], true);
-    /* ESP-IDF 的 xTaskCreate 以字节解释栈深度。 */
-    const BaseType_t created = xTaskCreate(service_task_entry,
-                                           s_descriptors[id].task_name,
-                                           (configSTACK_DEPTH_TYPE)stack_bytes,
-                                           (void *)(uintptr_t)id,
-                                           priority,
-                                           &s_tasks[id]);
+    /* ESP-IDF 的 xTaskCreate 以字节解释栈深度；ui_task 钉 Core 1。 */
+    BaseType_t created;
+    if (id == LEGBOT_SERVICE_UI)
+    {
+        created = xTaskCreatePinnedToCore(service_task_entry,
+                                          s_descriptors[id].task_name,
+                                          (configSTACK_DEPTH_TYPE)stack_bytes,
+                                          (void *)(uintptr_t)id,
+                                          priority,
+                                          &s_tasks[id],
+                                          EWF_UI_TASK_CORE);
+    }
+    else
+    {
+        created = xTaskCreate(service_task_entry,
+                              s_descriptors[id].task_name,
+                              (configSTACK_DEPTH_TYPE)stack_bytes,
+                              (void *)(uintptr_t)id,
+                              priority,
+                              &s_tasks[id]);
+    }
     if (created != pdPASS)
     {
         atomic_store(&s_task_running[id], false);
@@ -680,6 +747,9 @@ static void service_task_entry(void *argument)
     case LEGBOT_SERVICE_SYNC:
         err = sync_service_run();
         break;
+    case LEGBOT_SERVICE_UI:
+        err = ui_service_run();
+        break;
     default:
         err = ESP_ERR_INVALID_ARG;
         break;
@@ -705,6 +775,7 @@ static void cleanup_service_contracts(void)
     (void)device_nav_service_deinit_contracts();
     (void)sync_service_deinit_contracts();
     (void)selftest_service_deinit_contracts();
+    (void)ui_service_deinit_contracts();
     if (s_state_queue != NULL)
     {
         vQueueDelete(s_state_queue);

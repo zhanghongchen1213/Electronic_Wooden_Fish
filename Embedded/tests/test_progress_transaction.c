@@ -149,6 +149,7 @@ static void test_apply_valid_tap_and_completion(void)
         assert(completed_now == expect_completion);
     }
     assert(tx.pending_completion);
+    assert(tx.round_state == EWF_PROGRESS_ROUND_STATE_COMPLETED);
     ewf_tap_gate_state_t gate = {0};
     ewf_progress_fill_gate(&tx, &gate);
     assert(gate.completed);

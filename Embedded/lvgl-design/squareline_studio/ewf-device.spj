@@ -1,0 +1,112 @@
+{
+  "root": {
+    "children": [
+      {
+        "guid": "shell",
+        "properties": [
+          {
+            "strtype": "OBJECT/Name",
+            "strval": "screen_shell"
+          },
+          {
+            "strtype": "LABEL/Text",
+            "strval": ""
+          },
+          {
+            "strtype": "_style/Text_Font",
+            "strval": ""
+          }
+        ],
+        "children": [
+          {
+            "guid": "muyu",
+            "properties": [
+              {
+                "strtype": "OBJECT/Name",
+                "strval": "ui_muyu_title"
+              },
+              {
+                "strtype": "LABEL/Text",
+                "strval": "木鱼"
+              },
+              {
+                "strtype": "_style/Text_Font",
+                "strval": "ui_font_serif700_28"
+              }
+            ],
+            "children": []
+          },
+          {
+            "guid": "jingwen",
+            "properties": [
+              {
+                "strtype": "OBJECT/Name",
+                "strval": "ui_jingwen_title"
+              },
+              {
+                "strtype": "LABEL/Text",
+                "strval": "经文"
+              },
+              {
+                "strtype": "_style/Text_Font",
+                "strval": "ui_font_serif700_28"
+              }
+            ],
+            "children": []
+          },
+          {
+            "guid": "tongji",
+            "properties": [
+              {
+                "strtype": "OBJECT/Name",
+                "strval": "ui_tongji_title"
+              },
+              {
+                "strtype": "LABEL/Text",
+                "strval": "统计"
+              },
+              {
+                "strtype": "_style/Text_Font",
+                "strval": "ui_font_ns700_22"
+              }
+            ],
+            "children": []
+          }
+        ]
+      },
+      {
+        "guid": "shezhi",
+        "properties": [
+          {
+            "strtype": "OBJECT/Name",
+            "strval": "ui_scr_shezhi"
+          },
+          {
+            "strtype": "LABEL/Text",
+            "strval": ""
+          }
+        ],
+        "children": [
+          {
+            "guid": "st",
+            "properties": [
+              {
+                "strtype": "OBJECT/Name",
+                "strval": "ui_shezhi_title"
+              },
+              {
+                "strtype": "LABEL/Text",
+                "strval": "设置"
+              },
+              {
+                "strtype": "_style/Text_Font",
+                "strval": "ui_font_ns700_22"
+              }
+            ],
+            "children": []
+          }
+        ]
+      }
+    ]
+  }
+}

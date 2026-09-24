@@ -364,6 +364,53 @@ static void test_write_set_has_no_automatic_mode_flag(void)
     assert(stored->action_id[0] == '\0');
 }
 
+static void test_request_round_action_publish_and_no_auto(void)
+{
+    reset_owner();
+    ewf_progress_transaction_t preload = {0};
+    ewf_progress_transaction_init(&preload, EWF_SCRIPTURE_VERSION);
+    preload.local_total = (uint32_t)EWF_SCRIPTURE_CONSUMABLE_COUNT;
+    preload.round_cursor = (uint32_t)EWF_SCRIPTURE_CONSUMABLE_COUNT;
+    preload.pending_completion = true;
+    preload.round_state = EWF_PROGRESS_ROUND_STATE_COMPLETED;
+    host_progress_store_preload(&preload);
+    restart_owner();
+
+    bool queue_full = false;
+    assert(read_gate(&queue_full));
+    const uint32_t local_before = snapshot().tap_local_total;
+    const uint32_t round_before = snapshot().tap_round_id;
+
+    assert(progress_service_request_round_action(
+               EWF_PROGRESS_ROUND_ACTION_EXIT, "rt-exit-1", 0) == ESP_OK);
+    drain_state_updates();
+    assert(read_gate(&queue_full));
+    assert(snapshot().tap_pending_completion == false);
+    assert(snapshot().tap_round_state ==
+           (uint32_t)EWF_PROGRESS_ROUND_STATE_COMPLETED);
+    assert(snapshot().tap_local_total == local_before);
+    assert(strcmp(host_progress_store_stored()->action_id, "rt-exit-1") == 0);
+
+    assert(progress_service_request_round_action(
+               EWF_PROGRESS_ROUND_ACTION_RESTART, "rt-restart-1", 0) == ESP_OK);
+    drain_state_updates();
+    assert(!read_gate(&queue_full));
+    assert(snapshot().tap_round_id == round_before + 1U);
+    assert(snapshot().tap_round_cursor == 0U);
+    assert(snapshot().tap_pending_completion == false);
+    assert(snapshot().tap_round_state ==
+           (uint32_t)EWF_PROGRESS_ROUND_STATE_IN_PROGRESS);
+    assert(snapshot().tap_local_total == local_before);
+    /* AC3 / 裁决 H：跨轮写集仍不含 auto；restart 不隐式写入自动模式键。 */
+    assert(!host_progress_store_contains_key("automatic_mode"));
+    assert(!host_progress_store_contains_key("auto"));
+    assert(strcmp(host_progress_store_stored()->action_id, "rt-restart-1") == 0);
+
+    assert(progress_service_request_round_action(
+               EWF_PROGRESS_ROUND_ACTION_RESTART, "rt-restart-1", 0) == ESP_OK);
+    assert(snapshot().tap_round_id == round_before + 1U);
+}
+
 int main(void)
 {
     test_first_boot_zero_values();
@@ -375,6 +422,7 @@ int main(void)
     test_persist_failure_typed_and_no_silent_loss();
     test_fault_lock_after_persist_failures_and_idle_unlock();
     test_write_set_has_no_automatic_mode_flag();
+    test_request_round_action_publish_and_no_auto();
     printf("progress runtime: 全部通过\n");
     return 0;
 }

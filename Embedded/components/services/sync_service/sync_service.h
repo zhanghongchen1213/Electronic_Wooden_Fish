@@ -12,6 +12,7 @@
 #define EWF_SYNC_SERVICE_H
 
 #include <stdbool.h>
+#include <stddef.h>
 #include <stdint.h>
 
 #include "esp_err.h"
@@ -99,6 +100,20 @@ esp_err_t sync_service_set_identity(const char *device_id,
                                     const char *firmware_version,
                                     const char *scripture_version,
                                     uint32_t audio_config_version);
+
+/**
+ * @brief 只读拷贝身份字段供设置页展示（不伪造已绑定）
+ * @param device_id 输出缓冲；可为 NULL
+ * @param device_id_len 容量
+ * @param firmware_version 输出缓冲；可为 NULL
+ * @param firmware_version_len 容量
+ * @param identity_configured 输出：是否足以开窗；可为 NULL
+ */
+esp_err_t sync_service_copy_identity(char *device_id,
+                                     size_t device_id_len,
+                                     char *firmware_version,
+                                     size_t firmware_version_len,
+                                     bool *identity_configured);
 
 /**
  * @brief 注入电量百分比（0–100）

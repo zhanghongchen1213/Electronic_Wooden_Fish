@@ -237,6 +237,7 @@ extern "C"
         bool pending_completion;   /**< 本地末字完成锁定置位。 */
         uint32_t backlog_count;    /**< 离线积压差值 local_total - acked_total。 */
         bool persist_error;        /**< 最近一次事务落盘是否失败（busy/error typed 原因）。 */
+        uint32_t today_count;      /**< 非权威今日桶展示计数（失信时 UI 仍显待校时）。 */
     } watch_tap_progress_update_t;
 
     typedef enum
@@ -984,6 +985,7 @@ extern "C"
         bool tap_pending_completion;                                      /**< 本地末字完成锁定置位快照。 */
         uint32_t tap_backlog_count;                                       /**< 离线积压差值快照。 */
         bool tap_persist_error;                                           /**< 最近一次进度事务落盘失败事实。 */
+        uint32_t tap_today_count;                                         /**< 非权威今日桶展示计数快照（Story 3.4）。 */
         watch_feedback_update_t feedback;                                  /**< 统一反馈服务最近一次 typed 事实。 */
         watch_nav_update_t nav;                                            /**< 导航/设置/立即同步 owner 最近一次 typed 事实。 */
         watch_selftest_summary_t selftest;                               /**< 当前启动周期的最近一次自检摘要。 */

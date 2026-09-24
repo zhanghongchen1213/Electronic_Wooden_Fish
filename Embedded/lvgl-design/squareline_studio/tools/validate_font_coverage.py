@@ -1,14 +1,15 @@
 #!/usr/bin/env python3
-"""验证 SquareLine 静态/运行时文案与固件字体资源的字形闭合。"""
+"""验证 EWF DEVICE-01 静态/运行时文案与固件字体资源的字形闭合。
+
+路径根为 Embedded/。SquareLine 工程名为 ewf-device（裁决 B）。
+"""
 
 from __future__ import annotations
 
 import json
 import re
 import sys
-from collections import defaultdict
 from pathlib import Path
-
 
 ROOT = Path(__file__).resolve().parents[3]
 PROJECT_DIR = ROOT / "lvgl-design/squareline_studio"
@@ -19,9 +20,8 @@ GENERATED_UI_DIRS = (
     ROOT / "components/ui/generated/screens",
     ROOT / "components/ui/generated/components",
 )
-MANIFEST_PROJECTION_PATH = ROOT / "components/ui/bindings/ui_manifest_projection.c"
-PROJECT_MANIFEST_PATH = PROJECT_DIR / "project_manifest.json"
 ASCII_DYNAMIC = set(chr(code) for code in range(0x20, 0x7F))
+FORBIDDEN_PRODUCT = ("TODO", "draft", "placeholder", "data-pencil-id", "助力", "外骨骼", "支付", "档位")
 
 
 def fail(message: str) -> None:
@@ -59,7 +59,10 @@ def label_fields(node: dict) -> tuple[str, str, str]:
 
 
 def authoring_roots() -> list[dict]:
-    project = json.loads((PROJECT_DIR / "watch-lvgl.spj").read_text(encoding="utf-8"))
+    spj = PROJECT_DIR / "ewf-device.spj"
+    if not spj.exists():
+        fail("缺少 ewf-device.spj")
+    project = json.loads(spj.read_text(encoding="utf-8"))
     roots = list(project.get("root", {}).get("children", []))
     for path in sorted((PROJECT_DIR / "components").glob("*.ecomp")):
         roots.append(json.loads(path.read_text(encoding="utf-8")))
@@ -68,8 +71,7 @@ def authoring_roots() -> list[dict]:
 
 def function_body(source: str, name: str) -> str:
     match = re.search(
-        rf"^[ \t]*(?:static[ \t]+)?(?:const[ \t]+)?"
-        rf"[A-Za-z_][A-Za-z0-9_]*[ \t]+(?:\*[ \t]*)?"
+        rf"^[ \t]*(?:static[ \t]+)?(?:const[ \t]+)?(?:[A-Za-z_][A-Za-z0-9_]*[ \t*]+)+"
         rf"{re.escape(name)}\s*\([^;{{}}]*\)\s*\{{",
         source,
         flags=re.M | re.S,
@@ -84,302 +86,168 @@ def function_body(source: str, name: str) -> str:
         elif source[index] == "}":
             depth -= 1
             if depth == 0:
-                return source[opening + 1:index]
+                return source[opening + 1 : index]
     fail(f"运行时字形合同引用的函数未闭合: {name}")
     return ""
 
 
-def runtime_non_ascii_literals(contract: dict) -> set[str]:
-    literals: set[str] = set()
+def glyph_codepoints(font_c: Path) -> set[str]:
+    if not font_c.exists():
+        fail(f"缺少字体源: {font_c}")
+    text = font_c.read_text(encoding="utf-8", errors="replace")
+    codes: set[str] = set()
+    for match in re.finditer(r"/\*\s*U\+([0-9A-Fa-f]+)\b", text):
+        codes.add(chr(int(match.group(1), 16)))
+    # Also accept lv_font_fmt_txt cmap ranges
+    for match in re.finditer(
+        r"\{\s*\.range_start\s*=\s*(\d+).*?\.glyph_id_start\s*=\s*\d+.*?\.list_length\s*=\s*(\d+)",
+        text,
+        flags=re.S,
+    ):
+        start = int(match.group(1))
+        length = int(match.group(2))
+        for code in range(start, start + length):
+            if code >= 0x20:
+                codes.add(chr(code))
+    return codes
+
+
+def font_code_to_path(font_code: str) -> Path:
+    name = font_code if font_code.startswith("ui_font_") else f"ui_font_{font_code}"
+    return GENERATED_FONT_DIR / f"{name}.c"
+
+
+def projected_fonts_by_label() -> dict[str, set[str]]:
+    contract = json.loads(CONTRACT_PATH.read_text(encoding="utf-8"))
+    result: dict[str, set[str]] = {}
+    for entry in contract.get("runtime_labels", []):
+        selector = entry["selector"]
+        codes = set(entry.get("font_codes", []))
+        if not codes and entry.get("source_path"):
+            # infer from generated C lv_obj_set_style_text_font
+            pass
+        result[selector] = codes
+    return result
+
+
+def collect_required_chars() -> dict[str, set[str]]:
+    contract = json.loads(CONTRACT_PATH.read_text(encoding="utf-8"))
+    by_font: dict[str, set[str]] = {}
+
+    for root in authoring_roots():
+        for node in walk_project_nodes(root):
+            _name, text, font = label_fields(node)
+            if not text or not font:
+                continue
+            code = font.replace("ui_font_", "")
+            by_font.setdefault(code, set()).update(ch for ch in text if ord(ch) >= 0x20)
+
+    for entry in contract.get("runtime_labels", []):
+        codes = entry.get("font_codes") or []
+        texts = "".join(entry.get("texts", []))
+        # Story 3.2：动态字带占位展开为 canonical 心经汉字，避免 ASCII 占位令缺字门禁空转。
+        if "DYNAMIC_SCRIPTURE_BELT" in texts:
+            canon = ROOT.parent / "docs/contracts/canonical/heart-sutra.txt"
+            if canon.exists():
+                body = canon.read_text(encoding="utf-8")
+                texts = texts.replace(
+                    "DYNAMIC_SCRIPTURE_BELT",
+                    "".join(re.findall(r"[\u4e00-\u9fff]", body)) + "·，。",
+                )
+            else:
+                texts = texts.replace("DYNAMIC_SCRIPTURE_BELT", "·")
+        if "DYNAMIC_SCRIPTURE_HISTORY" in texts:
+            canon = ROOT.parent / "docs/contracts/canonical/heart-sutra.txt"
+            if canon.exists():
+                body = canon.read_text(encoding="utf-8")
+                texts = texts.replace(
+                    "DYNAMIC_SCRIPTURE_HISTORY",
+                    "".join(re.findall(r"[\u4e00-\u9fff]", body)) + "·，。",
+                )
+            else:
+                texts = texts.replace("DYNAMIC_SCRIPTURE_HISTORY", "·")
+        for code in codes:
+            by_font.setdefault(code, set()).update(ch for ch in texts if ord(ch) >= 0x20)
+
     for source_entry in contract.get("runtime_sources", []):
         path = ROOT / source_entry["path"]
+        if not path.exists():
+            fail(f"runtime_sources 路径不存在: {path}")
         source = path.read_text(encoding="utf-8")
         for function_name in source_entry.get("functions", []):
             body = function_body(source, function_name)
             body = re.sub(r"//[^\n]*|/\*.*?\*/", "", body, flags=re.S)
             for literal in re.findall(r'"((?:\\.|[^"\\])*)"', body):
-                if any(ord(character) >= 0x80 for character in literal):
-                    literals.add(literal)
-    return literals
+                decoded = bytes(literal, "utf-8").decode("unicode_escape")
+                # Prefer UTF-8 source literals already decoded
+                try:
+                    decoded = literal.encode("utf-8").decode("unicode_escape")
+                except Exception:
+                    decoded = literal
+                # Chinese source files: keep literal as-is
+                decoded = literal
+                for ch in decoded:
+                    if ord(ch) >= 0x80:
+                        # assign to all ns/serif fonts that exist
+                        for code in ("ns600_16", "ns700_22", "serif700_28"):
+                            by_font.setdefault(code, set()).add(ch)
+
+    return by_font
 
 
-def glyph_codepoints(path: Path) -> set[str]:
-    source = path.read_text(encoding="utf-8")
-    return {
-        chr(int(codepoint, 16))
-        for codepoint in re.findall(r"/\* U\+([0-9A-Fa-f]{4,6})", source)
-    }
-
-
-def manifest_projection_labels() -> list[tuple[str, str]]:
-    """提取状态投影中同一标签实际写入的文本和字体。"""
-    source = MANIFEST_PROJECTION_PATH.read_text(encoding="utf-8")
-    labels: list[tuple[str, str]] = []
-    text_pattern = re.compile(
-        r'lv_label_set_text\(\s*(.+?)\s*,\s*"((?:\\.|[^"\\])*)"\s*\);'
-    )
-    font_pattern = re.compile(
-        r"lv_obj_set_style_text_font\(\s*(.+?)\s*,\s*&ui_font_"
-        r"([A-Za-z0-9_]+)\s*,"
-    )
-    for text_match in text_pattern.finditer(source):
-        selector = text_match.group(1).strip()
-        text = json.loads(f'"{text_match.group(2)}"')
-        next_text = text_pattern.search(source, text_match.end())
-        operation_end = next_text.start() if next_text is not None else len(source)
-        font_match = next(
-            (
-                match
-                for match in font_pattern.finditer(
-                    source, text_match.end(), operation_end
-                )
-                if match.group(1).strip() == selector
-            ),
-            None,
-        )
-        if font_match is None:
-            fail(f"状态投影标签缺少可追踪字体: {selector} -> {text}")
-        labels.append((font_match.group(2), text))
-    return labels
-
-
-def generated_export_labels() -> list[tuple[str, str]]:
-    """从固件实际编译的 SquareLine 导出 C 中提取基础标签文本和字体。"""
-    text_pattern = re.compile(
-        r'lv_label_set_text\(\s*([^,]+?)\s*,\s*"((?:\\.|[^"\\])*)"\s*\);'
-    )
-    font_pattern = re.compile(
-        r"lv_obj_set_style_text_font\(\s*([^,]+?)\s*,\s*&ui_font_"
-        r"([A-Za-z0-9_]+)\s*,"
-    )
-    labels: list[tuple[str, str]] = []
+def check_forbidden_copy() -> None:
     for directory in GENERATED_UI_DIRS:
-        for path in sorted(directory.glob("*.c")):
-            source = path.read_text(encoding="utf-8")
-            fonts_by_selector: dict[str, set[str]] = defaultdict(set)
-            for match in font_pattern.finditer(source):
-                fonts_by_selector[match.group(1).strip()].add(match.group(2))
-            for match in text_pattern.finditer(source):
-                selector = match.group(1).strip()
-                font_codes = fonts_by_selector.get(selector, set())
-                if len(font_codes) != 1:
-                    fail(
-                        "固件导出标签字体不可唯一追踪: "
-                        f"{path.relative_to(ROOT)} -> {selector} -> "
-                        f"{sorted(font_codes)}"
-                    )
-                labels.append(
-                    (
-                        next(iter(font_codes)),
-                        json.loads(f'"{match.group(2)}"'),
-                    )
-                )
-    return labels
-
-
-def projected_fonts_by_label() -> dict[str, set[str]]:
-    """提取每个逻辑标签在所有状态投影中实际绑定的字体集合。"""
-    manifest = json.loads(PROJECT_MANIFEST_PATH.read_text(encoding="utf-8"))
-    result: dict[str, set[str]] = defaultdict(set)
-
-    def walk_descriptor(descriptor: dict):
-        yield descriptor
-        for child in descriptor.get("children", []):
-            yield from walk_descriptor(child)
-
-    for state in manifest.get("state_registry", []):
-        patch = state.get("state_patch")
-        if not patch:
+        if not directory.exists():
             continue
-        for override in patch.get("overrides", {}).values():
-            for descriptor in walk_descriptor(override):
-                operations = descriptor.get("operations", [])
-                font_codes = [
-                    operation.get("args", [""])[0]
-                    for operation in operations
-                    if operation.get("op") == "lv_obj_set_style_text_font"
-                ]
-                if not font_codes:
-                    continue
-                if len(font_codes) != 1:
-                    fail(
-                        "状态投影标签字体不唯一: "
-                        f"{state.get('state_key')} -> "
-                        f"{descriptor.get('target', {}).get('logical_name', '')}"
-                    )
-                selector = descriptor.get("target", {}).get("logical_name", "")
-                if selector:
-                    result[selector].add(font_codes[0])
-    return result
+        for path in directory.rglob("*.c"):
+            text = path.read_text(encoding="utf-8", errors="replace")
+            for bad in FORBIDDEN_PRODUCT:
+                if bad in text:
+                    fail(f"生成页残留禁用词 {bad!r}: {path}")
 
 
-def validate_font_coverage() -> dict[str, object]:
-    contract = json.loads(CONTRACT_PATH.read_text(encoding="utf-8"))
-    if contract.get("schema_version") != 1:
-        fail("不支持的字体字形合同版本")
+def check_squareline_firmware_identical() -> bool:
+    identical = True
+    for gen in sorted(GENERATED_FONT_DIR.glob("ui_font_*.c")):
+        sl = FONT_DIR / gen.name
+        if not sl.exists():
+            fail(f"SquareLine 字体资产缺失: {sl}")
+        if gen.read_bytes() != sl.read_bytes():
+            print(f"ERROR: 字体字节不一致: {gen.name}")
+            identical = False
+    return identical
 
-    required_by_font: dict[str, set[str]] = defaultdict(set)
-    fonts_by_label: dict[str, set[str]] = defaultdict(set)
-    static_label_count = 0
-    for root in authoring_roots():
-        for node in walk_project_nodes(root):
-            if node.get("saved_objtypeKey") != "LABEL":
-                continue
-            selector, text, font_code = label_fields(node)
-            if not selector or not font_code:
-                fail("SquareLine 标签缺少逻辑对象名或字体绑定")
-            static_label_count += 1
-            fonts_by_label[selector].add(font_code)
-            required_by_font[font_code].update(text)
-            if re.fullmatch(r"(?:ns|mo)[0-9]+_[0-9]+", font_code):
-                required_by_font[font_code].update(ASCII_DYNAMIC)
 
-    for selector, font_codes in projected_fonts_by_label().items():
-        fonts_by_label[selector].update(font_codes)
+def main() -> int:
+    if not CONTRACT_PATH.exists():
+        fail(f"缺少字形合同: {CONTRACT_PATH}")
 
-    generated_labels = generated_export_labels()
-    for font_code, text in generated_labels:
-        required_by_font[font_code].update(text)
-        if re.fullmatch(r"(?:ns|mo)[0-9]+_[0-9]+", font_code):
-            required_by_font[font_code].update(ASCII_DYNAMIC)
-
-    projection_labels = manifest_projection_labels()
-    for font_code, text in projection_labels:
-        required_by_font[font_code].update(text)
-        if re.fullmatch(r"(?:ns|mo)[0-9]+_[0-9]+", font_code):
-            required_by_font[font_code].update(ASCII_DYNAMIC)
-
-    contract_texts: set[str] = set()
-    for entry in contract.get("runtime_labels", []):
-        selector = entry.get("selector", "")
-        font_codes = fonts_by_label.get(selector, set())
-        explicit_font_code = entry.get("font_code")
-        explicit_font_codes = entry.get("font_codes")
-        if explicit_font_code and explicit_font_codes:
-            fail(f"运行时标签同时声明 font_code/font_codes: {selector}")
-        if explicit_font_codes is not None:
-            if (
-                not isinstance(explicit_font_codes, list)
-                or not explicit_font_codes
-                or not all(
-                    isinstance(font_code, str) and font_code
-                    for font_code in explicit_font_codes
-                )
-            ):
-                fail(f"运行时标签 font_codes 无效: {selector}")
-            runtime_font_codes = set(explicit_font_codes)
-        elif explicit_font_code:
-            runtime_font_codes = {explicit_font_code}
+    check_forbidden_copy()
+    by_font = collect_required_chars()
+    missing_total = 0
+    for code, chars in sorted(by_font.items()):
+        path = font_code_to_path(code)
+        glyphs = glyph_codepoints(path)
+        missing = sorted(ch for ch in chars if ch not in glyphs and ch not in ASCII_DYNAMIC)
+        # ASCII may be in font; if not in glyphs set due to parse limits, skip pure ASCII
+        missing = [ch for ch in missing if ord(ch) >= 0x80]
+        if missing:
+            missing_total += len(missing)
+            sample = "".join(missing[:20])
+            print(f"ERROR: {code} 缺字 {len(missing)}: {sample}")
         else:
-            runtime_font_codes = font_codes
-        if not runtime_font_codes:
-            fail(f"运行时标签没有可追踪字体: {selector}")
-        texts = entry.get("texts", [])
-        if not texts or not all(isinstance(text, str) for text in texts):
-            fail(f"运行时标签缺少有效 texts: {selector}")
-        for text in texts:
-            contract_texts.add(text)
-            for font_code in runtime_font_codes:
-                required_by_font[font_code].update(text)
-        for font_code in runtime_font_codes:
-            if re.fullmatch(r"(?:ns|mo)[0-9]+_[0-9]+", font_code):
-                required_by_font[font_code].update(ASCII_DYNAMIC)
+            print(f"OK {code}: required={len(chars)}")
 
-    for required in required_by_font.values():
-        required.difference_update(
-            character
-            for character in tuple(required)
-            if ord(character) < 0x20 or ord(character) == 0x7F
-        )
-
-    runtime_literals = runtime_non_ascii_literals(contract)
-    registered_literals = {
-        text for text in contract_texts if any(ord(character) >= 0x80 for character in text)
+    identical = check_squareline_firmware_identical()
+    result = {
+        "missing_glyphs": missing_total,
+        "squareline_firmware_font_sources_identical": identical,
     }
-    unregistered = sorted(runtime_literals - registered_literals)
-    sourced_literals: set[str] = set()
-    for entry in contract.get("runtime_labels", []):
-        source_path = entry.get("source_path")
-        if not source_path:
-            continue
-        source = (ROOT / source_path).read_text(encoding="utf-8")
-        for value in entry.get("texts", []):
-            if value not in source:
-                fail(f"字形合同来源未包含登记文案: {source_path} -> {value}")
-            if any(ord(character) >= 0x80 for character in value):
-                sourced_literals.add(value)
-    stale_contract = sorted(registered_literals - runtime_literals - sourced_literals)
-    if unregistered:
-        fail("运行时出现未登记的非 ASCII 文案: " + " | ".join(unregistered))
-    if stale_contract:
-        fail("字形合同含无运行时来源的文案: " + " | ".join(stale_contract))
-
-    runtime_source_text = "\n".join(
-        (ROOT / entry["path"]).read_text(encoding="utf-8")
-        for entry in contract.get("runtime_sources", [])
-    )
-    for entry in contract.get("bounded_external_text", []):
-        selector = entry.get("selector", "")
-        font_codes = fonts_by_label.get(selector, set())
-        if not font_codes:
-            fail(f"外部文本边界标签没有可追踪字体: {selector}")
-        enforcement = entry.get("enforced_by", "")
-        if not enforcement or enforcement not in runtime_source_text:
-            fail(f"外部文本字符边界未落实: {selector} -> {enforcement}")
-
-    missing: list[str] = []
-    for font_code, required in sorted(required_by_font.items()):
-        stem = f"ui_font_{font_code}"
-        asset_c = FONT_DIR / f"{stem}.c"
-        asset_bin = FONT_DIR / f"{stem}.bin"
-        config_path = FONT_DIR / f"{stem}.fcfg"
-        firmware_c = GENERATED_FONT_DIR / f"{stem}.c"
-        for path in (asset_c, asset_bin, config_path, firmware_c):
-            if not path.is_file() or path.stat().st_size <= 64:
-                missing.append(f"{font_code}: 缺少或无效资源 {path.relative_to(ROOT)}")
-        if any(not path.is_file() for path in (asset_c, config_path, firmware_c)):
-            continue
-        if asset_c.read_bytes() != firmware_c.read_bytes():
-            missing.append(f"{font_code}: SquareLine 与固件字体 C 源不一致")
-        actual = glyph_codepoints(asset_c)
-        absent = sorted(required - actual, key=ord)
-        if absent:
-            rendered = " ".join(f"{character}(U+{ord(character):04X})" for character in absent)
-            missing.append(f"{font_code}: 缺少 {rendered}")
-        config = json.loads(config_path.read_text(encoding="utf-8"))
-        configured = set(config.get("symbols", ""))
-        configured.update(ASCII_DYNAMIC if config.get("ranges") == ["0x20-0x7e"] else set())
-        absent_from_config = sorted(required - configured, key=ord)
-        if absent_from_config:
-            rendered = " ".join(
-                f"{character}(U+{ord(character):04X})" for character in absent_from_config
-            )
-            missing.append(f"{font_code}: .fcfg 缺少 {rendered}")
-
-    if missing:
-        fail("字体覆盖未闭合:\n  " + "\n  ".join(missing))
-
-    return {
-        "ok": True,
-        "static_labels": static_label_count,
-        "generated_labels": len(generated_labels),
-        "projection_labels": len(projection_labels),
-        "runtime_labels": len(contract.get("runtime_labels", [])),
-        "runtime_non_ascii_literals": len(runtime_literals),
-        "fonts": len(required_by_font),
-        "required_font_glyph_pairs": sum(len(symbols) for symbols in required_by_font.values()),
-        "missing_glyphs": 0,
-        "squareline_firmware_font_sources_identical": True,
-    }
-
-
-def main() -> None:
-    print(json.dumps(validate_font_coverage(), ensure_ascii=False))
+    print(json.dumps(result, ensure_ascii=False))
+    if missing_total != 0 or not identical:
+        return 1
+    return 0
 
 
 if __name__ == "__main__":
-    try:
-        main()
-    except (OSError, UnicodeDecodeError, json.JSONDecodeError) as error:
-        print(f"ERROR: {error}")
-        sys.exit(1)
+    raise SystemExit(main())

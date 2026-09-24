@@ -1,6 +1,6 @@
 # Story 1.1：services 组件只纳管 EWF 启动图中的服务。
-# BLE/GPS/ML307R/cloud/voice/audio/ui_service/time/maintenance/radio_power 旧实现
-# 已从默认启动图移除（目录一并清除），避免通过“保留但不编译”掩盖未审计代码。
+# BLE/GPS/ML307R/cloud/voice/audio/time/maintenance/radio_power 旧实现已移除。
+# Story 3.1 重新登记 EWF ui_service（独占 ui_task），与 legbot 旧 UI 服务不同。
 idf_component_register(
     SRCS
         "legbot_services.c"
@@ -10,6 +10,8 @@ idf_component_register(
         "power_service/power_service.c"
         "progress_service/progress_transaction.c"
         "progress_service/progress_store_nvs.c"
+        "progress_service/today_bucket_policy.c"
+        "progress_service/today_bucket_store_nvs.c"
         "progress_service/fault_gate_policy.c"
         "progress_service/progress_service.c"
         "feedback_service/feedback_policy.c"
@@ -31,6 +33,7 @@ idf_component_register(
         "tap_input_service/tap_input_service.c"
         "selftest_service/selftest_service.c"
         "state_service/state_service.c"
+        "ui_service/ui_service.c"
     INCLUDE_DIRS
         "."
         "power_service"
@@ -42,6 +45,7 @@ idf_component_register(
         "tap_input_service"
         "selftest_service"
         "state_service"
+        "ui_service"
     REQUIRES
         BSP
         app_state
@@ -52,6 +56,8 @@ idf_component_register(
         nvs_flash
         platform
         spiffs
+        ui
+        lvgl
 )
 
 # canonical 生成头（ewf_scripture_canonical.h）位于仓库 docs 契约目录；

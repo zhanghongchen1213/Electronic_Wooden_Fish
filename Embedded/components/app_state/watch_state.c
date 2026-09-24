@@ -512,6 +512,7 @@ esp_err_t watch_state_apply_tap_progress_update(
     s_state.tap_pending_completion = update->pending_completion;
     s_state.tap_backlog_count = update->backlog_count;
     s_state.tap_persist_error = update->persist_error;
+    s_state.tap_today_count = update->today_count;
     xSemaphoreGive(s_state_mutex);
     return ESP_OK;
 }

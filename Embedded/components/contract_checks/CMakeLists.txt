@@ -6,4 +6,6 @@ idf_component_register(
         app_state
         control_gate
         services
+        ui
 )
+

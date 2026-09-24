@@ -22,6 +22,7 @@ PROGRESS_DIR = EMBEDDED_DIR / "components/services/progress_service"
 FEEDBACK_DIR = EMBEDDED_DIR / "components/services/feedback_service"
 DEVICE_NAV_DIR = EMBEDDED_DIR / "components/services/device_nav_service"
 SYNC_DIR = EMBEDDED_DIR / "components/services/sync_service"
+UI_BIND_DIR = EMBEDDED_DIR / "components/ui/bindings"
 CANONICAL_DIR = EMBEDDED_DIR.parent / "docs/contracts/canonical/generated"
 
 
@@ -277,9 +278,12 @@ def run_tap_runtime_host_test() -> int:
                 str(EMBEDDED_DIR / "components/platform/event_bus"),
                 "-I",
                 str(DEVICE_NAV_DIR),
+                "-I",
+                str(UI_BIND_DIR),
                 str(TESTS_DIR / "test_tap_input_runtime.c"),
                 str(TAP_POLICY_DIR / "tap_input_policy.c"),
                 str(DEVICE_NAV_DIR / "device_nav_policy.c"),
+                str(UI_BIND_DIR / "ui_jingwen_gesture_policy.c"),
                 str(TESTS_DIR / "host_stubs/host_platform.c"),
                 str(TESTS_DIR / "host_stubs/state_service_host.c"),
                 str(TESTS_DIR / "host_stubs/pvdf_service_host.c"),
@@ -347,6 +351,47 @@ def run_progress_transaction_host_test() -> int:
         return run.returncode
 
 
+def run_progress_round_action_host_test() -> int:
+    compiler = shutil.which("cc") or shutil.which("gcc") or shutil.which("clang")
+    if compiler is None:
+        print("FAIL progress-round-action: 未找到 cc/gcc/clang，无法构建主机测试")
+        return 1
+
+    with tempfile.TemporaryDirectory() as tmpdir:
+        binary = Path(tmpdir) / "test_progress_round_action"
+        build = subprocess.run(
+            [
+                compiler,
+                "-std=c17",
+                "-Wall",
+                "-Wextra",
+                "-Werror",
+                "-I",
+                str(PROGRESS_DIR),
+                "-I",
+                str(TAP_POLICY_DIR),
+                "-I",
+                str(CANONICAL_DIR),
+                str(TESTS_DIR / "test_progress_round_action.c"),
+                str(PROGRESS_DIR / "progress_transaction.c"),
+                "-o",
+                str(binary),
+            ],
+            capture_output=True,
+            text=True,
+            check=False,
+        )
+        if build.returncode != 0:
+            print("FAIL progress-round-action: 主机测试构建失败")
+            print(build.stdout)
+            print(build.stderr)
+            return 1
+        run = subprocess.run([str(binary)], capture_output=True, text=True, check=False)
+        sys.stdout.write(run.stdout)
+        sys.stderr.write(run.stderr)
+        return run.returncode
+
+
 def run_progress_runtime_host_test() -> int:
     compiler = shutil.which("cc") or shutil.which("gcc") or shutil.which("clang")
     if compiler is None:
@@ -381,8 +426,10 @@ def run_progress_runtime_host_test() -> int:
                 str(TESTS_DIR / "test_progress_runtime.c"),
                 str(PROGRESS_DIR / "progress_transaction.c"),
                 str(PROGRESS_DIR / "fault_gate_policy.c"),
+                str(PROGRESS_DIR / "today_bucket_policy.c"),
                 str(PROGRESS_DIR / "progress_service.c"),
                 str(TESTS_DIR / "host_stubs/progress_store_host.c"),
+                str(TESTS_DIR / "host_stubs/today_bucket_store_host.c"),
                 str(TESTS_DIR / "host_stubs/host_platform.c"),
                 str(TESTS_DIR / "host_stubs/state_service_host.c"),
                 str(EMBEDDED_DIR / "components/app_state/watch_state.c"),
@@ -769,6 +816,8 @@ def run_sync_runtime_host_test() -> int:
                 "-I",
                 str(PROGRESS_DIR),
                 "-I",
+                str(TAP_POLICY_DIR),
+                "-I",
                 str(FEEDBACK_DIR),
                 "-I",
                 str(TESTS_DIR / "host_stubs"),
@@ -818,6 +867,264 @@ def run_sync_runtime_host_test() -> int:
         return run.returncode
 
 
+
+def run_ui_shell_policy_host_test() -> int:
+    compiler = shutil.which("cc") or shutil.which("gcc") or shutil.which("clang")
+    if compiler is None:
+        print("FAIL ui-shell-policy: 未找到 cc/gcc/clang，无法构建主机测试")
+        return 1
+    with tempfile.TemporaryDirectory() as tmpdir:
+        binary = Path(tmpdir) / "test_ui_shell_policy"
+        build = subprocess.run(
+            [
+                compiler,
+                "-std=c17",
+                "-Wall",
+                "-Wextra",
+                "-Werror",
+                "-I",
+                str(UI_BIND_DIR),
+                str(TESTS_DIR / "test_ui_shell_policy.c"),
+                str(UI_BIND_DIR / "ui_shell_policy.c"),
+                "-o",
+                str(binary),
+            ],
+            capture_output=True,
+            text=True,
+            check=False,
+        )
+        if build.returncode != 0:
+            print("FAIL ui-shell-policy: 主机测试构建失败")
+            print(build.stdout)
+            print(build.stderr)
+            return 1
+        run = subprocess.run([str(binary)], capture_output=True, text=True, check=False)
+        sys.stdout.write(run.stdout)
+        sys.stderr.write(run.stderr)
+        return run.returncode
+
+
+def run_ui_shell_contract_tests() -> int:
+    sys.path.insert(0, str(TESTS_DIR))
+    import test_ui_shell_contract  # noqa: PLC0415
+    failures = 0
+    executed = 0
+    for name in sorted(vars(test_ui_shell_contract)):
+        if not name.startswith("test_"):
+            continue
+        function = getattr(test_ui_shell_contract, name)
+        if not callable(function):
+            continue
+        executed += 1
+        try:
+            function()
+        except AssertionError as error:
+            failures += 1
+            print(f"FAIL {name}: {error}")
+        else:
+            print(f"PASS {name}")
+    print(f"ui-shell-contract: {executed - failures}/{executed} 通过")
+    return failures
+
+def run_ui_muyu_belt_policy_host_test() -> int:
+    compiler = shutil.which("cc") or shutil.which("gcc") or shutil.which("clang")
+    if compiler is None:
+        print("FAIL ui-muyu-belt-policy: 未找到 cc/gcc/clang，无法构建主机测试")
+        return 1
+    canonical = EMBEDDED_DIR.parent / "docs/contracts/canonical/generated"
+    with tempfile.TemporaryDirectory() as tmpdir:
+        binary = Path(tmpdir) / "test_ui_muyu_belt_policy"
+        build = subprocess.run(
+            [
+                compiler,
+                "-std=c17",
+                "-Wall",
+                "-Wextra",
+                "-Werror",
+                "-I",
+                str(UI_BIND_DIR),
+                "-I",
+                str(canonical),
+                str(TESTS_DIR / "test_ui_muyu_belt_policy.c"),
+                str(UI_BIND_DIR / "ui_muyu_belt_policy.c"),
+                str(UI_BIND_DIR / "ui_scripture_display_expand.c"),
+                str(UI_BIND_DIR / "ui_tap_rings_policy.c"),
+                "-o",
+                str(binary),
+            ],
+            capture_output=True,
+            text=True,
+            check=False,
+        )
+        if build.returncode != 0:
+            print("FAIL ui-muyu-belt-policy: 主机测试构建失败")
+            print(build.stdout)
+            print(build.stderr)
+            return 1
+        run = subprocess.run([str(binary)], capture_output=True, text=True, check=False)
+        sys.stdout.write(run.stdout)
+        sys.stderr.write(run.stderr)
+        return run.returncode
+
+
+def run_ui_jingwen_stream_policy_host_test() -> int:
+    compiler = shutil.which("cc") or shutil.which("gcc") or shutil.which("clang")
+    if compiler is None:
+        print("FAIL ui-jingwen-stream-policy: 未找到 cc/gcc/clang，无法构建主机测试")
+        return 1
+    canonical = EMBEDDED_DIR.parent / "docs/contracts/canonical/generated"
+    with tempfile.TemporaryDirectory() as tmpdir:
+        binary = Path(tmpdir) / "test_ui_jingwen_stream_policy"
+        build = subprocess.run(
+            [
+                compiler,
+                "-std=c17",
+                "-Wall",
+                "-Wextra",
+                "-Werror",
+                "-I",
+                str(UI_BIND_DIR),
+                "-I",
+                str(canonical),
+                str(TESTS_DIR / "test_ui_jingwen_stream_policy.c"),
+                str(UI_BIND_DIR / "ui_jingwen_stream_policy.c"),
+                str(UI_BIND_DIR / "ui_jingwen_gesture_policy.c"),
+                str(UI_BIND_DIR / "ui_scripture_display_expand.c"),
+                str(UI_BIND_DIR / "ui_muyu_belt_policy.c"),
+                "-o",
+                str(binary),
+            ],
+            capture_output=True,
+            text=True,
+            check=False,
+        )
+        if build.returncode != 0:
+            print("FAIL ui-jingwen-stream-policy: 主机测试构建失败")
+            print(build.stdout)
+            print(build.stderr)
+            return 1
+        run = subprocess.run([str(binary)], capture_output=True, text=True, check=False)
+        sys.stdout.write(run.stdout)
+        sys.stderr.write(run.stderr)
+        return run.returncode
+
+
+def run_ui_tongji_stats_policy_host_test() -> int:
+    compiler = shutil.which("cc") or shutil.which("gcc") or shutil.which("clang")
+    if compiler is None:
+        print("FAIL ui-tongji-stats-policy: 未找到 cc/gcc/clang，无法构建主机测试")
+        return 1
+    canonical = EMBEDDED_DIR.parent / "docs/contracts/canonical/generated"
+    with tempfile.TemporaryDirectory() as tmpdir:
+        binary = Path(tmpdir) / "test_ui_tongji_stats_policy"
+        build = subprocess.run(
+            [
+                compiler,
+                "-std=c17",
+                "-Wall",
+                "-Wextra",
+                "-Werror",
+                "-I",
+                str(UI_BIND_DIR),
+                "-I",
+                str(PROGRESS_DIR),
+                "-I",
+                str(canonical),
+                str(TESTS_DIR / "test_ui_tongji_stats_policy.c"),
+                str(UI_BIND_DIR / "ui_tongji_stats_policy.c"),
+                str(UI_BIND_DIR / "ui_muyu_belt_policy.c"),
+                str(UI_BIND_DIR / "ui_scripture_display_expand.c"),
+                str(PROGRESS_DIR / "today_bucket_policy.c"),
+                "-o",
+                str(binary),
+            ],
+            capture_output=True,
+            text=True,
+            check=False,
+        )
+        if build.returncode != 0:
+            print("FAIL ui-tongji-stats-policy: 主机测试构建失败")
+            print(build.stdout)
+            print(build.stderr)
+            return 1
+        run = subprocess.run([str(binary)], capture_output=True, text=True, check=False)
+        sys.stdout.write(run.stdout)
+        sys.stderr.write(run.stderr)
+        return run.returncode
+
+
+def run_ui_shezhi_settings_policy_host_test() -> int:
+    compiler = shutil.which("cc") or shutil.which("gcc") or shutil.which("clang")
+    if compiler is None:
+        print("FAIL ui-shezhi-settings-policy: 未找到 cc/gcc/clang，无法构建主机测试")
+        return 1
+    with tempfile.TemporaryDirectory() as tmpdir:
+        binary = Path(tmpdir) / "test_ui_shezhi_settings_policy"
+        build = subprocess.run(
+            [
+                compiler,
+                "-std=c17",
+                "-Wall",
+                "-Wextra",
+                "-Werror",
+                "-I",
+                str(UI_BIND_DIR),
+                str(TESTS_DIR / "test_ui_shezhi_settings_policy.c"),
+                str(UI_BIND_DIR / "ui_shezhi_settings_policy.c"),
+                "-o",
+                str(binary),
+            ],
+            capture_output=True,
+            text=True,
+            check=False,
+        )
+        if build.returncode != 0:
+            print("FAIL ui-shezhi-settings-policy: 主机测试构建失败")
+            print(build.stdout)
+            print(build.stderr)
+            return 1
+        run = subprocess.run([str(binary)], capture_output=True, text=True, check=False)
+        sys.stdout.write(run.stdout)
+        sys.stderr.write(run.stderr)
+        return run.returncode
+
+
+def run_ui_muyu_done_policy_host_test() -> int:
+    compiler = shutil.which("cc") or shutil.which("gcc") or shutil.which("clang")
+    if compiler is None:
+        print("FAIL ui-muyu-done-policy: 未找到 cc/gcc/clang，无法构建主机测试")
+        return 1
+    with tempfile.TemporaryDirectory() as tmpdir:
+        binary = Path(tmpdir) / "test_ui_muyu_done_policy"
+        build = subprocess.run(
+            [
+                compiler,
+                "-std=c17",
+                "-Wall",
+                "-Wextra",
+                "-Werror",
+                "-I",
+                str(UI_BIND_DIR),
+                str(TESTS_DIR / "test_ui_muyu_done_policy.c"),
+                str(UI_BIND_DIR / "ui_muyu_done_policy.c"),
+                "-o",
+                str(binary),
+            ],
+            capture_output=True,
+            text=True,
+            check=False,
+        )
+        if build.returncode != 0:
+            print("FAIL ui-muyu-done-policy: 主机测试构建失败")
+            print(build.stdout)
+            print(build.stderr)
+            return 1
+        run = subprocess.run([str(binary)], capture_output=True, text=True, check=False)
+        sys.stdout.write(run.stdout)
+        sys.stderr.write(run.stderr)
+        return run.returncode
+
+
 def main() -> int:
     failures = run_source_contracts()
     failures += run_edge_policy_host_test()
@@ -827,6 +1134,7 @@ def main() -> int:
     failures += run_tap_policy_host_test()
     failures += run_tap_runtime_host_test()
     failures += run_progress_transaction_host_test()
+    failures += run_progress_round_action_host_test()
     failures += run_progress_runtime_host_test()
     failures += run_feedback_policy_host_test()
     failures += run_feedback_runtime_host_test()
@@ -837,6 +1145,13 @@ def main() -> int:
     failures += run_sync_response_policy_host_test()
     failures += run_sync_https_codec_host_test()
     failures += run_sync_runtime_host_test()
+    failures += run_ui_shell_policy_host_test()
+    failures += run_ui_shell_contract_tests()
+    failures += run_ui_muyu_belt_policy_host_test()
+    failures += run_ui_jingwen_stream_policy_host_test()
+    failures += run_ui_tongji_stats_policy_host_test()
+    failures += run_ui_shezhi_settings_policy_host_test()
+    failures += run_ui_muyu_done_policy_host_test()
     if failures != 0:
         print("host tests: 失败")
         return 1

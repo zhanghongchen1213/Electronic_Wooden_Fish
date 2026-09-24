@@ -16,6 +16,7 @@
 #include "esp_err.h"
 #include "freertos/FreeRTOS.h"
 #include "legbot_services.h"
+#include "progress_transaction.h"
 
 /** 高水位/轮次 owner 服务在统一服务表中的固定 ID。 */
 #define LEGBOT_PROGRESS_SERVICE_ID LEGBOT_SERVICE_PROGRESS
@@ -88,5 +89,19 @@ esp_err_t progress_service_get_persist_status(bool *persist_pending,
  * @return ESP_OK 已处理，其他值表示未初始化或发布失败
  */
 esp_err_t progress_service_set_display_fault(bool display_fault);
+
+/**
+ * @brief 请求篇章跨轮动作（restart/exit；Story 3.6）
+ * @details 裁决 C：owner=progress；落盘单事务组后发布 progress 快照与 gate。
+ *          同 action_id 幂等；未完成锁定拒绝；不清零高水位；不启用 auto_mode。
+ * @param action restart 或 exit
+ * @param action_id 非空幂等键（由 UI/调用方生成；禁止跨族复用设置命令 id）
+ * @param timeout_ticks 发布快照有界等待
+ * @return ESP_OK 接受或幂等；ESP_ERR_INVALID_ARG 拒绝；其他值状态/落盘失败
+ */
+esp_err_t progress_service_request_round_action(
+    ewf_progress_round_action_t action,
+    const char *action_id,
+    TickType_t timeout_ticks);
 
 #endif /* EWF_PROGRESS_SERVICE_H */

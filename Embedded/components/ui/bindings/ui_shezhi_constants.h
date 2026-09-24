@@ -1,0 +1,103 @@
+/**
+ * @file     ui_shezhi_constants.h
+ * @brief    设置页几何与色值常量（Story 3.5 裁决入口）。
+ * @details  裁决 A–J：SHEZHI 唯一按需 Screen + 两页列表；首屏恰好 4 行；
+ *           复用 device_settings/device_nav；五态只覆写 sync-btn action；
+ *           触摸不计数；CHARGING_PAUSE/完成遮罩/小程序镜像不实现；
+ *           wire 亮度 mid 显示「中」；禁止 medium wire。
+ * @author   ZHC
+ * @date     2026-09-24
+ */
+
+#ifndef EWF_UI_SHEZHI_CONSTANTS_H
+#define EWF_UI_SHEZHI_CONSTANTS_H
+
+/** 标题位置（居中视觉由宽度约束）。 */
+#define EWF_UI_SHEZHI_TITLE_X 16
+#define EWF_UI_SHEZHI_TITLE_Y 16
+
+/** 顶部分割线。 */
+#define EWF_UI_SHEZHI_DIVIDER_X 16
+#define EWF_UI_SHEZHI_DIVIDER_Y 66
+#define EWF_UI_SHEZHI_DIVIDER_W 378
+#define EWF_UI_SHEZHI_DIVIDER_H 2
+
+/** 列表视口与内容。 */
+#define EWF_UI_SHEZHI_VIEWPORT_X 16
+#define EWF_UI_SHEZHI_VIEWPORT_Y 72
+#define EWF_UI_SHEZHI_VIEWPORT_W 378
+#define EWF_UI_SHEZHI_VIEWPORT_H 344
+#define EWF_UI_SHEZHI_CONTENT_W 378
+#define EWF_UI_SHEZHI_CONTENT_H 520
+#define EWF_UI_SHEZHI_PAGE2_TOP 344
+
+/** 行几何：首屏恰好 4 行。 */
+#define EWF_UI_SHEZHI_ROW_W 378
+#define EWF_UI_SHEZHI_ROW_H 80
+#define EWF_UI_SHEZHI_ROW_GAP 8
+#define EWF_UI_SHEZHI_ROW_RADIUS 18
+#define EWF_UI_SHEZHI_PAGE1_ROW_COUNT 4
+
+#define EWF_UI_SHEZHI_ROW_BRIGHTNESS_Y 0
+#define EWF_UI_SHEZHI_ROW_TIMEOUT_Y 88
+#define EWF_UI_SHEZHI_ROW_VOLUME_Y 176
+#define EWF_UI_SHEZHI_ROW_SYNC_Y 264
+#define EWF_UI_SHEZHI_ROW_VERSION_Y 0
+#define EWF_UI_SHEZHI_ROW_DEVICE_ID_Y 88
+
+/** 分段胶囊。 */
+#define EWF_UI_SHEZHI_SEG_W 164
+#define EWF_UI_SHEZHI_SEG_H 48
+#define EWF_UI_SHEZHI_SEG_X 198
+#define EWF_UI_SHEZHI_SEG_Y 16
+#define EWF_UI_SHEZHI_CAPSULE_W 52
+#define EWF_UI_SHEZHI_CAPSULE_H 44
+
+/** 音量轨几何。 */
+#define EWF_UI_SHEZHI_VOLUME_TRACK_W 112
+#define EWF_UI_SHEZHI_VOLUME_TRACK_H 6
+#define EWF_UI_SHEZHI_VOLUME_TRACK_X 198
+#define EWF_UI_SHEZHI_VOLUME_TRACK_Y 37
+#define EWF_UI_SHEZHI_VOLUME_KNOB_SIZE 18
+
+/** sync-btn action 胶囊。 */
+#define EWF_UI_SHEZHI_SYNC_ACTION_W 146
+#define EWF_UI_SHEZHI_SYNC_ACTION_H 48
+#define EWF_UI_SHEZHI_SYNC_ACTION_X 216
+#define EWF_UI_SHEZHI_SYNC_ACTION_Y 16
+
+/** 色值。 */
+#define EWF_UI_SHEZHI_ROW_BG_HEX 0x16181CU
+#define EWF_UI_SHEZHI_DIVIDER_HEX 0x30343BU
+#define EWF_UI_SHEZHI_SEG_BG_HEX 0x262A31U
+#define EWF_UI_SHEZHI_SELECTED_BG_HEX 0xD9A441U
+#define EWF_UI_SHEZHI_SELECTED_FG_HEX 0x050505U
+#define EWF_UI_SHEZHI_UNSELECTED_FG_HEX 0xA6A29AU
+#define EWF_UI_SHEZHI_LABEL_HEX 0xFBFAF0U
+#define EWF_UI_SHEZHI_MUTED_HEX 0xA6A29AU
+#define EWF_UI_SHEZHI_ACTION_HEX 0xE6BD69U
+#define EWF_UI_SHEZHI_VOLUME_TRACK_HEX 0x252525U
+#define EWF_UI_SHEZHI_VOLUME_FILL_HEX 0xD9A441U
+#define EWF_UI_SHEZHI_ICON_PLACEHOLDER_HEX 0xE6BD69U
+
+/** 未配置身份安全占位。 */
+#define EWF_UI_SHEZHI_IDENTITY_PLACEHOLDER "-"
+
+/**
+ * 身份文本容量（对齐 sync_https_codec：DEVICE_ID=64、FIRMWARE=32）。
+ * policy 主机测不依赖 sync 头，用常量保持同容量。
+ */
+#define EWF_UI_SHEZHI_DEVICE_ID_TEXT_CAP 64U
+#define EWF_UI_SHEZHI_FIRMWARE_TEXT_CAP 32U
+
+/**
+ * sync 状态字面值（必须与 WATCH_SYNC_STATUS_* / EWF_SYNC_STATUS_* 同序）。
+ * policy 主机测零依赖 app_state，故在此冻结镜像常量。
+ */
+#define EWF_UI_SHEZHI_SYNC_STATUS_IDLE 0U
+#define EWF_UI_SHEZHI_SYNC_STATUS_PENDING 1U
+#define EWF_UI_SHEZHI_SYNC_STATUS_BUSY 2U
+#define EWF_UI_SHEZHI_SYNC_STATUS_OK 3U
+#define EWF_UI_SHEZHI_SYNC_STATUS_FAIL 4U
+
+#endif /* EWF_UI_SHEZHI_CONSTANTS_H */

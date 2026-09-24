@@ -29,7 +29,7 @@
 # - Dev moves story to 'review', then runs code-review (fresh context, different LLM recommended)
 # - Retrospective appends its action items to action_items; the status view surfaces open ones
 generated: 09-22-2026 02:37
-last_updated: 09-24-2026 10:05
+last_updated: 2026-09-24
 project: Electronic_Wooden_Fish
 project_key: NOKEY
 tracking_system: file-system
@@ -51,13 +51,13 @@ development_status:
   2-7-保护低电和故障下的核心链路: done
   epic-2-retrospective: optional
 
-  epic-3: backlog
-  3-1-建立设备-ui-骨架与字体合同: backlog
-  3-2-实现木鱼页七字带与三环反馈: backlog
-  3-3-实现经文页-13-槽-append-only-流: backlog
-  3-4-实现设备统计页与诵读进度: backlog
-  3-5-实现设置页与同步状态闭包: backlog
-  3-6-实现完成遮罩与跨轮操作: backlog
+  epic-3: in-progress
+  3-1-建立设备-ui-骨架与字体合同: done
+  3-2-实现木鱼页七字带与三环反馈: done
+  3-3-实现经文页-13-槽-append-only-流: done
+  3-4-实现设备统计页与诵读进度: done
+  3-5-实现设置页与同步状态闭包: done
+  3-6-实现完成遮罩与跨轮操作: done
   epic-3-retrospective: optional
 
   epic-4: in-progress

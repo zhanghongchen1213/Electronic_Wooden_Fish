@@ -19,6 +19,7 @@
 #include "freertos/semphr.h"
 #include "state_service.h"
 #include "app_state.h"
+#include "ui_jingwen_gesture_policy.h"
 
 static const char *TAG = "SVC_TAP";
 
@@ -291,11 +292,23 @@ esp_err_t tap_input_service_run(void)
                         continue;
                     }
                     if (gesture != EWF_NAV_INPUT_NONE) {
-                        const esp_err_t nav_error =
-                            device_nav_service_on_nav_input(gesture, touch_ms);
-                        if (nav_error != ESP_OK) {
-                            ESP_LOGW(TAG, "手势导航投递失败：kind=%d，错误=%s",
-                                     (int)gesture, esp_err_to_name(nav_error));
+                        const bool vertical =
+                            (gesture == EWF_NAV_INPUT_SWIPE_DOWN ||
+                             gesture == EWF_NAV_INPUT_SWIPE_UP);
+                        /* 裁决 H：JINGWEN + history 视口内垂直拖动交给 LVGL 滚动，不开设置。 */
+                        const bool suppress = ewf_ui_jingwen_suppress_vertical_nav(
+                            device_nav_service_active_page() == EWF_NAV_PAGE_JINGWEN,
+                            device_nav_service_settings_open(),
+                            s_gesture_x0,
+                            s_gesture_y0,
+                            vertical);
+                        if (!suppress) {
+                            const esp_err_t nav_error =
+                                device_nav_service_on_nav_input(gesture, touch_ms);
+                            if (nav_error != ESP_OK) {
+                                ESP_LOGW(TAG, "手势导航投递失败：kind=%d，错误=%s",
+                                         (int)gesture, esp_err_to_name(nav_error));
+                            }
                         }
                         message = (tap_input_message_t){0};
                         if (stop_requested &&

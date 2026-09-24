@@ -23,6 +23,9 @@
 #include "progress_transaction.h"
 #include "state_service.h"
 #include "tap_input_service.h"
+#include "today_bucket_policy.h"
+#include "today_bucket_store.h"
+#include "esp_timer.h"
 
 static const char *TAG = "SVC_PROGRESS";
 static const char *TAG_FAULT = "FAULT_GATE";
@@ -51,6 +54,8 @@ static atomic_bool s_persist_inflight;
 static atomic_bool s_persist_pending;
 /** fault_locked 生产策略态（progress 介质失败 + 显示注入）。 */
 static ewf_fault_gate_state_t s_fault_gate;
+/** 非权威今日桶（裁决 B；与高水位事务分仓）。 */
+static ewf_today_bucket_t s_today_bucket;
 
 static esp_err_t persist_transaction_locked(ewf_progress_transaction_t *candidate);
 static esp_err_t publish_progress_facts_locked(TickType_t timeout_ticks,
@@ -60,6 +65,8 @@ static void apply_fault_gate_locked(const ewf_fault_gate_decision_t *decision,
                                     TickType_t timeout_ticks);
 static void handle_valid_event(uint32_t sequence);
 static void probe_persist_recovery_idle(void);
+static void refresh_today_bucket_locked(bool bump_on_tap);
+static uint32_t current_shanghai_day_key(const watch_state_snapshot_t *snap);
 
 esp_err_t progress_service_init_contracts(void)
 {
@@ -73,6 +80,7 @@ esp_err_t progress_service_init_contracts(void)
         return ESP_ERR_NO_MEM;
     }
     memset(&s_transaction, 0, sizeof(s_transaction));
+    memset(&s_today_bucket, 0, sizeof(s_today_bucket));
     atomic_store(&s_prepared, false);
     s_degraded = false;
     s_last_completed = false;
@@ -140,10 +148,23 @@ esp_err_t progress_service_prepare_run(void)
         }
     }
     s_transaction = recovered;
+    /* 今日桶与高水位分仓加载；失败只告警，不阻断累计恢复。 */
+    {
+        ewf_today_bucket_t loaded = {0};
+        const esp_err_t today_load = today_bucket_store_load(&loaded);
+        if (today_load == ESP_OK) {
+            s_today_bucket = loaded;
+        } else {
+            ESP_LOGW(TAG, "今日桶加载失败：%s；展示回待校时路径",
+                     esp_err_to_name(today_load));
+            memset(&s_today_bucket, 0, sizeof(s_today_bucket));
+        }
+    }
     atomic_store(&s_prepared, true);
 
     /* 恢复后立即发布初值快照与 gate 事实，消费者只读快照。 */
     const TickType_t publish_ticks = pdMS_TO_TICKS(PROGRESS_PUBLISH_TIMEOUT_MS);
+    refresh_today_bucket_locked(false);
     esp_err_t publish_error = publish_progress_facts_locked(publish_ticks, false);
     if (publish_error != ESP_OK)
     {
@@ -221,6 +242,33 @@ esp_err_t progress_service_run(void)
         }
         /* 空闲轮询：介质恢复探测，打破 fault_locked + persist_pending 死锁。 */
         probe_persist_recovery_idle();
+        /* 空闲对齐今日桶：跨日清零，或可信时间翻转后补发展示计数。 */
+        if (xSemaphoreTake(s_mutex, 0) == pdTRUE) {
+            const uint32_t before_key = s_today_bucket.day_key;
+            const uint32_t before_count = s_today_bucket.count;
+            watch_state_snapshot_t before_snap;
+            memset(&before_snap, 0, sizeof(before_snap));
+            (void)watch_state_snapshot(&before_snap, 0);
+            const uint32_t before_published = before_snap.tap_today_count;
+            const bool before_trusted = before_snap.time_synchronized;
+
+            refresh_today_bucket_locked(false);
+
+            watch_state_snapshot_t after_snap;
+            memset(&after_snap, 0, sizeof(after_snap));
+            (void)watch_state_snapshot(&after_snap, 0);
+            const uint32_t day_key = current_shanghai_day_key(&after_snap);
+            const uint32_t today_display = ewf_today_bucket_display_count(
+                after_snap.time_synchronized, &s_today_bucket, day_key);
+            if (before_key != s_today_bucket.day_key ||
+                before_count != s_today_bucket.count ||
+                before_published != today_display ||
+                before_trusted != after_snap.time_synchronized) {
+                (void)publish_progress_facts_locked(
+                    pdMS_TO_TICKS(PROGRESS_PUBLISH_TIMEOUT_MS), false);
+            }
+            xSemaphoreGive(s_mutex);
+        }
         /* 空轮询超时后才检查停止请求：先消费完既有事件再退出，不丢事件。 */
         if (atomic_load(&s_stop_requested))
         {
@@ -340,6 +388,8 @@ static void handle_valid_event(uint32_t sequence)
                  esp_err_to_name(save_error), (unsigned long)sequence);
         return;
     }
+    /* 高水位落盘成功后：可信时间下写入今日桶（未校时不写）。 */
+    refresh_today_bucket_locked(true);
     const esp_err_t publish_error = publish_progress_facts_locked(publish_ticks, false);
     if (publish_error != ESP_OK)
     {
@@ -497,9 +547,149 @@ esp_err_t progress_service_set_display_fault(bool display_fault)
     return publish_error;
 }
 
+esp_err_t progress_service_request_round_action(
+    ewf_progress_round_action_t action,
+    const char *action_id,
+    TickType_t timeout_ticks)
+{
+    if (s_mutex == NULL || !atomic_load(&s_prepared))
+    {
+        return ESP_ERR_INVALID_STATE;
+    }
+    if (action_id == NULL || action_id[0] == '\0')
+    {
+        return ESP_ERR_INVALID_ARG;
+    }
+    if (xSemaphoreTake(s_mutex, portMAX_DELAY) != pdTRUE)
+    {
+        return ESP_ERR_TIMEOUT;
+    }
+    if (s_degraded)
+    {
+        xSemaphoreGive(s_mutex);
+        ESP_LOGE(TAG, "进度 owner 处于 fail-closed，拒绝跨轮动作");
+        return ESP_ERR_INVALID_STATE;
+    }
+
+    ewf_progress_transaction_t candidate = s_transaction;
+    const ewf_progress_round_action_result_t result =
+        ewf_progress_apply_round_action(&candidate,
+                                        action,
+                                        action_id,
+                                        EWF_SCRIPTURE_CONSUMABLE_COUNT);
+    if (result == EWF_PROGRESS_ROUND_ACTION_IDEMPOTENT)
+    {
+        xSemaphoreGive(s_mutex);
+        ESP_LOGI(TAG, "跨轮动作幂等命中：action=%d，action_id 已应用", (int)action);
+        return ESP_OK;
+    }
+    if (result == EWF_PROGRESS_ROUND_ACTION_REJECTED)
+    {
+        const bool locked = ewf_progress_is_completion_locked(&s_transaction);
+        xSemaphoreGive(s_mutex);
+        if (!locked)
+        {
+            ESP_LOGW(TAG, "跨轮动作拒绝：未处于完成锁定，action=%d", (int)action);
+        }
+        else if (action == EWF_PROGRESS_ROUND_ACTION_RESTART &&
+                 s_transaction.round_id == UINT32_MAX)
+        {
+            ESP_LOGE(TAG, "跨轮重启拒绝：round_id 已达上限，禁止回绕");
+        }
+        else
+        {
+            ESP_LOGW(TAG, "跨轮动作拒绝：action=%d", (int)action);
+        }
+        return ESP_ERR_INVALID_ARG;
+    }
+
+    const TickType_t publish_ticks =
+        (timeout_ticks == 0) ? pdMS_TO_TICKS(PROGRESS_PUBLISH_TIMEOUT_MS)
+                             : timeout_ticks;
+    const esp_err_t save_error = persist_transaction_locked(&candidate);
+    if (save_error != ESP_OK)
+    {
+        (void)publish_progress_facts_locked(publish_ticks, true);
+        xSemaphoreGive(s_mutex);
+        ESP_LOGE(TAG, "跨轮动作落盘失败，错误=%s；事务组保持不变",
+                 esp_err_to_name(save_error));
+        return save_error;
+    }
+    const esp_err_t publish_error =
+        publish_progress_facts_locked(publish_ticks, false);
+    if (publish_error != ESP_OK)
+    {
+        ESP_LOGW(TAG, "跨轮动作快照发布失败，错误=%s",
+                 esp_err_to_name(publish_error));
+    }
+    const esp_err_t gate_error = publish_gate_facts_locked(publish_ticks);
+    if (gate_error != ESP_OK)
+    {
+        ESP_LOGW(TAG, "跨轮动作 gate 发布失败，错误=%s",
+                 esp_err_to_name(gate_error));
+    }
+    ESP_LOGI(TAG,
+             "跨轮动作已应用：action=%d，round=%lu，cursor=%lu，pending=%d，state=%d",
+             (int)action,
+             (unsigned long)s_transaction.round_id,
+             (unsigned long)s_transaction.round_cursor,
+             (int)s_transaction.pending_completion,
+             (int)s_transaction.round_state);
+    xSemaphoreGive(s_mutex);
+    return ESP_OK;
+}
+
+static uint32_t current_shanghai_day_key(const watch_state_snapshot_t *snap)
+{
+    if (snap == NULL || !snap->time_synchronized) {
+        return 0U;
+    }
+    const int64_t mono_ms = esp_timer_get_time() / 1000LL;
+    const int64_t utc_ms =
+        ewf_today_utc_ms_from_offset(mono_ms, snap->time_offset_ms);
+    return ewf_today_day_key_from_utc_ms(utc_ms);
+}
+
+static void refresh_today_bucket_locked(bool bump_on_tap)
+{
+    watch_state_snapshot_t snap;
+    memset(&snap, 0, sizeof(snap));
+    if (watch_state_snapshot(&snap, 0) != ESP_OK) {
+        return;
+    }
+    if (!snap.time_synchronized) {
+        /* 失信：不写入桶；展示层按 time_synchronized 显「待校时」。 */
+        return;
+    }
+    const uint32_t day_key = current_shanghai_day_key(&snap);
+    if (day_key == 0U) {
+        return;
+    }
+    bool changed = false;
+    if (bump_on_tap) {
+        changed = ewf_today_bucket_on_trusted_tap(&s_today_bucket, day_key);
+    } else {
+        changed = ewf_today_bucket_align_day(&s_today_bucket, day_key);
+    }
+    if (changed) {
+        const esp_err_t save_error = today_bucket_store_save(&s_today_bucket);
+        if (save_error != ESP_OK) {
+            ESP_LOGW(TAG, "今日桶落盘失败：%s（累计不受影响）",
+                     esp_err_to_name(save_error));
+        }
+    }
+}
+
 static esp_err_t publish_progress_facts_locked(TickType_t timeout_ticks,
                                                bool persist_error)
 {
+    watch_state_snapshot_t snap;
+    memset(&snap, 0, sizeof(snap));
+    (void)watch_state_snapshot(&snap, 0);
+    const uint32_t day_key = current_shanghai_day_key(&snap);
+    const uint32_t today_display = ewf_today_bucket_display_count(
+        snap.time_synchronized, &s_today_bucket, day_key);
+
     const watch_tap_progress_update_t facts = {
         .update_sequence = 0U,
         .local_total = s_transaction.local_total,
@@ -510,6 +700,7 @@ static esp_err_t publish_progress_facts_locked(TickType_t timeout_ticks,
         .pending_completion = s_transaction.pending_completion,
         .backlog_count = ewf_progress_backlog_count(&s_transaction),
         .persist_error = persist_error,
+        .today_count = today_display,
     };
     return state_service_update_tap_progress_owner(&facts, timeout_ticks);
 }

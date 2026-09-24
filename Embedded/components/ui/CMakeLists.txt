@@ -7,13 +7,23 @@ endforeach()
 
 idf_component_register(
     SRCS
-        "ui_navigation.c"
-        "ui_selftest_summary.c"
-        "bindings/control_ui_binding.c"
+        "bindings/ui_shell_policy.c"
         "bindings/ui_manifest_projection.c"
         "bindings/ui_runtime_binding.c"
         "bindings/ui_runtime_events.c"
-        "bindings/ui_touch_session.c"
+        "bindings/ui_muyu_belt_policy.c"
+        "bindings/ui_scripture_display_expand.c"
+        "bindings/ui_jingwen_stream_policy.c"
+        "bindings/ui_jingwen_gesture_policy.c"
+        "bindings/ui_jingwen_projection.c"
+        "bindings/ui_tap_rings_policy.c"
+        "bindings/ui_muyu_projection.c"
+        "bindings/ui_muyu_done_policy.c"
+        "bindings/ui_tongji_stats_policy.c"
+        "bindings/ui_tongji_projection.c"
+        "bindings/ui_shezhi_settings_policy.c"
+        "bindings/ui_shezhi_projection.c"
+        "generated/ui_events.c"
         ${SQUARELINE_COMPONENT_SRCS}
     INCLUDE_DIRS
         "."
@@ -26,4 +36,9 @@ idf_component_register(
         log
         lvgl
         esp_timer
+)
+
+# canonical 经文头只读 include（字带唯一经文源）。
+target_include_directories(${COMPONENT_LIB} PRIVATE
+    "${CMAKE_CURRENT_LIST_DIR}/../../../docs/contracts/canonical/generated"
 )

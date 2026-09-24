@@ -449,3 +449,103 @@
 - gate 与 fault owner 交错 RMW：`state_service_update_tap_gate_owner` / `update_tap_fault_lock_owner` 各自读快照再写全量 gate；并发交错仍可能用陈旧副本互相覆盖。本轮已对快照失败 fail-closed，完整修复需单一合并发布者。
 - fault_locked 发布失败后无脏重试：`apply_fault_gate_locked` 在 `locked_changed` 时若 `state_service_update_tap_fault_lock_owner` 失败只打日志；后续成功落盘仍可再发 unlock。增加 dirty/retry 会扩展状态机面。
 - persist 失败路径上 `inflight` 先清再置 `pending` 的极窄空窗：并发读者可能短暂看到双 false；sync/feedback 已对读失败 fail-closed，完整原子打包属后续加固。
+
+## Deferred from: code review of 3-1-建立设备-ui-骨架与字体合同.md (2026-09-24)
+
+- `ewf_ui_geometry.h` 与 `ui_shell_policy.h` 几何常量双份：主机测隔离需要；两边已分别断言，后续可收敛到单一真源。
+- 缺 `ui_runtime_binding_build_model` 主机测：页偏移/设置按需已由 `test_ui_shell_policy` 覆盖；完整 binding 模型测属增强。
+- story-local.diff 约 73 万行（字体位图主导）：审查对关键子集执行；三字体字节一致与 `missing_glyphs:0` 由脚本门禁，非整份 Blind 字节审计。
+- SquareLine `assets/Fonts` 仍残留大量 legbot 字体 `.c`：合同只同步三档 EWF 字体；清理归 legacy 生成器债务。
+
+## Deferred from: create-story of 3-1-建立设备-ui-骨架与字体合同
+
+- 3.2：木鱼七字带推进、`glyph-current` 焦点色、三环 160ms flash 与敲击热区对拍。（→ 已由 create-story `3-2-实现木鱼页七字带与三环反馈` 承接软件侧）
+- 3.3：经文页 13 槽 append-only 历史流与回看锚点。
+- 3.4：统计卡今日/累计/环形进度投影与未校时「待校时」闭包。
+- 3.5：设置页四行控件交互与 sync-btn 五态视觉闭包。
+- 3.6：完成遮罩（`MUYU.DONE_OVERLAY`）与跨轮动作。
+- Epic 7：真机缺字观感、圆角裁剪、首帧闪屏、触摸热区对拍。
+- `MUYU.CHARGING_PAUSE`：Pen 若仍含该帧，本 Story 不接线为输入/音频/同步暂停（PRD final）；是否删除节点留给 UX 收敛。
+- CO5300「先整帧再 DISPON」完整时序：本 Story 由 `ui_task` 协调熄亮屏意图；若仅接到 `co5300_bsp_set_display`，保持 `hardware_pending`（与 2.4 deferred 同窗）。
+- Noto Serif SC 源字体若未落盘：Serif 档位生成不得用删字掩盖；缺源时登记为字体生成债务，不得宣称五路缺字已终验。
+
+## Deferred from: create-story of 3-2-实现木鱼页七字带与三环反馈
+
+- 3.3：经文页 13 槽 append-only 与回看锚点（本 Story 不实现）。
+- 3.4：统计页今日/累计/环形进度与可信「今日」精修；MUYU 今日区若仅占位，完整闭包归 3.4。
+- 3.5：设置页四行控件与 sync-btn 五态。
+- 3.6：完成遮罩与跨轮 `action_id`（本 Story 仅允许投影 260/260·100%）。
+- `MUYU.CHARGING_PAUSE`：仍不接线为输入暂停（PRD final）。
+- `hardware_pending`：真机热区手感、160ms 三环观感、1 秒 20 次字带追平、`woodfish-reference.png` 真图替换占位色块。
+- Epic 7：端到端敲击→字带→小程序确认对拍。
+
+## Deferred from: code review of 3-2-实现木鱼页七字带与三环反馈.md (2026-09-24)
+
+- CST9217 与 LVGL bindings 双路径可能对同一抬手双计 `device_touch`；以真机 indev 合流收口（延续 dual_touch_path）。
+- 木鱼 mark 几何与 CST `touch_is_wood_fish_region` 边界可能不完全对齐；归 `hardware_pending` 真机热区对拍。
+- `ui_muyu_projection_apply` / `on_woodfish_clicked` 产品接线仍缺零 LVGL 主机编排测；policy 单测已覆盖算法与 gate。
+- `tap_input_service_snapshot` 失败时本轮不 flash（保守）；完整事件总线携带 origin 属增强。
+- `ui_service` 重复 init 未显式 `lv_timer_del`：当前生命周期通常单次；若引入热重启需补销毁。
+- 字体 `validate_font_coverage` / runtime 单测未并入 `run_host_tests.py`；本 Story 外层 test_command 已覆盖。
+
+## Deferred from: create-story of 3-3-实现经文页-13-槽-append-only-流
+
+- 3.4：统计页今日/累计/环形进度与可信「今日」精修。
+- 3.5：设置页四行控件与 sync-btn 五态。
+- 3.6：完成遮罩与跨轮 `action_id`。
+- `MUYU.CHARGING_PAUSE`：仍不接线为输入暂停（PRD final）。
+- `hardware_pending`：经文页长文滚动性能、锚回流尾动画观感、history 视口内垂直滚动与「下滑进设置」真机手势对拍、24px vs 26px Serif 档观感。
+- Epic 7：端到端敲击→经文流→小程序确认对拍。
+- `round-index`「第 N 次诵读」若产品要求与 cloud 确认序号严格对齐：本 Story 仅本地 `tap_round_id` 镜像；权威对齐属后续同步/统计故事。
+- 交接确认（2026-09-24，dev-story 3-3）：软件侧 13 槽 append-only / 锚尾 / history 手势 policy / 字体合同扩展已落地；上列真机与 3.4–3.6/Epic7 项仍 deferred。
+
+## Deferred from: code review of 3-3-实现经文页-13-槽-append-only-流.md (2026-09-24)
+
+- history 内垂直回看无软件滚动通路：触控由 `tap_input_service` 独占，仓内无 `lv_indev`/`esp_lvgl_port` 注册；`suppress` 只阻止开设置，不向 `ui_task` 转发 `lv_obj_scroll_by`。AC2/AC4 回看依赖后续 ui_task 滚动消息或 indev 合流；真机手感仍见既有 `hardware_pending`。
+- `ui_service`→`ui_jingwen_projection_apply` 缺零 LVGL 主机编排测；流布局已由 `test_ui_jingwen_stream_policy` 覆盖，接线级验证需半集成/真机装具。
+
+## Deferred from: create-story of 3-4-实现设备统计页与诵读进度
+
+- 3.5：设置页四行控件与 sync-btn 五态视觉闭包。
+- 3.6：完成遮罩（MUYU.DONE_OVERLAY）与跨轮动作。
+- Epic 7：真机环形进度观感、千分位观感、校时后今日递增与跨日界对拍；设备今日桶与 cloud/backend `today_taps` 权威一致性对拍。
+- `hardware_pending`：环形弧动画观感、真机可信校时后今日递增、跨上海日界清零。
+- `MUYU.CHARGING_PAUSE`：仍不接线为输入暂停（PRD final）。
+- round-index 与 cloud 权威序号严格对齐：本 Story 仅本地 `tap_round_id` 镜像（裁决 E）。
+
+## Deferred from: code review of 3-4-实现设备统计页与诵读进度.md (2026-09-24)
+
+- `ui_service`→`ui_tongji_projection_apply` 缺零 LVGL 主机编排测；policy/shell 合同与 `test_ui_tongji_stats_policy` 已覆盖算法与几何，接线级半集成装具留给后续。
+- story-local.diff 超过约 3000 行主因是 generated font/.ttf 位图；审查使用 `story-local.review.diff`（排除位图），字体由 `missing_glyphs:0` 与字源一致门禁覆盖。
+
+## Deferred from: create-story of 3-5-实现设置页与同步状态闭包
+
+- 3.6：完成遮罩（MUYU.DONE_OVERLAY）与跨轮动作。
+- Epic 7 / 7.1：真机立即同步端到端、Air780 HTTPS 活动窗口对拍。
+- `hardware_pending`：亮度三档观感、音量滑块手感、设置内纵向滚动露出版本/ID、lucide 图标 SVG/位图像素级、真机供电三态下设置可用性。
+- 设置内纵向滚动若仍缺 `lv_indev` 合流：承接 3.3 deferred，本 Story 用可测 scroll/注入兜底，真机手感仍 deferred。
+- `MUYU.CHARGING_PAUSE`：仍不接线为输入暂停（PRD final）。
+- 小程序设置镜像「待设备应用」：属 6.8（已实现侧），勿回灌设备 SHEZHI。
+- sync-btn 与状态栏 backlog 累计态并存时的视觉同时出现：软件词表已对齐；真机观感对拍属 Epic 7。
+
+## Deferred from: code review of 3-5-实现设置页与同步状态闭包.md (2026-09-24)
+
+- intent→`device_nav`、`sync_service_copy_identity`、`ui_shezhi_projection_apply` 与 charging 下 intent 转发缺主机执行覆盖；policy/shell 合同已覆盖纯逻辑与源码卫生。
+- story-local.diff 超限主因 generated font/.ttf 位图；审查使用 `story-local.review.diff`；字体由 `missing_glyphs:0` 与字源一致门禁覆盖。
+
+## Deferred from: create-story of 3-6-实现完成遮罩与跨轮操作 (2026-09-24)
+
+- Epic 7 / 7.5：真机完成遮罩手感、按钮热区、完成→restart 字带空态观感；完成/自动模式/跨轮与小程序弹窗跨端一致性对拍。
+- 设备本地 restart（Epic 3 本地权威）与 cloud 尚未确认完成时上报新 `round_id` 触发 `20001` 的竞态收敛——属 sync/契约补强 + Epic 7，本 Story 不假装已闭合。
+- 契约正文补强（承接 5.2 deferred）：「退出」是否正式枚入 §9 篇章动作族；完成确认精确判定表；未确认完成下本地「从头开始」的跨层语义。
+- cloud `POST /api/v1/sync/round-action` 设备侧真 HTTPS 调用与幂等对拍：5.2 已在 backend；设备活动窗口是否/何时发 round-action 属后续联调，本 Story 仅本地 progress API。
+- 小程序礼花与独立 OVERLAY（6.5）：勿回灌设备；设备无礼花。
+- `MUYU.CHARGING_PAUSE`：仍不接线为输入暂停（PRD final）。
+- `hardware_pending`：遮罩 60% 黑观感、restart/exit 触控手感、完成锁定下导航与设置同时可用的真机路径。
+
+## Deferred from: code review of 3-6-实现完成遮罩与跨轮操作.md (2026-09-24)
+
+- 跨轮落盘成功后 progress/gate 快照发布失败：与敲击路径同属 AD-12 尽力发布；介质已一致，短暂 UI/gate 不同步未在本轮改发布契约。
+- AC2「exit 后遮罩可隐藏」与裁决 A「overlay≡gate.completed」：无人值守保留裁决 A；exit 后遮罩仍显直至 restart。
+- Task 6.2 `contract_checks` 对 rings 抑制/文案白名单的编译期断言未补全；主机测与 shell 合同已覆盖。
+- story-local.diff 超限主因 generated font/.ttf 位图；审查使用 `story-local.review.diff`；字体由 Phase B `missing_glyphs:0` 与字源一致门禁覆盖。

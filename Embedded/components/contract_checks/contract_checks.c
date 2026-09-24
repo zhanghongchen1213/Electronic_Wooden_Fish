@@ -15,6 +15,8 @@
 #include "device_nav_service.h"
 #include "feedback_service.h"
 #include "sync_service.h"
+#include "ui_service.h"
+#include "ewf_ui_geometry.h"
 #include "rgb_bsp.h"
 #include "power_boot_policy.h"
 #include "power_auto_mode_policy.h"
@@ -141,15 +143,29 @@ _Static_assert(LEGBOT_BSP_RESOURCE_COUNT == 15,
                "BSP resource table must cover the authoritative EWF board resources.");
 _Static_assert(LEGBOT_BSP_STAGE_COUNT == 6,
                "Story 1.1 fixes six serial initialization stages.");
-_Static_assert(LEGBOT_SERVICE_COUNT == 9,
-               "The EWF startup graph adds sync to the prior eight "
-               "services (power/state/selftest/pvdf/tap/progress/feedback/nav).");
+_Static_assert(LEGBOT_SERVICE_COUNT == 10,
+               "The EWF startup graph adds ui_task to the prior nine "
+               "services (power/state/selftest/pvdf/tap/progress/feedback/nav/sync).");
 _Static_assert(LEGBOT_FEEDBACK_SERVICE_ID == LEGBOT_SERVICE_FEEDBACK,
                "Feedback must own its fixed service slot.");
 _Static_assert(LEGBOT_DEVICE_NAV_SERVICE_ID == LEGBOT_SERVICE_DEVICE_NAV,
                "Device nav must own its fixed service slot.");
 _Static_assert(LEGBOT_SYNC_SERVICE_ID == LEGBOT_SERVICE_SYNC,
                "Sync must own its fixed service slot.");
+_Static_assert(LEGBOT_UI_SERVICE_ID == LEGBOT_SERVICE_UI,
+               "UI must own its fixed service slot.");
+_Static_assert(EWF_UI_CANVAS_W == 410 && EWF_UI_CANVAS_H == 502,
+               "DEVICE-01 canvas must be 410x502.");
+_Static_assert(EWF_UI_CORNER_RADIUS == 110,
+               "DEVICE-01 corner radius must be 110.");
+_Static_assert(EWF_UI_MARGIN_PX == 16,
+               "DEVICE-01 margin must be 16px.");
+_Static_assert(EWF_UI_STATUSBAR_H == 24,
+               "DEVICE-01 statusbar height must be 24.");
+_Static_assert(EWF_UI_PAGER_CONTENT_W == 1230,
+               "DEVICE-01 pager content width must be 1230.");
+_Static_assert(EWF_UI_TASK_CORE == 1,
+               "ui_task must be pinned to Core 1.");
 _Static_assert(EWF_BSP_RGB_DATA_GPIO == GPIO_NUM_3, "RGB_DATA must be IO3.");
 _Static_assert(RGB_BSP_DATA_GPIO_ID == (int)EWF_BSP_RGB_DATA_GPIO,
                "RGB BSP must consume the authoritative RGB_DATA pin.");
@@ -193,6 +209,81 @@ _Static_assert(SELFTEST_EVIDENCE_DESIGN_INPUT == 0 &&
                "Self-test evidence categories are a frozen contract.");
 _Static_assert(SELFTEST_SERVICE_BOARD_RECEIPT_AVAILABLE == 0U,
                "No board receipt exists yet, so hardware_verified stays forbidden.");
+
+/* Story 3.2：木鱼页三环/触区/琥珀色常量契约。 */
+#include "ui_muyu_constants.h"
+_Static_assert(EWF_UI_MUYU_TAP_RING_COUNT == 3U, "tap-rings must be exactly 3.");
+_Static_assert(EWF_UI_MUYU_TAP_FLASH_MS == 160U, "tap flash duration is 160ms.");
+_Static_assert(EWF_UI_MUYU_TOUCH_MIN_PX == 96U, "woodfish touch min edge is 96px.");
+_Static_assert(EWF_UI_MUYU_AMBER_300_HEX == 0xE6BD69U, "flash amber.300 must match DESIGN.");
+_Static_assert(EWF_UI_MUYU_AMBER_400_HEX == 0xD9A441U, "glyph amber.400 must match DESIGN.");
+_Static_assert(EWF_UI_MUYU_BELT_SLOTS == 7U, "MUYU belt viewport is 7 slots.");
+_Static_assert(EWF_UI_MUYU_PROGRESS_DENOM == 260U, "progress denominator is consumable count.");
+_Static_assert(EWF_UI_MUYU_MODAL_OVERLAY_OPA == 0x99U, "modal overlay opa is ~60% black.");
+_Static_assert(EWF_UI_MUYU_MODAL_OVERLAY_W == 410, "modal overlay width matches canvas.");
+_Static_assert(EWF_UI_MUYU_MODAL_OVERLAY_H == 502, "modal overlay height matches canvas.");
+_Static_assert(EWF_UI_MUYU_MODAL_CARD_W == 338, "modal-done card width.");
+_Static_assert(EWF_UI_MUYU_MODAL_CARD_H == 190, "modal-done card height.");
+_Static_assert(EWF_UI_MUYU_MODAL_CARD_X == 36, "modal-done card x.");
+_Static_assert(EWF_UI_MUYU_MODAL_CARD_Y == 150, "modal-done card y.");
+_Static_assert(EWF_UI_MUYU_MODAL_CARD_RADIUS == 16, "modal-done card radius.");
+_Static_assert(EWF_UI_MUYU_MODAL_CARD_BG_HEX == 0x121212U, "modal card bg.");
+_Static_assert(EWF_UI_MUYU_MODAL_RESTART_HEX == 0xE6BD69U, "restart amber.300.");
+_Static_assert(EWF_UI_MUYU_MODAL_MUTED_HEX == 0xCFC4B0U, "summary/exit muted.");
+_Static_assert(EWF_UI_MUYU_MODAL_TITLE_HEX == 0xFBFAF0U, "title color.");
+/* 禁止第二套顶层 OVERLAY Screen：遮罩挂在 MUYU 页内（见 ui_scr_shell.c）。 */
+
+/* Story 3.3：经文页 13 槽 append-only 流常量契约。 */
+#include "ui_jingwen_constants.h"
+_Static_assert(EWF_UI_JINGWEN_ROW_SLOTS == 13U, "JINGWEN history row width is 13 slots.");
+_Static_assert(EWF_UI_JINGWEN_DISPLAY_CAP == 303U, "display stream cap is totalChars.");
+_Static_assert(EWF_UI_JINGWEN_MAX_ROWS == 24U, "max rows is ceil(303/13).");
+_Static_assert(EWF_UI_JINGWEN_HISTORY_W == 362, "scripture-history width matches HTML.");
+_Static_assert(EWF_UI_JINGWEN_HISTORY_H == 286, "scripture-history height matches HTML.");
+_Static_assert(EWF_UI_JINGWEN_HISTORY_X == 24, "scripture-history left matches HTML.");
+_Static_assert(EWF_UI_JINGWEN_HISTORY_Y == 102, "scripture-history top matches HTML.");
+_Static_assert(EWF_UI_MUYU_AMBER_400_HEX == 0xD9A441U,
+               "glyph-current reuses amber.400 from muyu constants.");
+
+/* Story 3.4：统计页几何与进度分母契约。 */
+#include "ui_tongji_constants.h"
+_Static_assert(EWF_UI_PAGE_TONGJI_X == 820, "TONGJI root frame X is 820.");
+_Static_assert(EWF_UI_TONGJI_CARD_W == 378, "stat-card width matches HTML.");
+_Static_assert(EWF_UI_TONGJI_CARD_H == 64, "stat-card height matches HTML.");
+_Static_assert(EWF_UI_TONGJI_TODAY_Y == 112, "today card top matches HTML.");
+_Static_assert(EWF_UI_TONGJI_TOTAL_Y == 184, "total card top matches HTML.");
+_Static_assert(EWF_UI_TONGJI_PROGRESS_Y == 264, "reading-progress top matches HTML.");
+_Static_assert(EWF_UI_TONGJI_PROGRESS_H == 176, "reading-progress height matches HTML.");
+_Static_assert(EWF_UI_TONGJI_RING_SIZE == 120, "progress ring size matches HTML.");
+_Static_assert(EWF_UI_TONGJI_PROGRESS_DENOM == 260U,
+               "TONGJI progress denominator is consumable count.");
+_Static_assert(EWF_UI_TONGJI_ACCENT_HEX == 0xD9A441U, "amber accent matches DESIGN.");
+
+/* Story 3.5：设置页几何与首屏行数契约；五态不复制 Screen。 */
+#include "sync_https_codec.h"
+#include "ui_shezhi_constants.h"
+_Static_assert(EWF_UI_SHEZHI_VIEWPORT_W == 378, "settings viewport width matches HTML.");
+_Static_assert(EWF_UI_SHEZHI_VIEWPORT_H == 344, "settings viewport height matches HTML.");
+_Static_assert(EWF_UI_SHEZHI_CONTENT_H == 520, "settings content height matches HTML.");
+_Static_assert(EWF_UI_SHEZHI_PAGE1_ROW_COUNT == 4, "settings page-1 has exactly 4 rows.");
+_Static_assert(EWF_UI_SHEZHI_PAGE2_TOP == 344, "settings page-2 top matches HTML.");
+_Static_assert(EWF_UI_SHEZHI_ROW_H == 80, "settings row height matches HTML.");
+_Static_assert(EWF_UI_SHEZHI_SELECTED_BG_HEX == 0xD9A441U, "capsule selected amber matches DESIGN.");
+_Static_assert(EWF_UI_SHEZHI_ACTION_HEX == 0xE6BD69U, "sync action amber.300 matches DESIGN.");
+_Static_assert(EWF_UI_SHEZHI_SYNC_STATUS_IDLE == (unsigned)WATCH_SYNC_STATUS_IDLE,
+               "shezhi sync IDLE mirrors watch_sync_status.");
+_Static_assert(EWF_UI_SHEZHI_SYNC_STATUS_PENDING == (unsigned)WATCH_SYNC_STATUS_PENDING,
+               "shezhi sync PENDING mirrors watch_sync_status.");
+_Static_assert(EWF_UI_SHEZHI_SYNC_STATUS_BUSY == (unsigned)WATCH_SYNC_STATUS_BUSY,
+               "shezhi sync BUSY mirrors watch_sync_status.");
+_Static_assert(EWF_UI_SHEZHI_SYNC_STATUS_OK == (unsigned)WATCH_SYNC_STATUS_OK,
+               "shezhi sync OK mirrors watch_sync_status.");
+_Static_assert(EWF_UI_SHEZHI_SYNC_STATUS_FAIL == (unsigned)WATCH_SYNC_STATUS_FAIL,
+               "shezhi sync FAIL mirrors watch_sync_status.");
+_Static_assert(EWF_UI_SHEZHI_DEVICE_ID_TEXT_CAP == EWF_SYNC_DEVICE_ID_CAPACITY,
+               "shezhi device_id text capacity matches sync codec.");
+_Static_assert(EWF_UI_SHEZHI_FIRMWARE_TEXT_CAP == EWF_SYNC_FIRMWARE_VERSION_CAPACITY,
+               "shezhi firmware text capacity matches sync codec.");
 
 /* 保留的 BLE 控制 reducer 仍然只能被显式调用，不得自行启动任何链路。 */
 _Static_assert(CONTROL_MAX_ATTEMPTS == WATCH_CONTROL_MAX_ATTEMPTS,

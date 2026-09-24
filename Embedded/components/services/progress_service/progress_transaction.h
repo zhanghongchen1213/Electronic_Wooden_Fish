@@ -29,10 +29,13 @@ extern "C" {
 /** action_id 字段容量，包含字符串终止符；本 Story 只保留落盘位（契约 §9）。 */
 #define EWF_PROGRESS_ACTION_ID_CAPACITY 64U
 
-/** 轮次状态取值域（契约 §2：仅两值，completed 只由完成确认翻转）。 */
+/**
+ * 轮次状态取值域（契约 §2：仅两值）。
+ * Story 3.6 裁决 B：本地末字即可置 completed，并保持 pending 直至 sync/exit/restart。
+ */
 typedef enum {
     EWF_PROGRESS_ROUND_STATE_IN_PROGRESS = 0, /**< 轮次进行中。 */
-    EWF_PROGRESS_ROUND_STATE_COMPLETED = 1,   /**< 轮次已被完成确认翻转。 */
+    EWF_PROGRESS_ROUND_STATE_COMPLETED = 1,   /**< 本地末字确认或跨轮 exit 后的完成态。 */
 } ewf_progress_round_state_t;
 
 /** 事务组校验结果；INVALID 版本属配置错误，调用方必须 fail-closed。 */
@@ -123,13 +126,47 @@ ewf_progress_ack_result_t ewf_progress_apply_acked_total(
 
 /**
  * @brief 由事务组投影统一敲击 gate 事实
- * @details completed 来自 pending_completion 投影，queue_full 来自积压判定；
- *          fault_locked 不属于本 owner，保持 false（故障反馈属 Story 2.3/2.7）。
+ * @details 裁决 A：completed = pending_completion || round_state==completed；
+ *          queue_full 来自积压判定；fault_locked 不属于本 owner，保持 false。
  * @param tx 事务组
  * @param gate gate 事实输出
  */
 void ewf_progress_fill_gate(const ewf_progress_transaction_t *tx,
                             ewf_tap_gate_state_t *gate);
+
+/** 篇章跨轮动作（对齐 cloud 5.2：restart|exit；仅 progress 事务组）。 */
+typedef enum {
+    EWF_PROGRESS_ROUND_ACTION_RESTART = 0, /**< 新轮：round_id+1、游标 0、in_progress。 */
+    EWF_PROGRESS_ROUND_ACTION_EXIT = 1,    /**< 退出：保留 completed，清 pending。 */
+} ewf_progress_round_action_t;
+
+/** 跨轮动作纯函数结果（裁决 D/F）。 */
+typedef enum {
+    EWF_PROGRESS_ROUND_ACTION_ACCEPTED = 0,   /**< 首次成功应用。 */
+    EWF_PROGRESS_ROUND_ACTION_IDEMPOTENT = 1, /**< 同 action_id 重放，保持首次结果。 */
+    EWF_PROGRESS_ROUND_ACTION_REJECTED = 2,   /**< 非法状态 / 空 id / 溢出拒绝。 */
+} ewf_progress_round_action_result_t;
+
+/**
+ * @brief 应用篇章 restart/exit（纯逻辑；裁决 C/D/E/F/H）
+ * @details owner=progress；不清零 local_total/acked_total；篇章 action_id 只写本事务组。
+ *          未完成锁定时 restart/exit 均拒绝；round_id==UINT32_MAX 时 restart 拒绝不回绕。
+ * @param tx 事务组
+ * @param action restart 或 exit
+ * @param action_id 非空幂等键（容量见 EWF_PROGRESS_ACTION_ID_CAPACITY）
+ * @param consumable_count canonical 可消费总数（校验用，不推进游标）
+ * @return 接受 / 幂等 / 拒绝
+ */
+ewf_progress_round_action_result_t ewf_progress_apply_round_action(
+    ewf_progress_transaction_t *tx,
+    ewf_progress_round_action_t action,
+    const char *action_id,
+    uint32_t consumable_count);
+
+/**
+ * @brief 是否处于完成锁定（与 fill_gate.completed 同语义）
+ */
+bool ewf_progress_is_completion_locked(const ewf_progress_transaction_t *tx);
 
 #ifdef __cplusplus
 }

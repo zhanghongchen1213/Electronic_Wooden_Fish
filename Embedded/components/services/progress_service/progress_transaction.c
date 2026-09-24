@@ -2,9 +2,10 @@
  * @file     progress_transaction.c
  * @brief    本地高水位/轮次单事务组的纯逻辑实现。
  * @details  owner 是唯一累计入口：每个有效事件只推进一次 local_total 与可消费汉字
- *           游标；acked_total 只能单调推进；末字置位 pending_completion；写集不含
- *           自动模式标志。所有判定不硬编码经文字数，取值域由调用方传入 canonical
- *           可消费总数（EWF_SCRIPTURE_CONSUMABLE_COUNT）。
+ *           游标；acked_total 只能单调推进；末字置位 pending_completion 并本地确认
+ *           round_state=completed（Story 3.6 裁决 B）；写集不含自动模式标志。
+ *           gate.completed = pending || round_state==completed（裁决 A）。
+ *           跨轮 restart/exit 经 ewf_progress_apply_round_action（裁决 C–F）。
  * @author   ZHC
  * @date     2026-09-23
  */
@@ -13,8 +14,7 @@
 
 #include <string.h>
 
-/** 事务组字段容量与版本字符串长度检查使用的内部工具。 */
-static bool string_fits(const char *scripture_version);
+/** 事务组字段容量检查使用的内部工具。 */
 static void copy_bounded(char *dst, size_t capacity, const char *src);
 
 void ewf_progress_transaction_init(ewf_progress_transaction_t *tx,
@@ -102,8 +102,8 @@ bool ewf_progress_apply_valid_tap(ewf_progress_transaction_t *tx,
     {
         return false;
     }
-    /* 完成锁定期间不再推进；gate 层已忽略输入，这里保持防御一致。 */
-    if (tx->pending_completion)
+    /* 完成锁定期间不再推进（pending 或 round_state=completed）；与 gate 双保险。 */
+    if (ewf_progress_is_completion_locked(tx))
     {
         return false;
     }
@@ -115,8 +115,12 @@ bool ewf_progress_apply_valid_tap(ewf_progress_transaction_t *tx,
     ++tx->round_cursor;
     if (tx->round_cursor >= consumable_count)
     {
-        /* 到达末字：本地完成锁定置位；完成确认与新轮次属 Story 3.6/5.2 域。 */
+        /*
+         * 裁决 B：末字本地可见完成 → round_state=completed 且保持 pending=true，
+         * 直至 sync 确认或用户 exit/restart 显式清理；gate 靠 pending||completed。
+         */
         tx->pending_completion = true;
+        tx->round_state = EWF_PROGRESS_ROUND_STATE_COMPLETED;
         return true;
     }
     return false;
@@ -144,6 +148,17 @@ ewf_progress_ack_result_t ewf_progress_apply_acked_total(
     return EWF_PROGRESS_ACK_ACCEPTED;
 }
 
+bool ewf_progress_is_completion_locked(const ewf_progress_transaction_t *tx)
+{
+    if (tx == NULL)
+    {
+        return false;
+    }
+    /* 裁决 A：完成锁定 = pending || round_state==completed。 */
+    return tx->pending_completion ||
+           tx->round_state == EWF_PROGRESS_ROUND_STATE_COMPLETED;
+}
+
 void ewf_progress_fill_gate(const ewf_progress_transaction_t *tx,
                             ewf_tap_gate_state_t *gate)
 {
@@ -152,15 +167,75 @@ void ewf_progress_fill_gate(const ewf_progress_transaction_t *tx,
         return;
     }
     gate->service_ready = true;
-    gate->completed = tx != NULL && tx->pending_completion;
+    gate->completed = ewf_progress_is_completion_locked(tx);
     gate->fault_locked = false;
     gate->queue_full = ewf_progress_backlog_is_full(tx);
 }
 
-static bool string_fits(const char *scripture_version)
+ewf_progress_round_action_result_t ewf_progress_apply_round_action(
+    ewf_progress_transaction_t *tx,
+    ewf_progress_round_action_t action,
+    const char *action_id,
+    uint32_t consumable_count)
 {
-    return scripture_version != NULL &&
-           strlen(scripture_version) < EWF_PROGRESS_SCRIPTURE_VERSION_CAPACITY;
+    (void)consumable_count;
+    if (tx == NULL || action_id == NULL || action_id[0] == '\0' ||
+        strlen(action_id) >= EWF_PROGRESS_ACTION_ID_CAPACITY)
+    {
+        return EWF_PROGRESS_ROUND_ACTION_REJECTED;
+    }
+    if (action != EWF_PROGRESS_ROUND_ACTION_RESTART &&
+        action != EWF_PROGRESS_ROUND_ACTION_EXIT)
+    {
+        return EWF_PROGRESS_ROUND_ACTION_REJECTED;
+    }
+
+    /* 同 action_id 短路径：仅当当前状态已与该动作首次结果一致才幂等；
+     * 否则视为跨动作碰撞或陈旧键，拒绝（避免重启后序号归零撞键误吞）。 */
+    if (strncmp(tx->action_id, action_id, sizeof(tx->action_id)) == 0)
+    {
+        if (action == EWF_PROGRESS_ROUND_ACTION_RESTART &&
+            tx->round_state == EWF_PROGRESS_ROUND_STATE_IN_PROGRESS &&
+            !tx->pending_completion)
+        {
+            return EWF_PROGRESS_ROUND_ACTION_IDEMPOTENT;
+        }
+        if (action == EWF_PROGRESS_ROUND_ACTION_EXIT &&
+            tx->round_state == EWF_PROGRESS_ROUND_STATE_COMPLETED &&
+            !tx->pending_completion)
+        {
+            return EWF_PROGRESS_ROUND_ACTION_IDEMPOTENT;
+        }
+        return EWF_PROGRESS_ROUND_ACTION_REJECTED;
+    }
+
+    if (!ewf_progress_is_completion_locked(tx))
+    {
+        /* 裁决 D：未完成锁定时 restart/exit 均拒绝（对齐 5.2）。 */
+        return EWF_PROGRESS_ROUND_ACTION_REJECTED;
+    }
+
+    if (action == EWF_PROGRESS_ROUND_ACTION_RESTART)
+    {
+        /* 裁决 F：UINT32_MAX 拒绝，不回绕到 0/1。 */
+        if (tx->round_id == UINT32_MAX)
+        {
+            return EWF_PROGRESS_ROUND_ACTION_REJECTED;
+        }
+        ++tx->round_id;
+        tx->round_cursor = 0U;
+        tx->round_state = EWF_PROGRESS_ROUND_STATE_IN_PROGRESS;
+        tx->pending_completion = false;
+        copy_bounded(tx->action_id, sizeof(tx->action_id), action_id);
+        /* 裁决 H/AD-3：不清零 local_total/acked_total；不触碰 auto_mode。 */
+        return EWF_PROGRESS_ROUND_ACTION_ACCEPTED;
+    }
+
+    /* exit：保留 completed 与当前 round_id/cursor；清 pending；累计保留。 */
+    tx->round_state = EWF_PROGRESS_ROUND_STATE_COMPLETED;
+    tx->pending_completion = false;
+    copy_bounded(tx->action_id, sizeof(tx->action_id), action_id);
+    return EWF_PROGRESS_ROUND_ACTION_ACCEPTED;
 }
 
 static void copy_bounded(char *dst, size_t capacity, const char *src)
@@ -169,7 +244,7 @@ static void copy_bounded(char *dst, size_t capacity, const char *src)
     {
         return;
     }
-    if (!string_fits(src))
+    if (src == NULL || strlen(src) >= capacity)
     {
         dst[0] = '\0';
         return;

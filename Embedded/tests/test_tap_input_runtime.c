@@ -207,6 +207,39 @@ static void test_device_touch_swipe_navigates_without_count(void)
     assert(host_published_count() == 0U);
     assert(device_nav_service_active_page() == EWF_NAV_PAGE_JINGWEN);
 }
+
+static void test_jingwen_history_vertical_swipe_suppresses_settings(void)
+{
+    reset_services();
+    host_device_nav_set_page(EWF_NAV_PAGE_JINGWEN);
+    host_device_nav_set_settings_open(false);
+
+    /* history 内起点 (100,200)：垂直下滑不得开设置。 */
+    const unsigned before_in = host_device_nav_input_calls();
+    host_cst9217_set_point(100U, 200U, true);
+    host_cst9217_interrupt();
+    host_cst9217_set_point(100U, 280U, true);
+    host_cst9217_interrupt();
+    host_cst9217_set_point(100U, 280U, false);
+    host_cst9217_interrupt();
+    consume();
+    assert(host_device_nav_input_calls() == before_in);
+    assert(!device_nav_service_settings_open());
+
+    /* history 外起点 (100,70) 标题带：垂直下滑应投递 SWIPE_DOWN 并开设置。 */
+    const unsigned before_out = host_device_nav_input_calls();
+    host_cst9217_set_point(100U, 70U, true);
+    host_cst9217_interrupt();
+    host_cst9217_set_point(100U, 150U, true);
+    host_cst9217_interrupt();
+    host_cst9217_set_point(100U, 150U, false);
+    host_cst9217_interrupt();
+    consume();
+    assert(host_device_nav_input_calls() == before_out + 1U);
+    assert(host_device_nav_last_kind() == EWF_NAV_INPUT_SWIPE_DOWN);
+    assert(device_nav_service_settings_open());
+}
+
 static void test_three_sources_backpressure_and_downstream(void)
 {
     reset_services();
@@ -245,6 +278,7 @@ int main(void)
     test_device_touch_production_bridge();
     test_device_touch_page_and_wake_gates();
     test_device_touch_swipe_navigates_without_count();
+    test_jingwen_history_vertical_swipe_suppresses_settings();
     test_three_sources_backpressure_and_downstream();
     assert(tap_input_service_deinit_contracts() == ESP_OK);
     assert(pvdf_input_service_deinit_contracts() == ESP_OK);

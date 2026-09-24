@@ -193,3 +193,9 @@ uint32_t host_published_sequence(uint32_t index)
     assert(index < s_published_count);
     return s_published_sequences[index];
 }
+
+int64_t esp_timer_get_time(void)
+{
+    /* 主机：用 tick 近似微秒，供今日桶日键换算。 */
+    return (int64_t)s_ticks * 1000LL;
+}

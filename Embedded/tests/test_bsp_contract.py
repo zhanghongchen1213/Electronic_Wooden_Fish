@@ -28,7 +28,6 @@ SERVICES_LEGACY = (
     "voice_service",
     "time_service",
     "maintenance_service",
-    "ui_service",
     "log_service",
 )
 
@@ -69,7 +68,6 @@ FORBIDDEN_TOKENS = (
     "charging_pause",
     "charge_state",
     "is_charging",
-    "ui_service_",
     "ble_service_",
     "gps_service_",
     "modem_service_",
@@ -156,8 +154,10 @@ def test_services_component_only_holds_the_ewf_startup_graph():
     assert "selftest_service/selftest_service.c" in registered
     assert "state_service/state_service.c" in registered
     assert "esp-sr" not in registered
-    assert "lvgl" not in registered
-    assert "ui" not in registered
+    assert "ui_service/ui_service.c" in registered
+    # Story 3.1：ui_task 依赖 ui/lvgl 组件。
+    assert "ui" in registered
+    assert "lvgl" in registered
     for legacy in SERVICES_LEGACY:
         assert legacy not in registered, f"{legacy} 仍在 services 构建图中"
 

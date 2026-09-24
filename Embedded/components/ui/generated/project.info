@@ -1,9 +1,5 @@
 {
-    "project_name": "watch-lvgl.spj",
-    "datetime": "2026-07-20T13:38:18.0751950+08:00",
-    "editor_version": "1.6.1",
-    "project_version": 15,
-    "user": "zhang hongchen",
-    "export_datetime": "2026-08-17T16:36:34.9390460+08:00",
-    "export_user": "zhang hongchen"
+  "project_name": "ewf-device",
+  "squareline_version": "1.6.1",
+  "lvgl_version": "8.3.11"
 }

@@ -200,6 +200,32 @@ esp_err_t sync_service_set_identity(const char *device_id,
     return ESP_OK;
 }
 
+esp_err_t sync_service_copy_identity(char *device_id,
+                                     size_t device_id_len,
+                                     char *firmware_version,
+                                     size_t firmware_version_len,
+                                     bool *identity_configured)
+{
+    if (s_mutex == NULL) {
+        return ESP_ERR_INVALID_STATE;
+    }
+    if (xSemaphoreTake(s_mutex, portMAX_DELAY) != pdTRUE) {
+        return ESP_ERR_TIMEOUT;
+    }
+    if (device_id != NULL && device_id_len > 0U) {
+        (void)snprintf(device_id, device_id_len, "%s", s_device_id);
+    }
+    if (firmware_version != NULL && firmware_version_len > 0U) {
+        (void)snprintf(firmware_version, firmware_version_len, "%s",
+                       s_firmware_version);
+    }
+    if (identity_configured != NULL) {
+        *identity_configured = s_identity_ready;
+    }
+    xSemaphoreGive(s_mutex);
+    return ESP_OK;
+}
+
 esp_err_t sync_service_set_battery_percent(uint8_t percent)
 {
     if (percent > 100U) {
