@@ -24,8 +24,14 @@ export interface RequestOptions {
   _retry?: boolean
 }
 
+/**
+ * 与 backend AuthTokenResponse 对齐（Story 4.4 / 6.2）。
+ * 令牌载荷仅含 access/refresh/expires/device；禁止微信会话材料进入类型面。
+ */
 export interface AuthTokenPayload {
   accessToken: string
   refreshToken: string
   expiresIn: number
+  /** 唯一设备身份；本地缓存非权威（AD-2）。 */
+  deviceId: string
 }

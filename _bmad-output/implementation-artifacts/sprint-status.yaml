@@ -29,7 +29,7 @@
 # - Dev moves story to 'review', then runs code-review (fresh context, different LLM recommended)
 # - Retrospective appends its action items to action_items; the status view surfaces open ones
 generated: 09-22-2026 02:37
-last_updated: 09-23-2026 23:49
+last_updated: 09-24-2026 02:41
 project: Electronic_Wooden_Fish
 project_key: NOKEY
 tracking_system: file-system
@@ -80,15 +80,15 @@ development_status:
   epic-5-retrospective: optional
 
   epic-6: in-progress
-  6-1-建立-mini-06-小程序壳层-令牌和导航: review
-  6-2-实现登录直达与权限状态: backlog
-  6-3-实现在线心经持续阅读流: backlog
-  6-4-实现断线查询与离线回放: backlog
-  6-5-实现完成态-礼花和篇章归档: backlog
-  6-6-实现记录页统计: backlog
-  6-7-实现设备状态页与同步动作: backlog
-  6-8-实现设置镜像与待应用状态: backlog
-  6-9-完成空态-失败态-权限态和视觉卫生门禁: backlog
+  6-1-建立-mini-06-小程序壳层-令牌和导航: done
+  6-2-实现登录直达与权限状态: done
+  6-3-实现在线心经持续阅读流: done
+  6-4-实现断线查询与离线回放: done
+  6-5-实现完成态-礼花和篇章归档: done
+  6-6-实现记录页统计: done
+  6-7-实现设备状态页与同步动作: done
+  6-8-实现设置镜像与待应用状态: done
+  6-9-完成空态-失败态-权限态和视觉卫生门禁: done
   epic-6-retrospective: optional
 
   epic-7: backlog

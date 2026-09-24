@@ -1,12 +1,19 @@
 /**
- * Story 5.6 裁决 F：本地 storage 白名单。
- * 键前缀 ewf_；只允许 access/refresh/expireTime；禁止任何 session_key 键。
+ * Story 5.6 裁决 F + Story 6.4 裁决 E：本地 storage 白名单。
+ * 键前缀 ewf_；token 三键 + 契约 §11.1 frontend 三水位；禁止任何 session_key 键。
+ * 正式进度禁止写入 userAuth；权威仍只信快照/`delta`。
  */
 
 export const STORAGE_KEYS = {
   ACCESS_TOKEN: 'ewf_access_token',
   REFRESH_TOKEN: 'ewf_refresh_token',
   TOKEN_EXPIRE_TIME: 'ewf_token_expire_time',
+  /** 契约 §11.1：最近一次查询冻结的权威水位。 */
+  SNAPSHOT_SEQ: 'ewf_snapshot_seq',
+  /** 裁决 A：本地已展示步进镜像（非 cloud 权威）。 */
+  REPLAY_CURSOR: 'ewf_replay_cursor',
+  /** 已消费的最大帧序号。 */
+  LAST_APPLIED_SEQ: 'ewf_last_applied_seq',
 } as const
 
 /** 提前 5 分钟视为过期。 */
@@ -84,6 +91,48 @@ export function clearTokens(): void {
   removeStorage(STORAGE_KEYS.ACCESS_TOKEN)
   removeStorage(STORAGE_KEYS.REFRESH_TOKEN)
   removeStorage(STORAGE_KEYS.TOKEN_EXPIRE_TIME)
+  clearReadingWatermarks()
+}
+
+function readNonNegInt(key: string): number | null {
+  const raw = getStorage<unknown>(key)
+  if (raw === null || raw === undefined || raw === '') {
+    return null
+  }
+  const n = typeof raw === 'number' ? raw : Number(raw)
+  if (!Number.isFinite(n) || n < 0) {
+    return null
+  }
+  return Math.floor(n)
+}
+
+export function getPersistedSnapshotSeq(): number | null {
+  return readNonNegInt(STORAGE_KEYS.SNAPSHOT_SEQ)
+}
+
+export function getPersistedReplayCursor(): number | null {
+  return readNonNegInt(STORAGE_KEYS.REPLAY_CURSOR)
+}
+
+export function getPersistedLastAppliedSeq(): number | null {
+  return readNonNegInt(STORAGE_KEYS.LAST_APPLIED_SEQ)
+}
+
+/** 裁决 E：成功态水位写入；登出/reset 必须清。 */
+export function persistReadingWatermarks(input: {
+  snapshotSeq: number
+  replayCursor: number
+  lastAppliedSeq: number
+}): void {
+  setStorage(STORAGE_KEYS.SNAPSHOT_SEQ, Math.max(0, Math.floor(input.snapshotSeq)))
+  setStorage(STORAGE_KEYS.REPLAY_CURSOR, Math.max(0, Math.floor(input.replayCursor)))
+  setStorage(STORAGE_KEYS.LAST_APPLIED_SEQ, Math.max(0, Math.floor(input.lastAppliedSeq)))
+}
+
+export function clearReadingWatermarks(): void {
+  removeStorage(STORAGE_KEYS.SNAPSHOT_SEQ)
+  removeStorage(STORAGE_KEYS.REPLAY_CURSOR)
+  removeStorage(STORAGE_KEYS.LAST_APPLIED_SEQ)
 }
 
 export function isTokenExpired(): boolean {

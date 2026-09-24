@@ -301,3 +301,114 @@
 3. 微信隐私协议/用户协议勾选文案——属 6.2 登录页产品文案，不在 6.1 发明。
 4. 生产 `VITE_WX_APPID` 仍为 replace 占位——部署前替换；本 Story 只保证从 env 读取。
 5. 交接：6.2 负责登录直达与权限态；6.3+ 填业务页；6.9 做 14 状态对拍终验。
+
+## Deferred from: create-story of 6-2-实现登录直达与权限状态
+
+1. 《用户协议》《隐私政策》正式法务正文——本 Story 交付产品短文本地页，上架前由作者替换（页面可见文案不含 TODO/draft 等禁用词）。
+2. LOGIN 帧印章/纸纹等视觉装饰像素差——逻辑两态（BASE / PERM_ERROR）本 Story 已交付，像素终验归 6.9。
+3. 生产 `VITE_WX_APPID` / 公众平台 request 合法域名 / 真机微信授权弹窗——Epic 7 / 部署假设；本 Story 仅 Node mock 护栏。
+4. deviceId 落盘策略——本 Story 按裁决 E 选择仅 Pinia 内存（不写 `ewf_device_id`），避免突破 5.6 storage 三键白名单；若后续展示页需要持久缓存再单独立项。
+5. 交接：6.3+ 填阅读业务与快照/WebSocket；6.9 做 LOGIN 帧像素终验；Epic 7 真机合法域名与 AppID 三处对齐。
+
+## Deferred from: code review of 6-2-实现登录直达与权限状态.md (2026-09-24)
+
+- **页面级 uni.login→store→switchTab 串联未做组件挂载测试：** 护栏拆测 `loginWithWxCode` 与 `navigateToReadingAfterLogin`；未挂载 `pages/login/index.vue` 验证手势接线。真机授权与隐私弹窗归 Epic 7；不阻断 6.2 done。
+- **App.onLaunch 门闸接线无专门断言：** `ensureAuthenticated` 行为已测；`App.vue` 调用点未做挂载 harness。价值低于再引 App 测试基建；不阻断 6.2 done。
+
+## Deferred from: create-story of 6-3-实现在线心经持续阅读流
+
+1. 完整 REPLAY/OFFLINE UI、「回放中·新事件排队」与 `replay_cursor` 持久化权威恢复——Story 6.4。
+2. `completion` 礼花弹窗与篇章折叠归档——Story 6.5。
+3. READING 像素终验与印谱/17 槽基线装饰差——Story 6.9。
+4. 真机 WSS 合法域名与 SM-3 1s 端到端实测——Epic 7。
+5. 动画基线/下限毫秒若 UX 日后冻结精确值，以 UX 更新为准并改常量（本 Story create-story 按裁决 B 先锁可测默认 320ms/48–80ms）。
+
+## Deferred from: code review of 6-3-实现在线心经持续阅读流.md (2026-09-24)
+
+- **阅读页 error 相位无产品态文案：** sync/WS 失败当前静默重查或停在 error 相位；AC 允许静默恢复，完整失败/REPLAY banner 归 Story 6.4。
+- **快照未校验 scripture_version：** 本 Story `StateSnapshot` 对齐契约 17 字段，无该 wire；AD-4 版本不一致停推待契约扩展后接入。
+- **onShow 时 liveActive 已 true 跳过重入水合：** 正常路径依赖 onHide→stopLiveSession；若宿主漏发 onHide，需另加固幂等重入。
+
+## Deferred from: create-story of 6-4-实现断线查询与离线回放
+
+1. READING REPLAY/OFFLINE 像素级对拍与印谱装饰——Story 6.9。
+2. `completion` 礼花弹窗与篇章折叠归档——Story 6.5。
+3. 真机断线恢复与 WSS 合法域名 / SM-3 1s——Epic 7。
+4. 快照 wire 若未来增加 `scripture_version`，再接 AD-4 停推校验（承接 6.3 defer）。
+5. 交接（dev-story 6.4）：6.5 接 `completion`+礼花（仅 live/replay 完成后，勿在 OFFLINE 误弹）；6.9 做 READING REPLAY/OFFLINE 像素终验；Epic 7 真机断线恢复与 SM-3。
+
+## Deferred from: code review of 6-4-实现断线查询与离线回放.md (2026-09-24)
+
+- **重连次数耗尽 → error 无护栏：** `scheduleReconnect`/`resyncFromSnapshot` 耗尽分支仅有 `maxAttempts===10` 常量断言；连续失败至 error 未钉住。主路径 1006→恢复已覆盖；可留 Epic 7 真机断线或后续加固。
+- **同轮快照重入未清空 pendingDeltas：** `applySnapshot` 仅在 round 切换时清空队列；同轮 mustReplay/resync 保留旧 pending，多数靠 stale 丢弃，交错语义需产品确认后再改。
+
+## Deferred from: create-story of 6-5-实现完成态-礼花和篇章归档
+
+1. READING.DONE / OVERLAY.DONE 像素级对拍与印谱装饰——Story 6.9。
+2. 记录页今日/周期/连续统计呈现——Story 6.6。
+3. 真机完成遮罩 ↔ 小程序弹窗跨端一致性与 SM-3——Epic 7。
+4. 篇章归档是否跨冷启动持久化及条数上限——产品未钉死；本 Story 实现为内存展示列表（登出/reset 清空），上限与淘汰策略待产品钉死后补。
+5. 承接 5.2：`consumedRoundActionIds` 跨进程重启仅单槽——前端同键重试依赖 backend 单槽；勿假设无限进程内集合。
+6. 真机「减少动效」系统开关与 `uni.getSystemInfo` 字段可得性——本 Story 以 `prefers-reduced-motion` / `reduceMotion` 尽力探测，真机终验留 6.9/Epic 7。
+7. 交接：6.6 接记录页统计；6.9 做 READING.DONE / OVERLAY.DONE 像素终验；Epic 7 跨端完成验收。
+
+## Deferred from: code review of 6-5-实现完成态-礼花和篇章归档.md (2026-09-24)
+
+- `resyncFromSnapshot` 在 `displayFrozen` 且 `mustReplay` 时先写回 `displayBase` 再 `applySnapshot`：若持久化 replay 游标落后于已冻结全文，理论上可把完成弹窗下的正文回退；本轮未构造稳定复现路径，留待 6.9/联调场景钉死。
+
+## Deferred from: create-story of 6-6-实现记录页统计
+
+1. RECORDS.BASE/EMPTY 像素级对拍与印谱装饰——Story 6.9。
+2. `GET /sync/stats` 仍未入契约注册表——承接 5.3 deferred；本 Story 前端按 DTO 消费，不改契约。
+3. `pending_sync` 页眉短句是否产品钉死——推荐弱提示「含待同步」；若审查要改文案，走 6.9/文案修订而非发明营销句。
+4. 设备页状态与立即同步——Story 6.7。
+5. 设置镜像与待应用——Story 6.8。
+6. 真机日界/连续天数跨端观感——Epic 7。
+7. 交接：6.7 设备状态；6.8 设置；6.9 RECORDS 像素/印谱终验；Epic 7 跨端统计一致性。
+
+## Deferred from: code review of 6-6-实现记录页统计.md (2026-09-24)
+
+- `readingStream.replay.guards.test.ts` 在本 Story 为稳定偶发失败而固定 `Math.random→0` 并缩短 timer/flush microtask：属测试侧范围漂移，不改阅读流生产逻辑；是否回滚或抽到独立 flaky 修复留给后续回归专项。
+
+## Deferred from: create-story of 6-7-实现设备状态页与同步动作
+
+1. DEVICE.BASE/FAIL_RETRY 像素级对拍与印谱装饰——Story 6.9。
+2. HTML 样例「76% · 未充电」与产品禁充电冲突——本 Story 已裁掉充电后缀；若设计要改 HTML 样例，走 UX 修订而非实现照抄。
+3. backend「立即同步」`sync_now` 篇章动作（契约 §9 点名、RoundAction 未收）——后续 backend story / Epic 7；本 Story 前端以刷新相位诚实表达。
+4. 快照缺少 `last_sync_at`——客户端相对时间；若产品要服务端权威时间，需契约变更（禁止本 Story 私加）。
+5. 设置页镜像与命令下发——Story 6.8。
+6. WS 驱动设备页实时刷新——可选增强，非本 Story 门禁。
+7. 交接：6.8 设置镜像；6.9 DEVICE 像素/印谱/FAIL_RETRY 终验；backend `sync_now` / Epic 7 真机立即同步。
+
+## Deferred from: code review of 6-7-实现设备状态页与同步动作.md (2026-09-24)
+
+- 设备 `devstatus-row` 缺 HTML 侧 battery/network/last-sync/pending/command 图标通道：本 Story 以 label+value 文字双通道交付；图标资产与 DEVICE 像素终验移交 Story 6.9。
+
+## Deferred from: create-story of 6-8-实现设置镜像与待应用状态
+
+1. SETTINGS.BASE/PENDING 像素级对拍、印谱、图标双编码——Story 6.9。
+2. HTML 导出无独立 `ST:PENDING` 帧名——语义由状态条文案切换；若 UX 日后补独立帧，走设计修订。
+3. WS `command_state` 前端实时收敛——可选增强或 Epic 7 联调加强（本 Story 门禁以 REST onShow + 提交响应为准）。
+4. 真机应用修订回传——Story 7.2。
+5. `base_revision` 未进契约正文——5.4 已 deferred；本 Story 沿用字段，禁止改契约。
+6. 设备页与设置页命令态双处展示——保持同谓词即可；跨页 store 同步非本 Story 门禁（各自 REST 水合）。
+7. 交接：6.9 SETTINGS 像素/印谱/PENDING 终验；Epic 7.2 真机应用修订；可选 WS `command_state` 实时翻转增强。
+
+## Deferred from: code review of 6-8-实现设置镜像与待应用状态.md (2026-09-24)
+
+- `deriveApplyStatus` 对运行时 null/NaN 修订号未做 `Number.isFinite` 门闸：契约/类型恒为 number，未构造脏 wire 路径；若后端脏载荷出现再加守卫。
+- 音量滑杆触区 ≥44×44 未做像素终验：行高已用 `$touch-min`；SETTINGS 触控/像素终验移交 Story 6.9。
+
+## Deferred from: create-story of 6-9-完成空态-失败态-权限态和视觉卫生门禁
+
+1. 待校时显式横幅——HistoryStats/Snapshot 无 trust 字段；无信号前不伪造；backend 补 `time_trust` 后再接 STATE_COPY 预留词表。
+2. 作者 HTML 未导出全部 14 个独立 `ST:*` 节点——语义对拍以 UI_CONTRACT + 运行态为准；若 UX 补帧走设计修订。
+3. 真机字体 Noto 包体 vs 系统回退、原生 tabBar 与自定义 bottom-nav 像素差——Epic 7 / 设计修订。
+4. 截图级自动视觉回归 CI——超出本 Story；dev-story 以人工逐屏 + 自动化令牌/文案护栏为准。
+5. `sync_now` 写路径、真机命令 ACK、WS 实时设备页——既有 defer，非本 Story。
+6. 交接：Epic 7 真机端到端与样机证据（SM）；本 Story 闭合 Epic 6 小程序门禁（14 态护栏 + 卫生扫描已落地）。
+
+## Deferred from: code review of 6-9-完成空态-失败态-权限态和视觉卫生门禁.md (2026-09-24)
+
+- 设备页 `queueFull`/`lowBattery` 告警条可见性仅有源码 `toContain` + store getter，无 Vue 挂载运行时断言；要闭合需挂载试验架，超出当前门禁风格。
+- 14 态护栏以文案金句/相位表驱动为主（裁决 B）；多数态未断言组件分支可达；像素/挂载验证记 Epic 7 / 人工逐屏。

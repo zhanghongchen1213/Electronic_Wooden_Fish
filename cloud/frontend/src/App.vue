@@ -1,15 +1,19 @@
 <script setup lang="ts">
 /**
  * Story 6.1 裁决 C：纸面根帧 = 全 app 唯一大底（#f4f0e5）。
- * 禁止外层手机框、深色展台、渐变营销背板（UX-DR22）。
- * WebSocket / 业务拉取属后续 Story；onLaunch 不假连。
+ * Story 6.2 裁决 B：onLaunch 统一冷启动令牌门闸；未登录走 redirectToLogin 判重。
+ * WebSocket / 业务拉取属后续 Story；门闸不假连。
  */
 import { onLaunch } from '@dcloudio/uni-app'
 import { useAppShellStore } from './stores/appShell'
+import { ensureAuthenticated, isOnLoginPage } from './utils/authGate'
 
 onLaunch(() => {
   const shell = useAppShellStore()
   shell.markLaunched()
+  if (!isOnLoginPage()) {
+    ensureAuthenticated()
+  }
 })
 </script>
 

@@ -13,7 +13,8 @@
       "style": {
         "navigationStyle": "custom",
         "navigationBarTitleText": "记录",
-        "backgroundColor": "#f4f0e5"
+        "backgroundColor": "#f4f0e5",
+        "enablePullDownRefresh": true
       }
     },
     {
@@ -21,7 +22,8 @@
       "style": {
         "navigationStyle": "custom",
         "navigationBarTitleText": "设备",
-        "backgroundColor": "#f4f0e5"
+        "backgroundColor": "#f4f0e5",
+        "enablePullDownRefresh": true
       }
     },
     {
@@ -29,7 +31,8 @@
       "style": {
         "navigationStyle": "custom",
         "navigationBarTitleText": "设置",
-        "backgroundColor": "#f4f0e5"
+        "backgroundColor": "#f4f0e5",
+        "enablePullDownRefresh": true
       }
     },
     {
@@ -37,6 +40,20 @@
       "style": {
         "navigationStyle": "custom",
         "navigationBarTitleText": "登录",
+        "backgroundColor": "#f4f0e5"
+      }
+    },
+    {
+      "path": "pages/legal/user-agreement",
+      "style": {
+        "navigationBarTitleText": "用户协议",
+        "backgroundColor": "#f4f0e5"
+      }
+    },
+    {
+      "path": "pages/legal/privacy-policy",
+      "style": {
+        "navigationBarTitleText": "隐私政策",
         "backgroundColor": "#f4f0e5"
       }
     }
