@@ -139,7 +139,8 @@ function onExit(): void {
 .modal-done__btn--secondary {
   height: 48px;
   background-color: $card;
-  border: 1px solid $accent;
+  outline: 1px solid $accent;
+  outline-offset: -0.5px;
 }
 
 .modal-done__btn--disabled {

@@ -50,7 +50,8 @@
 <script setup lang="ts">
 /**
  * Story 6.6：账本行 / 近 7·30 双列（无盒化；仅低对比刻线分隔）。
- * Story 6.9：可选字符图标双编码（Task 3.2 记录行）。
+ * 2026-10-03 对拍：数值衬线体——双列 30px/36px、行 28px/34px（含单位同尺寸）；
+ * 行首字符图标不再被页面传参（设计稿账本行无图标），组件能力保留。
  */
 withDefaults(
   defineProps<{
@@ -116,7 +117,7 @@ withDefaults(
 .ledger__v-rule {
   width: 1px;
   align-self: stretch;
-  background-color: $divider;
+  background-color: $rule-weak;
   margin: 0 8px;
   flex-shrink: 0;
 }
@@ -132,32 +133,42 @@ withDefaults(
 
 .ledger__label {
   color: $ink-2;
+  font-family: $font-sans;
   font-size: 14px;
   font-weight: 600;
-  line-height: 1.4;
+  line-height: 17px;
+}
+
+.ledger--pair .ledger__label {
+  font-size: 13px;
+  line-height: 16px;
 }
 
 .ledger__value {
   color: $ink;
-  font-size: 16px;
-  font-weight: 600;
-  line-height: 1.2;
+  font-family: $font-serif;
+  font-size: 28px;
+  font-weight: 700;
+  line-height: 34px;
+}
+
+.ledger--pair .ledger__value {
+  font-size: 30px;
+  line-height: 36px;
 }
 
 .ledger__value--md {
-  margin-top: 6px;
-  font-size: 18px;
+  margin-top: 8px;
 }
 
 .ledger__value--row {
-  font-size: 14px;
   text-align: left;
   max-width: 50%;
 }
 
 .ledger__unit {
-  color: $ink-2;
-  font-size: 12px;
-  font-weight: 500;
+  color: $ink;
+  font-size: inherit;
+  font-weight: inherit;
 }
 </style>

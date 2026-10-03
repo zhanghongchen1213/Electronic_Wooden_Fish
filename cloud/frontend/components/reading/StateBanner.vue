@@ -4,8 +4,9 @@
     :class="toneClass"
   >
     <text class="state-banner__title">{{ title }}</text>
+    <!-- 常规态单行（对拍导出稿页头胶囊 76×28）；DONE 双行承载进度句 -->
     <text
-      v-if="copy"
+      v-if="copy && tone === 'done'"
       class="state-banner__copy"
     >{{ copy }}</text>
   </view>
@@ -32,15 +33,15 @@ const toneClass = computed(() => `state-banner--${props.tone}`)
 
 .state-banner {
   min-width: 76px;
-  min-height: 28px;
-  padding: 4px 12px;
+  height: 28px;
+  padding: 0 12px;
   border-radius: 14px;
   background-color: $fill-muted;
   display: flex;
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  gap: 2px;
+  box-sizing: border-box;
 }
 
 .state-banner--live {
@@ -58,6 +59,8 @@ const toneClass = computed(() => `state-banner--${props.tone}`)
 .state-banner--done {
   background-color: #f3e6d0;
   min-width: 120px;
+  height: auto;
+  min-height: 28px;
   align-items: flex-start;
   padding: 8px 12px;
 }

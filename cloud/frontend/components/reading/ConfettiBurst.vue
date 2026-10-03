@@ -76,21 +76,26 @@ function startBurst(): void {
     emit('done')
     return
   }
-  const next: Array<{ style: Record<string, string> }> = []
-  for (let i = 0; i < 18; i += 1) {
-    const left = 8 + ((i * 17) % 84)
-    const delay = (i % 6) * 40
-    const rot = (i * 17) % 360
-    next.push({
-      style: {
-        left: `${left}%`,
-        backgroundColor: AMBER,
-        animationDelay: `${delay}ms`,
-        transform: `rotate(${rot}deg)`,
-      },
-    })
-  }
-  pieces.value = next
+  // 7 条金彩带，尺寸与位置对拍导出稿 OVERLAY.DONE confetti 节点（390 基线）
+  const RIBBONS = [
+    { x: 50, y: 86, w: 3, h: 18 },
+    { x: 108, y: 60, w: 2, h: 12 },
+    { x: 176, y: 96, w: 3, h: 16 },
+    { x: 250, y: 72, w: 2, h: 12 },
+    { x: 318, y: 112, w: 3, h: 18 },
+    { x: 76, y: 154, w: 2, h: 10 },
+    { x: 286, y: 168, w: 2, h: 14 },
+  ]
+  pieces.value = RIBBONS.map((r, i) => ({
+    style: {
+      left: `${r.x}px`,
+      top: `${r.y}px`,
+      width: `${r.w}px`,
+      height: `${r.h}px`,
+      backgroundColor: AMBER,
+      animationDelay: `${i * 40}ms`,
+    },
+  }))
   active.value = true
   timer = setTimeout(finish, DURATION_MS)
 }
@@ -127,21 +132,18 @@ onUnmounted(() => {
 
 .confetti__piece {
   position: absolute;
-  top: -16px;
-  width: 3px;
-  height: 12px;
-  border-radius: 2px;
+  border-radius: 999px;
   animation: confetti-fall 0.8s ease-out forwards;
 }
 
 @keyframes confetti-fall {
   0% {
     opacity: 1;
-    transform: translateY(0) rotate(0deg);
+    transform: translateY(0) rotate(12deg);
   }
   100% {
     opacity: 0;
-    transform: translateY(70vh) rotate(180deg);
+    transform: translateY(70vh) rotate(192deg);
   }
 }
 </style>

@@ -19,25 +19,29 @@ defineProps<{
 @import '../../styles/tokens.scss';
 
 .char-focus {
+  position: relative;
   width: 20px;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: flex-end;
+  height: 42px;
+  display: block;
 }
 
 .char-focus__glyph {
+  display: block;
+  font-family: $font-serif;
   font-size: 28px;
-  line-height: 32px;
+  line-height: 36px;
   color: $accent;
-  font-family: 'Noto Serif SC', 'Songti SC', serif;
   font-weight: 600;
+  text-align: center;
 }
 
+/* 下划线钉在 cell 内 top 38（对拍导出稿焦点字下划线 @ (·,38)） */
 .char-focus__underline {
+  position: absolute;
+  left: 0;
+  top: 38px;
   width: 20px;
   height: 2px;
   background-color: $accent;
-  margin-top: 0;
 }
 </style>

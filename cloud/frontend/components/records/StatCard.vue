@@ -25,7 +25,7 @@ defineProps<{
 
 .stat-card {
   background-color: $card;
-  outline: 1px solid $divider;
+  outline: 1px solid $rule-weak;
   outline-offset: -0.5px;
   border-radius: 16px;
   padding: 14px 16px 20px;
@@ -35,10 +35,11 @@ defineProps<{
 .stat-card__label {
   display: block;
   color: $ink-2;
+  font-family: $font-sans;
   font-size: 13px;
   font-weight: 600;
-  line-height: 1.4;
-  margin-bottom: 8px;
+  line-height: 16px;
+  margin-bottom: 10px;
 }
 
 .stat-card__value-row {
@@ -50,16 +51,18 @@ defineProps<{
 
 .stat-card__value {
   color: $ink;
+  font-family: $font-serif;
   font-size: 56px;
   font-weight: 700;
-  line-height: 1.1;
+  line-height: 59px;
 }
 
 .stat-card__unit {
   color: $ink-2;
+  font-family: $font-sans;
   font-size: 16px;
   font-weight: 600;
-  line-height: 1.2;
+  line-height: 19px;
   margin-top: 18px;
 }
 </style>

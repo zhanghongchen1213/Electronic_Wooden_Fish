@@ -3,10 +3,11 @@
     <template v-if="variant === 'summary'">
       <view class="dev-row__cell">
         <view class="dev-row__label-row">
-          <view class="dev-row__icon dev-row__icon--battery" aria-hidden="true">
-            <view class="dev-row__icon-battery-body" />
-            <view class="dev-row__icon-battery-cap" />
-          </view>
+          <view
+            class="dev-row__icon"
+            aria-hidden="true"
+            :style="{ backgroundImage: `url(${iconDataUri('battery', '#8b8177')})` }"
+          />
           <text class="dev-row__label">{{ leftLabel }}</text>
         </view>
         <text class="dev-row__value">{{ leftValue }}</text>
@@ -15,14 +16,11 @@
       <view class="dev-row__cell">
         <view class="dev-row__label-row">
           <view
-            class="dev-row__icon dev-row__icon--net"
-            :class="`dev-row__icon--net-${netTone}`"
+            class="dev-row__icon"
+            :class="`dev-row__icon--${netTone}`"
             aria-hidden="true"
-          >
-            <view class="dev-row__icon-bar" style="height: 6px" />
-            <view class="dev-row__icon-bar" style="height: 10px" />
-            <view class="dev-row__icon-bar" style="height: 14px" />
-          </view>
+            :style="{ backgroundImage: `url(${iconDataUri('radio', '#8b8177')})` }"
+          />
           <text class="dev-row__label">{{ rightLabel }}</text>
         </view>
         <text class="dev-row__value">{{ rightValue }}</text>
@@ -32,11 +30,10 @@
       <view class="dev-row__label-row">
         <view
           v-if="icon"
-          class="dev-row__icon-mark"
+          class="dev-row__icon dev-row__icon--row"
           aria-hidden="true"
-        >
-          <text class="dev-row__icon-mark-text">{{ icon }}</text>
-        </view>
+          :style="{ backgroundImage: `url(${iconDataUri(icon, '#8b8177')})` }"
+        />
         <text class="dev-row__label">{{ label }}</text>
       </view>
       <text
@@ -50,10 +47,12 @@
 <script setup lang="ts">
 /**
  * Story 6.7：devstatus-row——摘要卡（电量+4G）或账本行。
- * Story 6.9：图标+文字双编码（令牌色 CSS 形）；禁止装饰背景冒充数据、禁止充电文案。
- * 网络信号柱随 networkMode 变化，避免「无信号/已关闭」仍满格。
+ * 2026-10-03 对拍：图标对齐导出稿 lucide battery/radio/refresh-cw/upload/settings；
+ * 网络图标随 networkMode 弱化（透明度通道），避免「无信号/已关闭」仍满格观感。
+ * 禁止装饰背景冒充数据、禁止充电文案。
  */
 import { computed } from 'vue'
+import { iconDataUri, type IconKey } from '../../utils/uiIcons'
 
 const props = withDefaults(
   defineProps<{
@@ -61,8 +60,8 @@ const props = withDefaults(
     label?: string
     value?: string
     accent?: boolean
-    /** 行级可选字符图标（双通道）；摘要卡用电量/信号形）。 */
-    icon?: string
+    /** 行级可选图标（设计稿 lucide 键名）。 */
+    icon?: IconKey
     /** connected | no_signal | disabled —— 摘要卡网络图标态。 */
     networkMode?: 'connected' | 'no_signal' | 'disabled'
     leftLabel?: string
@@ -87,7 +86,7 @@ const netTone = computed(() => props.networkMode ?? 'no_signal')
   min-height: 88px;
   padding: 14px 16px;
   background-color: $card;
-  outline: 1px solid $divider;
+  outline: 1px solid $rule-weak;
   outline-offset: -0.5px;
   border-radius: 16px;
 }
@@ -104,84 +103,35 @@ const netTone = computed(() => props.networkMode ?? 'no_signal')
   display: flex;
   flex-direction: row;
   align-items: center;
-  gap: 6px;
+  gap: 12px;
 }
 
 .dev-row__icon {
-  flex-shrink: 0;
-  display: flex;
-  align-items: flex-end;
-  justify-content: center;
-}
-
-.dev-row__icon--battery {
-  width: 16px;
-  height: 12px;
-  position: relative;
-}
-
-.dev-row__icon-battery-body {
-  width: 12px;
-  height: 10px;
-  border: 1.5px solid $accent;
-  border-radius: 2px;
-  box-sizing: border-box;
-}
-
-.dev-row__icon-battery-cap {
-  position: absolute;
-  right: 0;
-  top: 3px;
-  width: 2px;
-  height: 4px;
-  background-color: $accent;
-  border-radius: 0 1px 1px 0;
-}
-
-.dev-row__icon--net {
-  width: 16px;
-  height: 14px;
-  gap: 2px;
-  flex-direction: row;
-}
-
-.dev-row__icon-bar {
-  width: 3px;
-  background-color: $accent;
-  border-radius: 1px;
-  align-self: flex-end;
-}
-
-.dev-row__icon--net-no_signal .dev-row__icon-bar:nth-child(2),
-.dev-row__icon--net-no_signal .dev-row__icon-bar:nth-child(3) {
-  opacity: 0.22;
-}
-
-.dev-row__icon--net-disabled .dev-row__icon-bar {
-  opacity: 0.28;
-  background-color: $ink-2;
-}
-
-.dev-row__icon-mark {
-  width: 16px;
-  height: 16px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
+  width: 18px;
+  height: 18px;
+  background-repeat: no-repeat;
+  background-size: 100% 100%;
   flex-shrink: 0;
 }
 
-.dev-row__icon-mark-text {
-  color: $accent;
-  font-size: 11px;
-  font-weight: 700;
-  line-height: 1;
+.dev-row__icon--no_signal {
+  opacity: 0.4;
+}
+
+.dev-row__icon--disabled {
+  opacity: 0.4;
+  filter: grayscale(1);
+}
+
+.dev-row__icon--row {
+  width: 18px;
+  height: 18px;
 }
 
 .dev-row__v-rule {
   width: 1px;
   align-self: stretch;
-  background-color: $divider;
+  background-color: $rule-weak;
   margin: 0 12px;
   flex-shrink: 0;
 }
@@ -198,24 +148,28 @@ const netTone = computed(() => props.networkMode ?? 'no_signal')
 
 .dev-row__label {
   color: $ink-2;
+  font-family: $font-sans;
   font-size: 14px;
   font-weight: 600;
-  line-height: 1.4;
+  line-height: 17px;
 }
 
 .dev-row--summary .dev-row__label {
   font-size: 13px;
+  line-height: 16px;
 }
 
 .dev-row__value {
   color: $ink;
+  font-family: $font-sans;
   font-size: 16px;
   font-weight: 600;
-  line-height: 1.2;
+  line-height: 19px;
 }
 
 .dev-row__value--row {
   font-size: 14px;
+  line-height: 17px;
   text-align: left;
   max-width: 50%;
 }

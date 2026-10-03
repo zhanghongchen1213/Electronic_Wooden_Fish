@@ -1,5 +1,15 @@
 <template>
   <page-shell title="阅读">
+    <template #header-right>
+      <!-- 状态胶囊固定于标题行右侧（对拍导出稿 state-banner @ (294,70)） -->
+      <state-banner
+        v-if="bannerTone"
+        :tone="bannerTone"
+        :title="bannerTitle"
+        :copy="bannerCopy"
+      />
+    </template>
+
     <scroll-view
       class="reading-scroll"
       scroll-y
@@ -27,17 +37,15 @@
 
         <view class="live__meta">
           <text class="live__round">{{ roundLabel }}</text>
-          <state-banner
-            v-if="bannerTone"
-            :tone="bannerTone"
-            :title="bannerTitle"
-            :copy="bannerCopy"
-          />
         </view>
 
         <view class="live__rule" />
 
         <reading-line :cursor="displayedCursor" />
+
+        <view class="live__rule live__rule--mid" />
+
+        <scripture-progress :cursor="progressCursor" />
 
         <view
           :id="TAIL_ID"
@@ -46,11 +54,11 @@
 
         <view class="live__rule live__rule--footer" />
 
-        <scripture-progress :cursor="progressCursor" />
-
         <style-signature variant="reading" />
       </view>
     </scroll-view>
+
+    <bottom-nav />
 
     <confetti-burst
       :pending="celebrationPending"
@@ -91,6 +99,7 @@ import ReadingLine from '../../components/reading/ReadingLine.vue'
 import ScriptureProgress from '../../components/reading/ScriptureProgress.vue'
 import StateBanner from '../../components/reading/StateBanner.vue'
 import StyleSignature from '../../components/shared/StyleSignature.vue'
+import BottomNav from '../../components/bottom-nav/BottomNav.vue'
 import { useAppShellStore } from '../../stores/appShell'
 import { useReadingStreamStore } from '../../stores/readingStream'
 import { READING_COPY } from '../../utils/constants'
@@ -195,6 +204,7 @@ function onExit(): void {
 
 onShow(() => {
   shell.setCurrentTab('reading')
+  uni.hideTabBar({ fail: () => {} })
   void stream.startLiveSession().then(() => {
     followTailIfNeeded()
   })
@@ -210,7 +220,8 @@ onHide(() => {
 @import '../../styles/tokens.scss';
 
 .reading-scroll {
-  height: calc(100vh - #{$safe-top} - 48px);
+  /* 顶部扣页头实际高（标题行 28 + 下间距 22），底部为内嵌自绘底栏（56 + 20 + 安全区）预留 */
+  height: calc(100vh - #{$safe-top} - 50px - #{$nav-h} - 20px - env(safe-area-inset-bottom));
   box-sizing: border-box;
 }
 
@@ -234,30 +245,37 @@ onHide(() => {
 }
 
 .live__meta {
-  display: flex;
-  flex-direction: row;
-  justify-content: space-between;
-  align-items: center;
-  margin-bottom: 12px;
+  padding-top: 4px;
+  margin-bottom: 4px;
 }
 
 .live__round {
+  font-family: $font-sans;
   font-size: 13px;
   line-height: 16px;
   color: $ink-2;
   font-weight: 500;
 }
 
+/* 经文区下强线（回合标签与经文区之间） */
 .live__rule {
   height: 1px;
-  background-color: #9e7b5755;
-  margin-bottom: 16px;
+  background-color: $rule-strong;
+  margin-bottom: 32px;
 }
 
+/* 经文区与进度卡之间弱线（对拍导出稿 y312） */
+.live__rule--mid {
+  margin-top: 24px;
+  margin-bottom: 20px;
+  background-color: $rule-weak;
+}
+
+/* 进度卡与印谱之间强线（对拍导出稿 y610） */
 .live__rule--footer {
   margin-top: 16px;
   margin-bottom: 16px;
-  background-color: $divider;
+  background-color: $rule-strong;
 }
 
 .live__tail {

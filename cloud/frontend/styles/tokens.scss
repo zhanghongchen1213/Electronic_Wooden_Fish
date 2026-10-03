@@ -13,6 +13,16 @@ $ink-3: #8b8177;
 $accent: #a66b3a;
 $accent-bright: #c9a66a;
 $divider: #9e7b5722;
+// 分隔线两级：强线=区块间/页头下/底栏上，弱线=行间/经文区下（对拍导出稿 2026-10-03）。
+$rule-strong: #9e7b5755;
+$rule-weak: #9e7b5722;
+// 失败/危险语义（状态卡「权限错误」「同步失败」），与印章描边同值但语义独立。
+$danger: #a64c3e;
+
+// 字体双体系：衬线=页头标题/大数字/经文/印章文字/弹窗标题；无衬线=其余。
+// 小程序不加载 Web 字体，走系统栈回退（2026-10-03 裁决）。
+$font-serif: 'Noto Serif SC', 'Songti SC', 'STSong', serif;
+$font-sans: 'Noto Sans SC', 'PingFang SC', 'Helvetica Neue', sans-serif;
 
 $safe-top: 62px;
 $page-pad: 20px;

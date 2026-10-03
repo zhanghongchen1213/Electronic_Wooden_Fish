@@ -1,16 +1,15 @@
 <template>
   <view class="seg" :class="{ 'seg--disabled': disabled }">
-    <view class="seg__label-row">
+    <view class="seg__head">
       <view
         v-if="icon"
         class="seg__icon"
         aria-hidden="true"
-      >
-        <text class="seg__icon-text">{{ icon }}</text>
-      </view>
+        :style="{ backgroundImage: `url(${iconDataUri(icon, '#8b8177')})` }"
+      />
       <text class="seg__label">{{ label }}</text>
     </view>
-    <view class="seg__row">
+    <view class="seg__control">
       <view
         v-for="opt in options"
         :key="String(opt.value)"
@@ -30,16 +29,19 @@
 <script setup lang="ts">
 /**
  * Story 6.8：亮度 / 熄屏分段控件。选中态可见；触区 ≥44×44。
- * Story 6.9：可选行首图标（对拍 HTML brightness-icon / timeout-icon）。
+ * 2026-10-03 对拍：单行布局（行首 lucide 图标+label 左、分段靠右）；
+ * 选中=实心 $accent 白字，未选中=$card 底 + 弱分隔线描边；段高 36 控件高 48 圆角 10 间距 6。
  */
+import { iconDataUri, type IconKey } from '../../utils/uiIcons'
+
 const props = withDefaults(
   defineProps<{
     label: string
     modelValue: string | number
     options: Array<{ value: string | number; label: string }>
     disabled?: boolean
-    /** 行首字符图标（双通道）。 */
-    icon?: string
+    /** 行首图标（设计稿 lucide 键名）。 */
+    icon?: IconKey
   }>(),
   { disabled: false },
 )
@@ -61,8 +63,9 @@ function onPick(value: string | number): void {
 
 .seg {
   display: flex;
-  flex-direction: column;
-  gap: 8px;
+  flex-direction: row;
+  align-items: center;
+  min-height: 72px;
 }
 
 .seg--disabled {
@@ -70,71 +73,71 @@ function onPick(value: string | number): void {
   pointer-events: none;
 }
 
-.seg__label-row {
+.seg__head {
   display: flex;
   flex-direction: row;
   align-items: center;
-  gap: 8px;
+  gap: 16px;
+  flex-shrink: 0;
 }
 
 .seg__icon {
   width: 20px;
   height: 20px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
+  background-repeat: no-repeat;
+  background-size: 100% 100%;
   flex-shrink: 0;
 }
 
-.seg__icon-text {
-  color: $ink-2;
-  font-size: 13px;
-  font-weight: 700;
-  line-height: 1;
-}
-
 .seg__label {
-  color: $ink;
+  color: $ink-2;
+  font-family: $font-sans;
   font-size: 15px;
   font-weight: 600;
-  line-height: 1.2;
+  line-height: 18px;
 }
 
-.seg__row {
+.seg__control {
+  margin-left: auto;
+  flex: 0 1 200px;
   display: flex;
   flex-direction: row;
-  gap: 8px;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 0;
 }
 
 .seg__item {
   flex: 1;
+  min-width: 50px;
   box-sizing: border-box;
-  min-height: $touch-min;
-  min-width: $touch-min;
-  padding: 10px 8px;
+  height: 36px;
+  padding: 0 8px;
   display: flex;
   align-items: center;
   justify-content: center;
-  background-color: $fill-muted;
-  border-radius: 12px;
+  background-color: $card;
+  outline: 1px solid $rule-weak;
+  outline-offset: -0.5px;
+  border-radius: 10px;
 }
 
 .seg__item--active {
-  background-color: $card;
-  outline: 1px solid $accent;
-  outline-offset: -0.5px;
+  background-color: $accent;
+  outline-color: $accent;
 }
 
 .seg__item-text {
   color: $ink-2;
-  font-size: 14px;
+  font-family: $font-sans;
+  font-size: 12px;
   font-weight: 500;
-  line-height: 1.2;
+  line-height: 14px;
   text-align: center;
 }
 
 .seg__item-text--active {
-  color: $accent;
+  color: #fffdf6;
   font-weight: 600;
 }
 </style>

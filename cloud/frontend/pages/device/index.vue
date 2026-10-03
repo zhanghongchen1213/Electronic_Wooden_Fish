@@ -1,11 +1,16 @@
 <template>
   <page-shell :title="DEVICE_COPY.pageTitle">
-    <view class="device">
-      <!-- 页眉状态胶囊 -->
-      <view v-if="statusLabel" class="device__status">
+    <template #header-right>
+      <!-- 页眉状态胶囊，固定于标题行右侧 -->
+      <view
+        v-if="statusLabel"
+        class="device__status"
+      >
         <text class="device__status-text">{{ statusLabel }}</text>
       </view>
+    </template>
 
+    <view class="device">
       <view class="device__rule" />
 
       <!-- loading -->
@@ -70,7 +75,7 @@
         <view class="device__rule device__rule--gap" />
 
         <dev-status-row
-          icon="同"
+          icon="refresh-cw"
           :label="DEVICE_COPY.lastSyncLabel"
           :value="lastSyncDisplay"
         />
@@ -78,7 +83,7 @@
         <view class="device__rule device__rule--soft" />
 
         <dev-status-row
-          icon="待"
+          icon="upload"
           :label="DEVICE_COPY.pendingLabel"
           :value="pendingDisplay"
         />
@@ -86,7 +91,7 @@
         <view class="device__rule device__rule--soft" />
 
         <dev-status-row
-          icon="设"
+          icon="settings"
           :label="DEVICE_COPY.commandLabel"
           :value="commandStatusDisplay"
           :accent="true"
@@ -113,6 +118,8 @@
         <style-signature variant="device" />
       </view>
     </view>
+
+    <bottom-nav />
   </page-shell>
 </template>
 
@@ -132,6 +139,7 @@ import PageShell from '../../components/page-shell/PageShell.vue'
 import DevStatusRow from '../../components/device/DevStatusRow.vue'
 import SyncActionButton from '../../components/device/SyncActionButton.vue'
 import StyleSignature from '../../components/shared/StyleSignature.vue'
+import BottomNav from '../../components/bottom-nav/BottomNav.vue'
 import { useAppShellStore } from '../../stores/appShell'
 import {
   formatRelativeSyncAt,
@@ -238,6 +246,7 @@ function onMainAction(): void {
 
 onShow(() => {
   shell.setCurrentTab('device')
+  uni.hideTabBar({ fail: () => {} })
   startClock()
   void loadSnapshot('show')
 })
@@ -260,13 +269,10 @@ onPullDownRefresh(() => {
 
 .device {
   position: relative;
-  padding-bottom: 24px;
+  padding-bottom: calc(#{$nav-h} + 20px + env(safe-area-inset-bottom));
 }
 
 .device__status {
-  position: absolute;
-  right: 0;
-  top: -42px;
   min-width: 84px;
   height: 28px;
   padding: 0 10px;
@@ -281,6 +287,7 @@ onPullDownRefresh(() => {
 
 .device__status-text {
   color: $ink-2;
+  font-family: $font-sans;
   font-size: 12px;
   font-weight: 600;
   line-height: 1.2;
@@ -289,12 +296,12 @@ onPullDownRefresh(() => {
 
 .device__rule {
   height: 1px;
-  background-color: $divider;
+  background-color: $rule-strong;
   width: 100%;
 }
 
 .device__rule--soft {
-  background-color: $divider;
+  background-color: $rule-weak;
 }
 
 .device__rule--gap {
@@ -429,7 +436,8 @@ onPullDownRefresh(() => {
 }
 
 .device__retry-text {
-  color: $accent;
+  color: $danger;
+  font-family: $font-sans;
   font-size: 14px;
   font-weight: 600;
   line-height: 1.2;
@@ -450,9 +458,10 @@ onPullDownRefresh(() => {
 
 .device__banner-text {
   color: $ink-2;
+  font-family: $font-sans;
   font-size: 14px;
   font-weight: 600;
-  line-height: 1.2;
+  line-height: 17px;
   text-align: center;
 }
 

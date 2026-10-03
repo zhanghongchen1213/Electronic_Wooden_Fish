@@ -26,7 +26,8 @@
 <script setup lang="ts">
 /**
  * Story 6.3 / UX-DR15：17 槽行列表。
- * 槽宽 20、行高约 38、正文 18；最新字由 CharFocus（28 + 下划线）。
+ * 槽宽 20、行步进 46（cell 42 + 间距 4，对拍导出稿行 1@174/行 2@220）；
+ * 正文 18px/32px Serif 500 墨色；最新字由 CharFocus（28 + 下划线）。
  * 禁止预览未来经文：只渲染已确认 display 槽。
  */
 import { computed } from 'vue'
@@ -63,14 +64,14 @@ function isFocus(rowIndex: number, colIndex: number): boolean {
 .reading-line__row {
   display: flex;
   flex-direction: row;
-  height: 38px;
+  height: 42px;
   align-items: flex-end;
   margin-bottom: 4px;
 }
 
 .reading-line__slot {
   width: 20px;
-  height: 38px;
+  height: 42px;
   display: flex;
   flex-direction: column;
   align-items: center;
@@ -79,13 +80,14 @@ function isFocus(rowIndex: number, colIndex: number): boolean {
 }
 
 .reading-line__char {
+  font-family: $font-serif;
   font-size: 18px;
-  line-height: 28px;
+  line-height: 32px;
+  font-weight: 500;
   color: $ink;
-  font-family: 'Noto Serif SC', 'Songti SC', serif;
 }
 
 .reading-line__char--muted {
-  color: $ink-2;
+  color: $ink;
 }
 </style>

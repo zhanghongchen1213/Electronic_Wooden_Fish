@@ -1,11 +1,14 @@
 <template>
   <page-shell :title="SETTINGS_COPY.pageTitle">
-    <view class="settings">
+    <template #header-right>
+      <!-- 页眉「设备镜像」胶囊，固定于标题行右侧 -->
       <view class="settings__status">
         <text class="settings__status-text">{{ headerCapsule }}</text>
       </view>
+    </template>
 
-      <view class="settings__rule" />
+    <view class="settings">
+      <view class="settings__rule settings__rule--head" />
 
       <view v-if="phase === 'loading'" class="settings__state">
         <text class="settings__state-hint">{{ SETTINGS_COPY.loadingHint }}</text>
@@ -28,7 +31,7 @@
         </view>
 
         <volume-slider
-          icon="音"
+          icon="volume-2"
           :label="SETTINGS_COPY.volumeLabel"
           :model-value="edit.volume"
           :disabled="submitPhase === 'busy'"
@@ -38,7 +41,7 @@
         <view class="settings__rule settings__rule--soft" />
 
         <segmented-control
-          icon="亮"
+          icon="sun"
           :label="SETTINGS_COPY.brightnessLabel"
           :model-value="edit.brightness"
           :options="brightnessOptions"
@@ -49,7 +52,7 @@
         <view class="settings__rule settings__rule--soft" />
 
         <segmented-control
-          icon="熄"
+          icon="moon"
           :label="SETTINGS_COPY.timeoutLabel"
           :model-value="edit.timeout"
           :options="timeoutOptions"
@@ -57,9 +60,10 @@
           @update:model-value="onTimeout"
         />
 
-        <view class="settings__rule" />
+        <view class="settings__rule settings__rule--soft" />
 
         <apply-status-bar
+          class="settings__apply"
           :status="applyStatus"
           :label="applyStatusDisplay"
         />
@@ -85,6 +89,8 @@
         <style-signature variant="settings" />
       </view>
     </view>
+
+    <bottom-nav />
   </page-shell>
 </template>
 
@@ -105,6 +111,7 @@ import ApplyStatusBar from '../../components/settings/ApplyStatusBar.vue'
 import SegmentedControl from '../../components/settings/SegmentedControl.vue'
 import VolumeSlider from '../../components/settings/VolumeSlider.vue'
 import StyleSignature from '../../components/shared/StyleSignature.vue'
+import BottomNav from '../../components/bottom-nav/BottomNav.vue'
 import { useAppShellStore } from '../../stores/appShell'
 import { useSettingsMirrorStore } from '../../stores/settingsMirror'
 import { SETTINGS_COPY } from '../../utils/constants'
@@ -143,6 +150,7 @@ async function loadShow(): Promise<void> {
 }
 
 onShow(() => {
+  uni.hideTabBar({ fail: () => {} })
   void loadShow()
 })
 
@@ -191,30 +199,50 @@ async function onSave(): Promise<void> {
   display: flex;
   flex-direction: column;
   gap: 0;
+  padding-bottom: calc(#{$nav-h} + 20px + env(safe-area-inset-bottom));
 }
 
 .settings__status {
-  align-self: flex-start;
-  padding: 6px 12px;
+  min-width: 88px;
+  height: 28px;
+  padding: 0 10px;
+  box-sizing: border-box;
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  justify-content: center;
   background-color: $fill-muted;
-  border-radius: 999px;
+  border-radius: 14px;
 }
 
 .settings__status-text {
-  color: $accent;
+  color: $ink-2;
+  font-family: $font-sans;
   font-size: 12px;
   font-weight: 600;
   line-height: 1.2;
+  text-align: center;
 }
 
 .settings__rule {
   height: 1px;
   margin: 16px 0;
-  background-color: $divider;
+  background-color: $rule-strong;
 }
 
+/* 页头线：设计稿设置区起于更低位置（标题盒底 +46） */
+.settings__rule--head {
+  margin: 24px 0 0;
+}
+
+/* 行后弱线：紧贴 72 行盒（对拍导出稿 rule @217/289/361） */
 .settings__rule--soft {
-  margin: 14px 0;
+  margin: 0;
+  background-color: $rule-weak;
+}
+
+.settings__apply {
+  margin-top: 24px;
 }
 
 .settings__state {
@@ -284,7 +312,7 @@ async function onSave(): Promise<void> {
 }
 
 .settings__retry--inline .settings__retry-text {
-  color: $accent;
+  color: $danger;
 }
 
 .settings__submit-hint {
@@ -292,7 +320,8 @@ async function onSave(): Promise<void> {
 }
 
 .settings__submit-hint-text {
-  color: $accent;
+  color: $danger;
+  font-family: $font-sans;
   font-size: 13px;
   line-height: 1.4;
 }
@@ -331,6 +360,6 @@ async function onSave(): Promise<void> {
 }
 
 .settings__cta--fail .settings__cta-label {
-  color: $accent;
+  color: $danger;
 }
 </style>

@@ -3,9 +3,9 @@
 本目录只承载冻结的 Pencil 设计源：
 
 - ewf-miniapp-ui.pen：MINI-06 小程序 UX 唯一视觉真源。
-- assets/paper-fiber-128.png：Pen 使用的本地纸张纹理。
+- ewf-miniapp-ui-export.html：作者从该 Pen 导出的对拍基线（权威文件名以此为准）。
 
-页面闭包固定为 LOGIN、READING、RECORDS、DEVICE、SETTINGS、OVERLAY，共 14 个状态语义。画布基线为 390×844，顶部安全区 62px，内容左右边距 20px，底部导航高 56px。
+页面闭包为 READING、RECORDS、DEVICE、SETTINGS、OVERLAY，共 12 个状态语义（LOGIN 两态随 2026-10-02 去鉴权裁决移除，不再对拍）。画布基线为 390×844，顶部安全区 62px，内容左右边距 20px，底部导航高 56px。
 
 ## 当前交互口径
 
@@ -18,9 +18,8 @@
 
 ## 导出约定
 
-同名 HTML 由作者从 ewf-miniapp-ui.pen 导出，落在本目录时使用 ewf-miniapp-ui.html。仓库不再保存方向稿、候选板、导出副本、组装脚本或旧校验工具。
+同名 HTML 由作者从 ewf-miniapp-ui.pen 导出，落在本目录时使用 ewf-miniapp-ui-export.html。仓库不再保存方向稿、候选板、导出副本、组装脚本或旧校验工具。
 
 ## 下游复刻
 
-uni-app 页面按冻结 Pen 与作者导出的同名 HTML 对拍；数据接 Pinia、mock 和同步契约，不从历史候选稿取值。
-
+uni-app 页面按冻结 Pen 与作者导出的 ewf-miniapp-ui-export.html 对拍；数据接 Pinia、mock 和同步契约，不从历史候选稿取值。

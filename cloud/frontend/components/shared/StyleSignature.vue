@@ -100,7 +100,7 @@ const showRule = computed(
 .sig__rule {
   height: 1px;
   width: 100%;
-  background-color: $divider;
+  background-color: $rule-strong;
   margin-bottom: 10px;
   align-self: stretch;
 }
@@ -164,11 +164,12 @@ const showRule = computed(
 
 .sig__seal-label {
   color: #a64c3e;
+  font-family: $font-serif;
   font-weight: 600;
   text-align: center;
-  line-height: 1.15;
   white-space: pre-line;
-  font-size: 15px;
+  font-size: 17px;
+  line-height: 20px;
 }
 
 .sig--login .sig__seal-label,

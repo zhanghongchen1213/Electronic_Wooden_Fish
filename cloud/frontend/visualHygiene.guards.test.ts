@@ -1,5 +1,6 @@
 /**
- * Story 6.9：视觉卫生 + 14 态门禁 + 对比度 + 真源边界。
+ * Story 6.9：视觉卫生 + 12 态门禁 + 对比度 + 真源边界。
+ * 2026-10-03：LOGIN 两态随去鉴权裁决移除，闭包 14→12（对拍范围 5 页）。
  * 扩展而非替换 shell.guards；扫描范围见裁决 G。
  */
 import { readFileSync, readdirSync, statSync } from 'node:fs'
@@ -202,7 +203,8 @@ describe('visual hygiene guards (Story 6.9)', () => {
 })
 
 describe('12-state reachability guards (Story 6.9)', () => {
-  const FOURTEEN: Array<{ frame: string; check: () => void }> = [
+  // 常量沿用旧名历史：原 14 态含 LOGIN，去鉴权后为 12 态
+  const TWELVE: Array<{ frame: string; check: () => void }> = [
     {
       frame: 'READING.LIVE',
       check: () => {
@@ -295,7 +297,7 @@ describe('12-state reachability guards (Story 6.9)', () => {
     },
   ]
 
-  it.each(FOURTEEN)('$frame 文案或相位可达', ({ check }) => {
+  it.each(TWELVE)('$frame 文案或相位可达', ({ check }) => {
     check()
   })
 
@@ -330,6 +332,17 @@ describe('12-state reachability guards (Story 6.9)', () => {
     expect(src).toContain('prefersReducedMotion')
     expect(src).toMatch(/reduceMotion/)
     expect(src).toMatch(/emit\('done'\)/)
+  })
+
+  it('四个 tab 页均接入内嵌自绘底栏与页头右插槽（2026-10-03 对拍裁决）', () => {
+    for (const page of ['reading', 'records', 'device', 'settings']) {
+      const src = readFileSync(join(srcRoot, `pages/${page}/index.vue`), 'utf8')
+      expect(src).toMatch(/bottom-nav|BottomNav/)
+      expect(src).toMatch(/uni\.hideTabBar/)
+    }
+    const shell = readFileSync(join(srcRoot, 'components/page-shell/PageShell.vue'), 'utf8')
+    expect(shell).toContain('header-right')
+    expect(shell).toMatch(/PaperTexture/)
   })
 })
 

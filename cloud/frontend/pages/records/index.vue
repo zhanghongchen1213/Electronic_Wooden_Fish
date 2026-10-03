@@ -1,11 +1,16 @@
 <template>
   <page-shell :title="RECORDS_COPY.pageTitle">
-    <view class="records">
-      <!-- 页眉状态胶囊（ready / fail 保留数字时） -->
-      <view v-if="statusLabel" class="records__status">
+    <template #header-right>
+      <!-- 页眉状态胶囊（ready / fail 保留数字时），固定于标题行右侧 -->
+      <view
+        v-if="statusLabel"
+        class="records__status"
+      >
         <text class="records__status-text">{{ statusLabel }}</text>
       </view>
+    </template>
 
+    <view class="records">
       <view class="records__rule" />
 
       <!-- loading -->
@@ -46,10 +51,8 @@
 
         <stat-ledger-row
           variant="pair"
-          left-icon="周"
           :left-label="RECORDS_COPY.weekLabel"
           :left-value="weekDisplay"
-          right-icon="月"
           :right-label="RECORDS_COPY.monthLabel"
           :right-value="monthDisplay"
         />
@@ -57,7 +60,6 @@
         <view class="records__rule" />
 
         <stat-ledger-row
-          icon="累"
           :label="RECORDS_COPY.totalLabel"
           :value="totalDisplay"
           :unit="RECORDS_COPY.totalUnit"
@@ -66,7 +68,6 @@
         <view class="records__rule" />
 
         <stat-ledger-row
-          icon="连"
           :label="RECORDS_COPY.streakLabel"
           :value="streakDisplay"
           :unit="RECORDS_COPY.streakUnit"
@@ -75,6 +76,8 @@
         <style-signature variant="records" />
       </view>
     </view>
+
+    <bottom-nav />
   </page-shell>
 </template>
 
@@ -94,6 +97,7 @@ import PageShell from '../../components/page-shell/PageShell.vue'
 import StatCard from '../../components/records/StatCard.vue'
 import StatLedgerRow from '../../components/records/StatLedgerRow.vue'
 import StyleSignature from '../../components/shared/StyleSignature.vue'
+import BottomNav from '../../components/bottom-nav/BottomNav.vue'
 import { useAppShellStore } from '../../stores/appShell'
 import { useRecordsStatsStore } from '../../stores/recordsStats'
 import { RECORDS_COPY } from '../../utils/constants'
@@ -149,6 +153,7 @@ function onRetry(): void {
 
 onShow(() => {
   shell.setCurrentTab('records')
+  uni.hideTabBar({ fail: () => {} })
   void loadStats('show')
 })
 
@@ -162,13 +167,10 @@ onPullDownRefresh(() => {
 
 .records {
   position: relative;
-  padding-bottom: 24px;
+  padding-bottom: calc(#{$nav-h} + 20px + env(safe-area-inset-bottom));
 }
 
 .records__status {
-  position: absolute;
-  right: 0;
-  top: -42px;
   min-width: 100px;
   height: 28px;
   padding: 0 10px;
@@ -183,6 +185,7 @@ onPullDownRefresh(() => {
 
 .records__status-text {
   color: $ink-2;
+  font-family: $font-sans;
   font-size: 12px;
   font-weight: 600;
   line-height: 1.2;
@@ -191,12 +194,12 @@ onPullDownRefresh(() => {
 
 .records__rule {
   height: 1px;
-  background-color: #9e7b5755;
+  background-color: $rule-strong;
   width: 100%;
 }
 
 .records__rule--gap {
-  margin: 16px 0 0;
+  margin: 20px 0 0;
 }
 
 .records__state {
@@ -224,7 +227,7 @@ onPullDownRefresh(() => {
   display: flex;
   flex-direction: column;
   gap: 0;
-  padding-top: 16px;
+  padding-top: 24px;
 }
 
 .records__fail-banner {
@@ -261,7 +264,8 @@ onPullDownRefresh(() => {
 }
 
 .records__retry-text {
-  color: $accent;
+  color: $danger;
+  font-family: $font-sans;
   font-size: 14px;
   font-weight: 600;
   line-height: 1.2;
