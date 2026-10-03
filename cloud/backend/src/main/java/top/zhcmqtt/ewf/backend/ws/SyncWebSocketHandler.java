@@ -25,6 +25,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 
 import jakarta.annotation.PostConstruct;
 import top.zhcmqtt.ewf.backend.common.exception.ErrorCode;
+import top.zhcmqtt.ewf.backend.common.security.UserContext;
 import top.zhcmqtt.ewf.backend.dto.sync.StateSnapshotResponse;
 import top.zhcmqtt.ewf.backend.service.StateSnapshotService;
 
@@ -99,11 +100,8 @@ public class SyncWebSocketHandler extends TextWebSocketHandler implements Dispos
 
     @Override
     public void afterConnectionEstablished(WebSocketSession session) {
-        String deviceId = (String) session.getAttributes().get(WsHandshakeInterceptor.ATTR_DEVICE_ID);
-        if (deviceId == null || deviceId.isBlank()) {
-            closeQuietly(session, new CloseStatus(CLOSE_PROTOCOL, "缺少设备身份"));
-            return;
-        }
+        // 2026-10-02 裁决：无鉴权单一固定身份（原握手拦截器写入 attributes 的链路已删）
+        String deviceId = UserContext.currentDeviceId();
         SessionState incoming = new SessionState(session, deviceId);
         SessionState previous = sessionsByDevice.put(deviceId, incoming);
         deviceBySessionId.put(session.getId(), deviceId);

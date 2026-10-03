@@ -2,6 +2,8 @@
 
 # 经验：后端 REST 信封与微信登录（miaowu → EWF 适配）
 
+> **2026-10-02 裁决注记**：小程序完全自用测试，EWF 已彻底移除鉴权（微信登录、JWT 过滤器、WechatMiniClient、`application*.yml` 的 jwt/wechat 段、identity.json 持久化文件均已删除），身份收敛为单一固定 `UserContext.SOLO_DEVICE_ID`。本文的微信登录/JWT 章节自此仅作 miaowu 经验存档，不代表 EWF 现状；信封/错误码/WebSocket 部分仍有效。
+>
 > 用途：EWF `cloud/backend`（Spring Boot 3.3.7 + Java 17 + Maven，JSON 零库、单实例单进程）**软件层后端**开工前的迁移经验。本文只写「从 miaowu 后端代码里实际读到的做法/坑位」及其在 EWF 的用法；**模块级实现规格不在此定义**——EWF 前端面 `{code,message,data}` 信封、WebSocket 端点派生与**同步域**错误码已由 `docs/contracts/sync-contract.md`（`contract_version` = `SC-1.0.0`）冻结（AD-16/17）；其余 REST 路径与身份入口错误码不在该契约范围内（属 4.4 与各模块 spec），本文只引用、不复制该契约的同步域部分。
 >
 > 阅读对象：后续 backend spec/实现 agent。§①—§⑧ 一律用两列「miaowu 做法 → EWF 怎么用」；§⑨ 是排除表。逐条标注可复制的类/文件，EWF 侧给出**落盘即用或裁剪**的结论。

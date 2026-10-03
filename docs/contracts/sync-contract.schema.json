@@ -8,11 +8,10 @@
       "unit": "无",
       "owner": "backend",
       "authority": "backend",
-      "domain": "不透明标识；单身份单设备，不提供绑定、迁移与多设备",
+      "domain": "不透明标识；2026-10-02 裁决后为单一固定设备身份（ewf-solo），不提供绑定、迁移与多设备",
       "channel": [
         "https-report",
-        "ws-frame",
-        "persistence-file"
+        "ws-frame"
       ],
       "source": "PRD §7"
     },
@@ -633,17 +632,6 @@
       "migration": "新增字段时可省略读取并取默认值；删除或改义字段必须递增 schema_version 并提供一次性重写"
     },
     {
-      "name": "identity.json",
-      "root": "app.data-dir",
-      "schema_version": 1,
-      "facts": "单身份单设备映射",
-      "fields": [
-        "device_id"
-      ],
-      "single_transaction": false,
-      "migration": "身份不可迁移；重建即重新绑定"
-    },
-    {
       "name": "commands.json",
       "root": "app.data-dir",
       "schema_version": 1,
@@ -688,7 +676,6 @@
       "scope": "backend",
       "carrier": "app.data-dir 下的 §11 文件表",
       "fields": [
-        "device_id",
         "local_total",
         "acked_total",
         "round_id",

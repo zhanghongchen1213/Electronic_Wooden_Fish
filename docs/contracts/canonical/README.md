@@ -90,7 +90,7 @@ python3 docs/contracts/canonical/tests/run_canonical_tests.py
 | --- | --- | --- |
 | cloud 后端 | `cloud/env-scripts/build-prod-backend.sh`，位于 `mvn ... package` 之前 | 本目录已接入 |
 | 设备（Embedded） | 设备固件构建流程，引用 `generated/ewf_scripture_canonical.h` | Story 3.1 |
-| 小程序（frontend） | 小程序打包流程，引用 `cloud/frontend/src/canonical/heart-sutra.generated.ts` | Story 6.1 |
+| 小程序（frontend） | 小程序打包流程，引用 `cloud/frontend/canonical/heart-sutra.generated.ts` | Story 6.1 |
 
 cloud 后端在 `cloud/backend/pom.xml` 就位（Story 4.3）前，`build-prod-backend.sh` 会在更早处
 退出；该门禁位于 `mvn` 之前，pom 补齐后即生效。

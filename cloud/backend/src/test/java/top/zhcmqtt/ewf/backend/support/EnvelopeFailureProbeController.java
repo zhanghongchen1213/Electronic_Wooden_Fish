@@ -37,12 +37,6 @@ public class EnvelopeFailureProbeController {
         throw new BusinessException(ErrorCode.SCRIPTURE_VERSION_MISMATCH, "经文版本不一致");
     }
 
-    /** 业务错误：非 200 业务码（契约 §12 的 401/40101），用于验证 HTTP 状态确由业务码推导。 */
-    @GetMapping("/unauthorized")
-    public ApiResponse<Void> unauthorized() {
-        throw BusinessException.unauthorized("令牌失效");
-    }
-
     /** 未捕获异常：用于验证兜底 500 的固定文案。 */
     @GetMapping("/boom")
     public ApiResponse<Void> boom() {

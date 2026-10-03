@@ -26,7 +26,7 @@ TOOL = CANONICAL_DIR / "scripture_tool.py"
 
 CANONICAL_REL = "docs/contracts/canonical"
 BACKEND_REL = "cloud/backend/src/main/resources/canonical/heart-sutra.json"
-FRONTEND_REL = "cloud/frontend/src/canonical/heart-sutra.generated.ts"
+FRONTEND_REL = "cloud/frontend/canonical/heart-sutra.generated.ts"
 HEADER_REL = "docs/contracts/canonical/generated/ewf_scripture_canonical.h"
 
 SOURCE_NAME = "heart-sutra.txt"

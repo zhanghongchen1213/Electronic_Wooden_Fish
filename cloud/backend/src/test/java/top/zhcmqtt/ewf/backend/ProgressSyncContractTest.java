@@ -40,10 +40,10 @@ import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.node.ObjectNode;
 
-import top.zhcmqtt.ewf.backend.client.WechatMiniClient;
 import top.zhcmqtt.ewf.backend.common.exception.ErrorCode;
 import top.zhcmqtt.ewf.backend.dto.sync.StateSnapshotResponse;
 import top.zhcmqtt.ewf.backend.dto.sync.SyncReportRequest;
+import top.zhcmqtt.ewf.backend.common.security.UserContext;
 import top.zhcmqtt.ewf.backend.service.CommandsStore;
 import top.zhcmqtt.ewf.backend.service.DeviceStateStore;
 import top.zhcmqtt.ewf.backend.service.ProgressStore;
@@ -61,9 +61,6 @@ import top.zhcmqtt.ewf.backend.support.TestWorkspace;
 class ProgressSyncContractTest {
 
     private static final Path DATA_DIR;
-
-    private static final String TEST_SECRET =
-            "0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef";
 
     private static final String REPORT_PATH = "/api/v1/sync/report";
 
@@ -88,9 +85,6 @@ class ProgressSyncContractTest {
     @DynamicPropertySource
     static void properties(DynamicPropertyRegistry registry) {
         registry.add("app.data-dir", () -> DATA_DIR.toString());
-        registry.add("jwt.secret", () -> TEST_SECRET);
-        registry.add("jwt.access-token-expiration", () -> "7200000");
-        registry.add("jwt.refresh-token-expiration", () -> "2592000000");
     }
 
     @Autowired
@@ -108,28 +102,17 @@ class ProgressSyncContractTest {
     @Autowired
     private DeviceStateStore deviceStateStore;
 
-    @MockBean
-    private WechatMiniClient wechatMiniClient;
 
-    private String accessToken;
 
     private String deviceId;
 
     @BeforeEach
-    void 重置临时数据目录并登录() throws Exception {
+    void 重置临时数据目录() throws Exception {
         for (String file : List.of("identity.json", ProgressStore.fileName(), CommandsStore.fileName(),
                 DeviceStateStore.fileName(), "daily_stats.json")) {
             Files.deleteIfExists(DATA_DIR.resolve(file));
         }
-        when(wechatMiniClient.exchangeCode("code-a")).thenReturn("openid-a");
-        when(wechatMiniClient.exchangeCode("code-b")).thenReturn("openid-b");
-
-        JsonNode login = json(mockMvc.perform(post("/api/v1/auth/login/wechat-mini")
-                .contentType("application/json")
-                .content(objectMapper.writeValueAsString(Map.of("code", "code-a"))))
-                .andExpect(status().isOk()).andReturn());
-        deviceId = login.path("data").path("deviceId").asText();
-        accessToken = login.path("data").path("accessToken").asText();
+        deviceId = UserContext.currentDeviceId();
     }
 
     @AfterAll
@@ -145,29 +128,6 @@ class ProgressSyncContractTest {
                 });
             }
         }
-    }
-
-    @Test
-    @DisplayName("新端点默认受 Bearer 保护：无令牌 40103，身份不匹配 40300")
-    void 鉴权保护() throws Exception {
-        JsonNode missing = json(mockMvc.perform(post(REPORT_PATH)
-                .contentType(MediaType.APPLICATION_JSON)
-                .content(objectMapper.writeValueAsString(reportBody(10, 0, 1, 1, false, "a1"))))
-                .andExpect(status().isUnauthorized()).andReturn());
-        assertEquals(ErrorCode.TOKEN_MISSING, missing.path("code").asInt());
-
-        Files.deleteIfExists(DATA_DIR.resolve("identity.json"));
-        mockMvc.perform(post("/api/v1/auth/login/wechat-mini")
-                .contentType("application/json")
-                .content(objectMapper.writeValueAsString(Map.of("code", "code-b"))))
-                .andExpect(status().isOk());
-
-        JsonNode foreign = json(mockMvc.perform(post(REPORT_PATH)
-                .header("Authorization", "Bearer " + accessToken)
-                .contentType(MediaType.APPLICATION_JSON)
-                .content(objectMapper.writeValueAsString(reportBody(10, 0, 1, 1, false, "a2"))))
-                .andExpect(status().isForbidden()).andReturn());
-        assertEquals(ErrorCode.IDENTITY_MISMATCH, foreign.path("code").asInt());
     }
 
     @Test
@@ -223,7 +183,6 @@ class ProgressSyncContractTest {
         ObjectNode body = reportBody(1, 0, 1, 1, false, "bat-1");
         body.put("battery_percent", 101);
         JsonNode response = json(mockMvc.perform(post(REPORT_PATH)
-                .header("Authorization", "Bearer " + accessToken)
                 .contentType(MediaType.APPLICATION_JSON)
                 .content(objectMapper.writeValueAsString(body)))
                 .andExpect(status().isBadRequest()).andReturn());
@@ -261,7 +220,6 @@ class ProgressSyncContractTest {
         ObjectNode badVersion = reportBody(1100, 1000, 1, 2, false, "q2");
         badVersion.put("scripture_version", "HS-0.0.0");
         JsonNode mismatch = json(mockMvc.perform(post(REPORT_PATH)
-                .header("Authorization", "Bearer " + accessToken)
                 .contentType(MediaType.APPLICATION_JSON)
                 .content(objectMapper.writeValueAsString(badVersion)))
                 .andExpect(status().isOk()).andReturn());
@@ -275,7 +233,6 @@ class ProgressSyncContractTest {
     void 既有查询端点仍可用() throws Exception {
         json(report(12, 0, 1, 3, false, "s1"));
         JsonNode snap = json(mockMvc.perform(get(SNAPSHOT_PATH)
-                .header("Authorization", "Bearer " + accessToken)
                 .param("acked_total", "12")
                 .param("snapshot_seq", "12"))
                 .andExpect(status().isOk()).andReturn());
@@ -328,7 +285,6 @@ class ProgressSyncContractTest {
     private MvcResult report(int local, int acked, int roundId, int cursor, boolean pending, String actionId)
             throws Exception {
         return mockMvc.perform(post(REPORT_PATH)
-                .header("Authorization", "Bearer " + accessToken)
                 .contentType(MediaType.APPLICATION_JSON)
                 .content(objectMapper.writeValueAsString(
                         reportBody(local, acked, roundId, cursor, pending, actionId))))

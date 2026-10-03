@@ -39,8 +39,8 @@ import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.node.ObjectNode;
 
-import top.zhcmqtt.ewf.backend.client.WechatMiniClient;
 import top.zhcmqtt.ewf.backend.common.exception.ErrorCode;
+import top.zhcmqtt.ewf.backend.common.security.UserContext;
 import top.zhcmqtt.ewf.backend.dto.sync.StateSnapshotResponse;
 import top.zhcmqtt.ewf.backend.service.CommandsStore;
 import top.zhcmqtt.ewf.backend.service.DeviceStateStore;
@@ -76,9 +76,6 @@ class StateSnapshotContractTest {
 
     private static final Path DATA_DIR;
 
-    private static final String TEST_SECRET =
-            "0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef";
-
     private static final String SNAPSHOT_PATH = "/api/v1/sync/snapshot";
 
     /** 契约注册表中发出快照的帧类型（§10.1）。 */
@@ -100,9 +97,6 @@ class StateSnapshotContractTest {
     @DynamicPropertySource
     static void properties(DynamicPropertyRegistry registry) {
         registry.add("app.data-dir", () -> DATA_DIR.toString());
-        registry.add("jwt.secret", () -> TEST_SECRET);
-        registry.add("jwt.access-token-expiration", () -> "7200000");
-        registry.add("jwt.refresh-token-expiration", () -> "2592000000");
     }
 
     @Autowired
@@ -120,28 +114,17 @@ class StateSnapshotContractTest {
     @Autowired
     private DeviceStateStore deviceStateStore;
 
-    @MockBean
-    private WechatMiniClient wechatMiniClient;
 
-    private String accessToken;
 
     private String deviceId;
 
     @BeforeEach
-    void 重置临时数据目录并登录() throws Exception {
+    void 重置临时数据目录() throws Exception {
         for (String file : List.of("identity.json", ProgressStore.fileName(), CommandsStore.fileName(),
                 DeviceStateStore.fileName(), "daily_stats.json")) {
             Files.deleteIfExists(DATA_DIR.resolve(file));
         }
-        when(wechatMiniClient.exchangeCode("code-a")).thenReturn("openid-a");
-        when(wechatMiniClient.exchangeCode("code-b")).thenReturn("openid-b");
-
-        JsonNode login = json(mockMvc.perform(post("/api/v1/auth/login/wechat-mini")
-                .contentType("application/json")
-                .content(objectMapper.writeValueAsString(Map.of("code", "code-a"))))
-                .andExpect(status().isOk()).andReturn());
-        deviceId = login.path("data").path("deviceId").asText();
-        accessToken = login.path("data").path("accessToken").asText();
+        deviceId = UserContext.currentDeviceId();
     }
 
     @AfterAll
@@ -180,36 +163,15 @@ class StateSnapshotContractTest {
     }
 
     @Test
-    @DisplayName("新端点默认受 Bearer 保护：无令牌 40103，令牌主体与落盘身份不符 40300")
-    void 新端点受Bearer保护() throws Exception {
-        JsonNode missing = json(mockMvc.perform(get(SNAPSHOT_PATH))
-                .andExpect(status().isUnauthorized()).andReturn());
-        assertEquals(ErrorCode.TOKEN_MISSING, missing.path("code").asInt());
-
-        Files.deleteIfExists(DATA_DIR.resolve("identity.json"));
-        mockMvc.perform(post("/api/v1/auth/login/wechat-mini")
-                .contentType("application/json")
-                .content(objectMapper.writeValueAsString(Map.of("code", "code-b"))))
-                .andExpect(status().isOk());
-
-        JsonNode foreign = json(mockMvc.perform(get(SNAPSHOT_PATH)
-                .header("Authorization", "Bearer " + accessToken))
-                .andExpect(status().isForbidden()).andReturn());
-        assertEquals(ErrorCode.IDENTITY_MISMATCH, foreign.path("code").asInt());
-    }
-
-    @Test
     @DisplayName("越域/非法基准参数是协议级错误：回 400 + 40000，不得落进业务拒绝")
     void 非法基准参数回参数错误() throws Exception {
         JsonNode negative = json(mockMvc.perform(get(SNAPSHOT_PATH)
-                .header("Authorization", "Bearer " + accessToken)
                 .param("acked_total", "-1"))
                 .andExpect(status().isBadRequest()).andReturn());
         assertEquals(ErrorCode.PARAM_INVALID, negative.path("code").asInt(),
                 "越域声明必须回参数错误，不得被判成 20003「请按云端基准重建」");
 
         JsonNode nonNumeric = json(mockMvc.perform(get(SNAPSHOT_PATH)
-                .header("Authorization", "Bearer " + accessToken)
                 .param("snapshot_seq", "abc"))
                 .andExpect(status().isBadRequest()).andReturn());
         assertEquals(ErrorCode.PARAM_INVALID, nonNumeric.path("code").asInt(),
@@ -351,7 +313,8 @@ class StateSnapshotContractTest {
     }
 
     private MvcResult call(Integer ackedTotal, Integer snapshotSeq) throws Exception {
-        var request = get(SNAPSHOT_PATH).header("Authorization", "Bearer " + accessToken);
+        org.springframework.test.web.servlet.request.MockHttpServletRequestBuilder request =
+                get(SNAPSHOT_PATH);
         if (ackedTotal != null) {
             request = request.param("acked_total", ackedTotal.toString());
         }

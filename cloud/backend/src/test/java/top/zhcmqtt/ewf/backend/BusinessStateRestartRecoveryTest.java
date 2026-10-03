@@ -41,7 +41,6 @@ import top.zhcmqtt.ewf.backend.service.CommandsStore;
 import top.zhcmqtt.ewf.backend.service.DailyStatsStore;
 import top.zhcmqtt.ewf.backend.service.DeviceStateStore;
 import top.zhcmqtt.ewf.backend.service.HistoryStatsService;
-import top.zhcmqtt.ewf.backend.service.IdentityStore;
 import top.zhcmqtt.ewf.backend.service.ProgressStore;
 import top.zhcmqtt.ewf.backend.service.ProgressSyncService;
 import top.zhcmqtt.ewf.backend.service.StateSnapshotService;
@@ -163,8 +162,6 @@ class BusinessStateRestartRecoveryTest {
         assertEquals(Conclusion.OK, fileConclusion(recovery, CommandsStore.fileName()));
         assertEquals(Conclusion.OK, fileConclusion(recovery, DailyStatsStore.fileName()));
         assertEquals(Conclusion.OK, fileConclusion(recovery, DeviceStateStore.fileName()));
-        assertEquals(Conclusion.MISSING, fileConclusion(recovery, IdentityStore.fileName()),
-                "本剧本未建 identity；缺失须记为 MISSING 且合法");
         assertFalse(Files.exists(orphan), "恢复后 orphan 应被 best-effort 清理");
 
         StateSnapshotResponse snap = restarted.snapshot.assemble(DEVICE_ID);
@@ -224,10 +221,8 @@ class BusinessStateRestartRecoveryTest {
         assertTrue(historyView.last7DaysTaps() >= 0);
         assertTrue(historyView.last30DaysTaps() >= 0);
 
-        // device_state / identity 可读（缺失合法）且不改写高水位
+        // device_state 可读（缺失合法）且不改写高水位
         assertTrue(restarted.deviceState.read().isPresent());
-        assertTrue(IdentityStore.strictRead(dataDir.resolve(IdentityStore.fileName())).isEmpty(),
-                "identity 缺失合法");
         assertArrayEquals(progressDigest, sha256(dataDir.resolve(ProgressStore.fileName())),
                 "半写 orphan 不得改写权威 progress 字节");
 
@@ -506,9 +501,9 @@ class BusinessStateRestartRecoveryTest {
                 StandardCharsets.UTF_8);
     }
 
-    /** 五文件证据：存在则写摘要，缺失则记 MISSING（identity/派生缺失合法）。 */
+    /** 五文件证据：存在则写摘要，缺失则记 MISSING（identity.json 已随去鉴权移除，仅记录磁盘残留）。 */
     private static void writeIdentityEvidence(Path path, Path dir) throws Exception {
-        writePresenceDigest(path, dir, IdentityStore.fileName());
+        writePresenceDigest(path, dir, "identity.json");
     }
 
     private static void writePresenceDigest(Path path, Path dir, String fileName) throws Exception {

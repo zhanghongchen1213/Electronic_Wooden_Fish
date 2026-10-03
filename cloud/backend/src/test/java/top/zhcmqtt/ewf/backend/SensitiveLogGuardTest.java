@@ -1,8 +1,5 @@
 package top.zhcmqtt.ewf.backend;
 
-import static org.junit.jupiter.api.Assertions.assertFalse;
-import static org.junit.jupiter.api.Assertions.assertTrue;
-import static org.mockito.Mockito.when;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
@@ -25,33 +22,26 @@ import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
 import org.springframework.boot.test.context.SpringBootTest;
-import org.springframework.boot.test.mock.mockito.MockBean;
 import org.springframework.boot.test.web.server.LocalServerPort;
 import org.springframework.context.annotation.Import;
 import org.springframework.http.MediaType;
 import org.springframework.test.context.DynamicPropertyRegistry;
 import org.springframework.test.context.DynamicPropertySource;
 import org.springframework.test.web.servlet.MockMvc;
-import org.springframework.web.socket.client.standard.StandardWebSocketClient;
-import org.springframework.web.socket.handler.TextWebSocketHandler;
 
-import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.node.ObjectNode;
 
 import ch.qos.logback.classic.Logger;
 import ch.qos.logback.classic.spi.ILoggingEvent;
 import ch.qos.logback.core.read.ListAppender;
-import top.zhcmqtt.ewf.backend.client.WechatMiniClient;
 import top.zhcmqtt.ewf.backend.common.exception.GlobalExceptionHandler;
-import top.zhcmqtt.ewf.backend.common.security.JwtAuthenticationFilter;
-import top.zhcmqtt.ewf.backend.common.security.UserContext;
 import top.zhcmqtt.ewf.backend.service.ProgressStore;
 import top.zhcmqtt.ewf.backend.support.EnvelopeFailureProbeController;
-import top.zhcmqtt.ewf.backend.ws.WsHandshakeInterceptor;
 
 /**
- * Story 5.6：敏感日志窄扫描 —— sync 写路径与 WS 握手失败不得泄漏会话材料。
+ * Story 5.6：敏感日志窄扫描 —— sync 写路径与 500 兜底不得泄漏会话材料。
+ * 2026-10-02 裁决：鉴权链路已移除；session_key/openid/JWT 明文的日志卫生守卫保留作回归防线。
  */
 @SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT)
 @AutoConfigureMockMvc
@@ -60,9 +50,6 @@ import top.zhcmqtt.ewf.backend.ws.WsHandshakeInterceptor;
 class SensitiveLogGuardTest {
 
     private static final Path DATA_DIR;
-
-    private static final String TEST_SECRET =
-            "0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef";
 
     /** JWT 三段式明文粗检（header.payload.sig）。 */
     private static final Pattern JWT_TRIPLE = Pattern.compile(
@@ -81,9 +68,6 @@ class SensitiveLogGuardTest {
     @DynamicPropertySource
     static void properties(DynamicPropertyRegistry registry) {
         registry.add("app.data-dir", () -> DATA_DIR.toString());
-        registry.add("jwt.secret", () -> TEST_SECRET);
-        registry.add("jwt.access-token-expiration", () -> "7200000");
-        registry.add("jwt.refresh-token-expiration", () -> "2592000000");
     }
 
     @LocalServerPort
@@ -95,24 +79,12 @@ class SensitiveLogGuardTest {
     @Autowired
     private ObjectMapper objectMapper;
 
-    @MockBean
-    private WechatMiniClient wechatMiniClient;
-
-    private String accessToken;
-
     @BeforeEach
     void reset() throws Exception {
         for (String file : List.of("identity.json", ProgressStore.fileName(), "commands.json",
                 "device_state.json", "daily_stats.json")) {
             Files.deleteIfExists(DATA_DIR.resolve(file));
         }
-        UserContext.clear();
-        when(wechatMiniClient.exchangeCode("code-a")).thenReturn("openid-a");
-        JsonNode login = json(mockMvc.perform(post("/api/v1/auth/login/wechat-mini")
-                .contentType(MediaType.APPLICATION_JSON)
-                .content("{\"code\":\"code-a\"}"))
-                .andExpect(status().isOk()).andReturn());
-        accessToken = login.path("data").path("accessToken").asText();
     }
 
     @AfterAll
@@ -133,8 +105,7 @@ class SensitiveLogGuardTest {
     @Test
     @DisplayName("sync 拒绝与 500 兜底日志不含 session_key/Authorization 值/JWT 明文/openid")
     void syncAndHandlerLogsAreClean() throws Exception {
-        ListAppender<ILoggingEvent> appender = attach(
-                GlobalExceptionHandler.class, JwtAuthenticationFilter.class);
+        ListAppender<ILoggingEvent> appender = attach(GlobalExceptionHandler.class);
 
         try {
             ObjectNode body = MAPPER.createObjectNode();
@@ -154,47 +125,15 @@ class SensitiveLogGuardTest {
             body.put("action_id", "sens-1");
 
             mockMvc.perform(post("/api/v1/sync/report")
-                    .header("Authorization", "Bearer " + accessToken)
                     .contentType(MediaType.APPLICATION_JSON)
                     .content(objectMapper.writeValueAsString(body)))
                     .andExpect(status().isOk());
 
-            mockMvc.perform(get("/api/v1/sync/snapshot")
-                    .header("Authorization", "Bearer " + accessToken + "-tampered"))
-                    .andExpect(status().isUnauthorized());
-
             mockMvc.perform(get("/__probe/boom")).andExpect(status().isInternalServerError());
 
-            assertLogsClean(appender, accessToken);
+            assertLogsClean(appender);
         } finally {
-            detach(appender, GlobalExceptionHandler.class, JwtAuthenticationFilter.class);
-        }
-    }
-
-    @Test
-    @DisplayName("WS 握手失败日志不含完整 JWT / session_key / Authorization 值")
-    void wsHandshakeFailureLogsAreClean() throws Exception {
-        ListAppender<ILoggingEvent> appender = attach(WsHandshakeInterceptor.class);
-        String leakToken = accessToken;
-        try {
-            StandardWebSocketClient client = new StandardWebSocketClient();
-            try {
-                client.execute(new TextWebSocketHandler() {
-                }, "ws://127.0.0.1:" + port + "/api/v1/ws?token=" + leakToken + "bad")
-                        .get();
-            } catch (Exception ignored) {
-                // 握手拒绝属预期
-            }
-            try {
-                client.execute(new TextWebSocketHandler() {
-                }, "ws://127.0.0.1:" + port + "/api/v1/ws")
-                        .get();
-            } catch (Exception ignored) {
-                // 缺 token
-            }
-            assertLogsClean(appender, leakToken);
-        } finally {
-            detach(appender, WsHandshakeInterceptor.class);
+            detach(appender, GlobalExceptionHandler.class);
         }
     }
 
@@ -213,7 +152,7 @@ class SensitiveLogGuardTest {
         }
     }
 
-    private static void assertLogsClean(ListAppender<ILoggingEvent> appender, String accessToken) {
+    private static void assertLogsClean(ListAppender<ILoggingEvent> appender) {
         String joined = appender.list.stream()
                 .map(ILoggingEvent::getFormattedMessage)
                 .collect(Collectors.joining("\n"))
@@ -225,14 +164,14 @@ class SensitiveLogGuardTest {
                 "日志不得含 AppSecret");
         assertFalse(joined.contains("openid-a"), "日志不得含未脱敏 openid");
         assertFalse(JWT_TRIPLE.matcher(joined).find(), "日志不得含 JWT 三段式明文");
-        if (accessToken != null && !accessToken.isBlank()) {
-            assertFalse(joined.contains(accessToken.toLowerCase(Locale.ROOT)),
-                    "日志不得回显完整 access token");
-        }
         assertTrue(true);
     }
 
-    private JsonNode json(org.springframework.test.web.servlet.MvcResult result) throws Exception {
-        return objectMapper.readTree(result.getResponse().getContentAsString(StandardCharsets.UTF_8));
+    private static void assertFalse(boolean condition, String message) {
+        org.junit.jupiter.api.Assertions.assertFalse(condition, message);
+    }
+
+    private static void assertTrue(boolean condition) {
+        org.junit.jupiter.api.Assertions.assertTrue(condition);
     }
 }

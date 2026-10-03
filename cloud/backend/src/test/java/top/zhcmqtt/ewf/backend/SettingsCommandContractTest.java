@@ -37,7 +37,6 @@ import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.node.ObjectNode;
 
-import top.zhcmqtt.ewf.backend.client.WechatMiniClient;
 import top.zhcmqtt.ewf.backend.common.exception.ErrorCode;
 import top.zhcmqtt.ewf.backend.service.CommandsStore;
 import top.zhcmqtt.ewf.backend.service.DeviceStateStore;
@@ -56,9 +55,6 @@ import top.zhcmqtt.ewf.backend.support.TestWorkspace;
 class SettingsCommandContractTest {
 
     private static final Path DATA_DIR;
-
-    private static final String TEST_SECRET =
-            "0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef";
 
     private static final String COMMAND_PATH = "/api/v1/sync/command";
 
@@ -81,9 +77,6 @@ class SettingsCommandContractTest {
     @DynamicPropertySource
     static void properties(DynamicPropertyRegistry registry) {
         registry.add("app.data-dir", () -> DATA_DIR.toString());
-        registry.add("jwt.secret", () -> TEST_SECRET);
-        registry.add("jwt.access-token-expiration", () -> "7200000");
-        registry.add("jwt.refresh-token-expiration", () -> "2592000000");
     }
 
     @Autowired
@@ -98,25 +91,14 @@ class SettingsCommandContractTest {
     @Autowired
     private CommandsStore commandsStore;
 
-    @MockBean
-    private WechatMiniClient wechatMiniClient;
 
-    private String accessToken;
 
     @BeforeEach
-    void 重置临时数据目录并登录() throws Exception {
+    void 重置临时数据目录() throws Exception {
         for (String file : List.of("identity.json", ProgressStore.fileName(), CommandsStore.fileName(),
                 DeviceStateStore.fileName(), "daily_stats.json")) {
             Files.deleteIfExists(DATA_DIR.resolve(file));
         }
-        when(wechatMiniClient.exchangeCode("code-a")).thenReturn("openid-a");
-        when(wechatMiniClient.exchangeCode("code-b")).thenReturn("openid-b");
-
-        JsonNode login = json(mockMvc.perform(post("/api/v1/auth/login/wechat-mini")
-                .contentType("application/json")
-                .content(objectMapper.writeValueAsString(Map.of("code", "code-a"))))
-                .andExpect(status().isOk()).andReturn());
-        accessToken = login.path("data").path("accessToken").asText();
     }
 
     @AfterAll
@@ -132,16 +114,6 @@ class SettingsCommandContractTest {
                 });
             }
         }
-    }
-
-    @Test
-    @DisplayName("command 默认受 Bearer 保护：无令牌 40103")
-    void 鉴权保护() throws Exception {
-        JsonNode missing = json(mockMvc.perform(post(COMMAND_PATH)
-                .contentType(MediaType.APPLICATION_JSON)
-                .content(objectMapper.writeValueAsString(commandBody(50, "mid", 15, "x", null))))
-                .andExpect(status().isUnauthorized()).andReturn());
-        assertEquals(ErrorCode.TOKEN_MISSING, missing.path("code").asInt());
     }
 
     @Test
@@ -226,28 +198,24 @@ class SettingsCommandContractTest {
         assertFalse(commandsStore.read().isPresent());
 
         JsonNode badBrightness = json(mockMvc.perform(post(COMMAND_PATH)
-                .header("Authorization", "Bearer " + accessToken)
                 .contentType(MediaType.APPLICATION_JSON)
                 .content(objectMapper.writeValueAsString(commandBody(50, "medium", 15, "x", null))))
                 .andExpect(status().isBadRequest()).andReturn());
         assertEquals(ErrorCode.PARAM_INVALID, badBrightness.path("code").asInt());
 
         JsonNode badTimeout = json(mockMvc.perform(post(COMMAND_PATH)
-                .header("Authorization", "Bearer " + accessToken)
                 .contentType(MediaType.APPLICATION_JSON)
                 .content(objectMapper.writeValueAsString(commandBody(50, "mid", 10, "y", null))))
                 .andExpect(status().isBadRequest()).andReturn());
         assertEquals(ErrorCode.PARAM_INVALID, badTimeout.path("code").asInt());
 
         JsonNode badVolumeHigh = json(mockMvc.perform(post(COMMAND_PATH)
-                .header("Authorization", "Bearer " + accessToken)
                 .contentType(MediaType.APPLICATION_JSON)
                 .content(objectMapper.writeValueAsString(commandBody(101, "mid", 15, "vol-hi", null))))
                 .andExpect(status().isBadRequest()).andReturn());
         assertEquals(ErrorCode.PARAM_INVALID, badVolumeHigh.path("code").asInt());
 
         JsonNode badVolumeLow = json(mockMvc.perform(post(COMMAND_PATH)
-                .header("Authorization", "Bearer " + accessToken)
                 .contentType(MediaType.APPLICATION_JSON)
                 .content(objectMapper.writeValueAsString(commandBody(-1, "mid", 15, "vol-lo", null))))
                 .andExpect(status().isBadRequest()).andReturn());
@@ -271,7 +239,6 @@ class SettingsCommandContractTest {
     private MvcResult command(int volume, String brightness, int timeout, String actionId,
             Integer baseRevision) throws Exception {
         return mockMvc.perform(post(COMMAND_PATH)
-                .header("Authorization", "Bearer " + accessToken)
                 .contentType(MediaType.APPLICATION_JSON)
                 .content(objectMapper.writeValueAsString(
                         commandBody(volume, brightness, timeout, actionId, baseRevision))))
@@ -309,7 +276,6 @@ class SettingsCommandContractTest {
         body.put("firmware_version", "1.0.0");
         body.put("action_id", actionId);
         return mockMvc.perform(post(REPORT_PATH)
-                .header("Authorization", "Bearer " + accessToken)
                 .contentType(MediaType.APPLICATION_JSON)
                 .content(objectMapper.writeValueAsString(body)))
                 .andExpect(status().isOk()).andReturn();

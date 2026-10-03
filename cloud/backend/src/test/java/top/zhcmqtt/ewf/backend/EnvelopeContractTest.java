@@ -98,16 +98,6 @@ class EnvelopeContractTest {
     }
 
     @Test
-    @DisplayName("非 200 业务码：HTTP 状态由码推导（40101 回 401）")
-    void 非200业务码由码推导HTTP状态() throws Exception {
-        JsonNode body = jsonOf(get("/__probe/unauthorized"), 401);
-
-        assertEquals(40101, body.get("code").asInt(), "令牌失效应回 40101");
-        assertEquals("令牌失效", body.get("message").asText());
-        assertEquals(Set.of("code", "message"), fieldNames(body));
-    }
-
-    @Test
     @DisplayName("协议错误使用对应 HTTP 状态：畸形 JSON 为 400 + 40001，校验失败为 400 + 40000")
     void 协议错误使用对应HTTP状态() throws Exception {
         JsonNode malformed = jsonOf(post("/__probe/echo")
@@ -133,9 +123,6 @@ class EnvelopeContractTest {
         appender.start();
         handlerLogger.addAppender(appender);
         try {
-            JsonNode methodNotAllowed = jsonOf(post("/api/v1/health"), 401);
-            assertEquals(40103, methodNotAllowed.get("code").asInt(), "受保护 API 缺少令牌应回 40103");
-
             MvcResult wrongMethod = responseOf(get("/__probe/echo"), 405);
             assertEquals(40500, bodyOf(wrongMethod).get("code").asInt(), "方法不支持应回 40500");
             String allow = wrongMethod.getResponse().getHeader("Allow");
@@ -165,11 +152,8 @@ class EnvelopeContractTest {
     }
 
     @Test
-    @DisplayName("未匹配路径回 HTTP 404 + 40400，受保护 API 缺令牌优先回 40103")
+    @DisplayName("未匹配路径回 HTTP 404 + 40400")
     void 未匹配路径回404而非500() throws Exception {
-        JsonNode protectedMissing = jsonOf(get("/api/v1/not-a-real-endpoint"), 401);
-        assertEquals(40103, protectedMissing.get("code").asInt(), "未匹配的受保护 API 应先回 40103");
-
         JsonNode notFound = jsonOf(get("/not-a-real-endpoint"), 404);
         assertEquals(40400, notFound.get("code").asInt(), "未匹配路径应回 40400，不得落兜底 500");
     }

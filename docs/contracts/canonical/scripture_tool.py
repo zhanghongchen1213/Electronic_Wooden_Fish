@@ -30,7 +30,7 @@ MANIFEST_REL = CANONICAL_REL / "heart-sutra.manifest.json"
 README_REL = CANONICAL_REL / "README.md"
 HEADER_REL = CANONICAL_REL / "generated" / "ewf_scripture_canonical.h"
 BACKEND_REL = Path("cloud/backend/src/main/resources/canonical/heart-sutra.json")
-FRONTEND_REL = Path("cloud/frontend/src/canonical/heart-sutra.generated.ts")
+FRONTEND_REL = Path("cloud/frontend/canonical/heart-sutra.generated.ts")
 
 SCHEMA_VERSION = 1
 INITIAL_SCRIPTURE_VERSION = "HS-1.0.0"

@@ -50,8 +50,8 @@ import org.springframework.web.socket.handler.TextWebSocketHandler;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 
-import top.zhcmqtt.ewf.backend.client.WechatMiniClient;
 import top.zhcmqtt.ewf.backend.common.exception.ErrorCode;
+import top.zhcmqtt.ewf.backend.common.security.UserContext;
 import top.zhcmqtt.ewf.backend.service.CommandsStore;
 import top.zhcmqtt.ewf.backend.service.DeviceStateStore;
 import top.zhcmqtt.ewf.backend.service.ProgressStore;
@@ -70,9 +70,6 @@ class WebSocketPushContractTest {
 
     private static final Path DATA_DIR;
 
-    private static final String TEST_SECRET =
-            "0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef";
-
     private static final ObjectMapper MAPPER = new ObjectMapper();
 
     static {
@@ -86,9 +83,6 @@ class WebSocketPushContractTest {
     @DynamicPropertySource
     static void properties(DynamicPropertyRegistry registry) {
         registry.add("app.data-dir", () -> DATA_DIR.toString());
-        registry.add("jwt.secret", () -> TEST_SECRET);
-        registry.add("jwt.access-token-expiration", () -> "7200000");
-        registry.add("jwt.refresh-token-expiration", () -> "2592000000");
     }
 
     @LocalServerPort
@@ -109,34 +103,24 @@ class WebSocketPushContractTest {
     @Autowired
     private DeviceStateStore deviceStateStore;
 
-    @MockBean
-    private WechatMiniClient wechatMiniClient;
 
-    private String accessToken;
 
     private String deviceId;
 
     private String scriptureVersion;
 
     @BeforeEach
-    void 重置临时数据目录并登录() throws Exception {
+    void 重置临时数据目录() throws Exception {
         for (String file : List.of("identity.json", ProgressStore.fileName(), CommandsStore.fileName(),
                 DeviceStateStore.fileName(), "daily_stats.json")) {
             Files.deleteIfExists(DATA_DIR.resolve(file));
         }
-        when(wechatMiniClient.exchangeCode("code-ws")).thenReturn("openid-ws");
 
-        JsonNode login = json(mockMvc.perform(post("/api/v1/auth/login/wechat-mini")
-                .contentType(MediaType.APPLICATION_JSON)
-                .content(objectMapper.writeValueAsString(Map.of("code", "code-ws"))))
-                .andExpect(status().isOk()).andReturn().getResponse().getContentAsString());
-        deviceId = login.path("data").path("deviceId").asText();
-        accessToken = login.path("data").path("accessToken").asText();
+        deviceId = UserContext.currentDeviceId();
         scriptureVersion = objectMapper.readTree(
                 getClass().getResourceAsStream("/canonical/heart-sutra.json"))
                 .path("scriptureVersion").asText();
         assertNotNull(deviceId);
-        assertFalse(accessToken.isBlank());
     }
 
     @AfterAll
@@ -157,7 +141,7 @@ class WebSocketPushContractTest {
     @Test
     @DisplayName("合法 token 升级成功；report 后收到 delta 且 seq==snapshot_seq")
     void 连接鉴权与delta水位一致() throws Exception {
-        try (WsProbe probe = connect(accessToken)) {
+        try (WsProbe probe = connect()) {
             JsonNode snapFrame = probe.awaitType("snapshot", Duration.ofSeconds(5));
             assertEquals(WsFrameFactory.CONTRACT_VERSION, snapFrame.path("contract_version").asText());
             assertEquals(0, snapFrame.path("seq").asInt());
@@ -185,7 +169,7 @@ class WebSocketPushContractTest {
     @Test
     @DisplayName("设置下发成功 → command_state 含修订对与载荷")
     void 设置下发推commandState() throws Exception {
-        try (WsProbe probe = connect(accessToken)) {
+        try (WsProbe probe = connect()) {
             probe.awaitType("snapshot", Duration.ofSeconds(5));
             JsonNode cmd = command(60, "high", 30, "cmd-ws-1", null);
             assertEquals(0, cmd.path("code").asInt());
@@ -204,7 +188,7 @@ class WebSocketPushContractTest {
     void 完成确认推completion() throws Exception {
         int end = objectMapper.readTree(getClass().getResourceAsStream("/canonical/heart-sutra.json"))
                 .path("counts").path("consumableHan").asInt();
-        try (WsProbe probe = connect(accessToken)) {
+        try (WsProbe probe = connect()) {
             probe.awaitType("snapshot", Duration.ofSeconds(5));
             JsonNode report = report(end, 0, 1, end, true, "act-complete");
             assertEquals(0, report.path("code").asInt());
@@ -222,9 +206,9 @@ class WebSocketPushContractTest {
     @Test
     @DisplayName("双连接：新连接替换旧连接，仅新连接收后续推送")
     void 双连接仅新连接收推送() throws Exception {
-        try (WsProbe oldProbe = connect(accessToken)) {
+        try (WsProbe oldProbe = connect()) {
             oldProbe.awaitType("snapshot", Duration.ofSeconds(5));
-            try (WsProbe newProbe = connect(accessToken)) {
+            try (WsProbe newProbe = connect()) {
                 newProbe.awaitType("snapshot", Duration.ofSeconds(5));
                 Thread.sleep(200);
                 assertFalse(oldProbe.sessionOpen(), "旧连接应被关闭");
@@ -242,24 +226,9 @@ class WebSocketPushContractTest {
     }
 
     @Test
-    @DisplayName("负例①：无 token / 坏 token 不能升级")
-    void 无token与坏token拒绝握手() {
-        assertThrows(Exception.class, () -> {
-            try (WsProbe ignored = connect(null)) {
-                fail("应拒绝无 token 握手");
-            }
-        });
-        assertThrows(Exception.class, () -> {
-            try (WsProbe ignored = connect("not-a-jwt")) {
-                fail("应拒绝坏 token 握手");
-            }
-        });
-    }
-
-    @Test
     @DisplayName("负例②：delta.seq 不得与同刻 snapshot_seq 矛盾")
     void deltaSeq与快照水位一致() throws Exception {
-        try (WsProbe probe = connect(accessToken)) {
+        try (WsProbe probe = connect()) {
             probe.awaitType("snapshot", Duration.ofSeconds(5));
             report(5, 0, 1, 5, false, "act-seq-a");
             JsonNode delta = probe.awaitType("delta", Duration.ofSeconds(5));
@@ -276,7 +245,7 @@ class WebSocketPushContractTest {
     @DisplayName("负例③：拒绝路径 20003 不推送")
     void 拒绝路径不推送() throws Exception {
         report(50, 0, 1, 10, false, "act-seed");
-        try (WsProbe probe = connect(accessToken)) {
+        try (WsProbe probe = connect()) {
             probe.awaitType("snapshot", Duration.ofSeconds(5));
             int before = probe.businessFrameCount();
             JsonNode rejected = report(40, 40, 1, 10, false, "act-reset");
@@ -289,7 +258,7 @@ class WebSocketPushContractTest {
     @Test
     @DisplayName("负例④：重连后不重放 ≤ 冻结水位的历史 delta")
     void 重连不重放历史帧() throws Exception {
-        try (WsProbe first = connect(accessToken)) {
+        try (WsProbe first = connect()) {
             first.awaitType("snapshot", Duration.ofSeconds(5));
             report(20, 0, 1, 8, false, "act-pre");
             first.awaitType("delta", Duration.ofSeconds(5));
@@ -298,7 +267,7 @@ class WebSocketPushContractTest {
         int frozenSeq = frozen.path("data").path("snapshot_seq").asInt();
         assertEquals(20, frozenSeq);
 
-        try (WsProbe second = connect(accessToken)) {
+        try (WsProbe second = connect()) {
             JsonNode snapFrame = second.awaitType("snapshot", Duration.ofSeconds(5));
             assertEquals(frozenSeq, snapFrame.path("seq").asInt());
             Thread.sleep(300);
@@ -314,23 +283,9 @@ class WebSocketPushContractTest {
     }
 
     @Test
-    @DisplayName("负例⑤：仅 Bearer 头、忽略 query token → 握手失败")
-    void 仅Bearer不能握手() {
-        assertThrows(Exception.class, () -> {
-            StandardWebSocketClient client = new StandardWebSocketClient();
-            WebSocketHttpHeaders headers = new WebSocketHttpHeaders();
-            headers.setBearerAuth(accessToken);
-            CompletableFuture<WebSocketSession> future = client.execute(new TextWebSocketHandler() {
-            }, headers, URI.create("ws://127.0.0.1:" + port + "/api/v1/ws"));
-            future.get(3, TimeUnit.SECONDS);
-            fail("仅 Bearer 不得升级成功");
-        });
-    }
-
-    @Test
     @DisplayName("同水位二次 report 不产生前进 seq 的新 delta")
     void 同水位不重复推delta() throws Exception {
-        try (WsProbe probe = connect(accessToken)) {
+        try (WsProbe probe = connect()) {
             probe.awaitType("snapshot", Duration.ofSeconds(5));
             report(15, 0, 1, 5, false, "act-once");
             JsonNode first = probe.awaitType("delta", Duration.ofSeconds(5));
@@ -343,9 +298,8 @@ class WebSocketPushContractTest {
         }
     }
 
-    private WsProbe connect(String token) throws Exception {
-        String query = token == null ? "" : "?token=" + token;
-        URI uri = URI.create("ws://127.0.0.1:" + port + "/api/v1/ws" + query);
+    private WsProbe connect() throws Exception {
+        URI uri = URI.create("ws://127.0.0.1:" + port + "/api/v1/ws");
         WsProbe probe = new WsProbe();
         StandardWebSocketClient client = new StandardWebSocketClient();
         WebSocketHttpHeaders headers = new WebSocketHttpHeaders();
@@ -373,7 +327,6 @@ class WebSocketPushContractTest {
         body.put("firmware_version", "1.0.0");
         body.put("action_id", actionId);
         String raw = mockMvc.perform(post("/api/v1/sync/report")
-                .header("Authorization", "Bearer " + accessToken)
                 .contentType(MediaType.APPLICATION_JSON)
                 .content(objectMapper.writeValueAsString(body)))
                 .andExpect(status().isOk())
@@ -392,7 +345,6 @@ class WebSocketPushContractTest {
             node.put("base_revision", base);
         }
         String raw = mockMvc.perform(post("/api/v1/sync/command")
-                .header("Authorization", "Bearer " + accessToken)
                 .contentType(MediaType.APPLICATION_JSON)
                 .content(objectMapper.writeValueAsString(node)))
                 .andExpect(status().isOk())
@@ -401,8 +353,7 @@ class WebSocketPushContractTest {
     }
 
     private JsonNode snapshot() throws Exception {
-        String raw = mockMvc.perform(get("/api/v1/sync/snapshot")
-                .header("Authorization", "Bearer " + accessToken))
+        String raw = mockMvc.perform(get("/api/v1/sync/snapshot"))
                 .andExpect(status().isOk())
                 .andReturn().getResponse().getContentAsString();
         return json(raw);

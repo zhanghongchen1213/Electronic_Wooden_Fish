@@ -6,7 +6,6 @@ import org.springframework.web.socket.config.annotation.WebSocketConfigurer;
 import org.springframework.web.socket.config.annotation.WebSocketHandlerRegistry;
 
 import top.zhcmqtt.ewf.backend.ws.SyncWebSocketHandler;
-import top.zhcmqtt.ewf.backend.ws.WsHandshakeInterceptor;
 
 /**
  * 原生 WebSocket 端点注册（Story 5.5）。
@@ -29,18 +28,15 @@ public class WebSocketConfig implements WebSocketConfigurer {
     public static final String WS_PATH = "/api/v1/ws";
 
     private final SyncWebSocketHandler syncWebSocketHandler;
-    private final WsHandshakeInterceptor handshakeInterceptor;
 
-    public WebSocketConfig(SyncWebSocketHandler syncWebSocketHandler,
-            WsHandshakeInterceptor handshakeInterceptor) {
+    public WebSocketConfig(SyncWebSocketHandler syncWebSocketHandler) {
         this.syncWebSocketHandler = syncWebSocketHandler;
-        this.handshakeInterceptor = handshakeInterceptor;
     }
 
     @Override
     public void registerWebSocketHandlers(WebSocketHandlerRegistry registry) {
         registry.addHandler(syncWebSocketHandler, WS_PATH)
-                .addInterceptors(handshakeInterceptor)
+                // 2026-10-02 裁决：完全自用测试无鉴权，握手拦截器已移除
                 // 显式 origin 模式：允许本机任意端口（本地联调 / 随机端口测试）；禁止 "*" 通配生产语义
                 .setAllowedOriginPatterns(
                         "http://localhost:*",

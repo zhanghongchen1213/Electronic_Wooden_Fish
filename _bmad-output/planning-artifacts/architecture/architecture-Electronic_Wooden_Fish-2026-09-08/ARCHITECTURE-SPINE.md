@@ -170,6 +170,7 @@ flowchart TD
 - **Binds:** frontend 目录结构、构建/调试、API 接入
 - **Prevents:** 引入多端/App/H5 工程面、绕过统一 API 封装、本地数据入正式统计
 - **Rule:** 沿用 miaowu `frontend` 的 uni-app（Vue 3 + TS + Vite + Pinia）骨架与 HBuilderX 调试方式，仅构建微信小程序。所有后端访问经单一 `VITE_API_BASE_URL` 与统一 `api/request` 封装（信封 + 鉴权头），不直接散落请求；客户端状态只放 Pinia/本地存储，不作权威数据（AD-2）。生产环境配置固定为 `cloud/frontend/.env`，本地测试固定为 `cloud/frontend/.env.development`，本地默认 API 为 `http://localhost:9218/api/v1`；本项目不依赖 `.env.development.local` 运行时覆盖。
+- **修订（2026-10-02，用户裁决）：** `cloud/frontend` 由 uni CLI（Vite）工程改造为 HBuilderX 工程：`src/` 提升至工程根、`vite.config.ts` 与根 `project.config.json` 删除、编译/运行走 HBuilderX 内置编译器，产物 `unpackage/dist/…`。本条中「Vite」及 CLI 工作流表述由本修订覆盖，其余 Rule 语义不变。
 
 #### AD-19 — 经文消费与展示语义：一敲一字、标点随附、不预览未来
 

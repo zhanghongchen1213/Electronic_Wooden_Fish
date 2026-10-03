@@ -33,7 +33,6 @@ import top.zhcmqtt.ewf.backend.common.persistence.PersistenceRecoveryReport.Conc
 import top.zhcmqtt.ewf.backend.service.CommandsStore;
 import top.zhcmqtt.ewf.backend.service.DailyStatsStore;
 import top.zhcmqtt.ewf.backend.service.DeviceStateStore;
-import top.zhcmqtt.ewf.backend.service.IdentityStore;
 import top.zhcmqtt.ewf.backend.service.ProgressStore;
 
 /**
@@ -52,7 +51,7 @@ import top.zhcmqtt.ewf.backend.service.ProgressStore;
 class PersistenceRecoveryTest {
 
     private static final Set<String> CONTRACT_FILE_NAMES = Set.of(
-            ProgressStore.fileName(), IdentityStore.fileName(), CommandsStore.fileName(),
+            ProgressStore.fileName(), CommandsStore.fileName(),
             DeviceStateStore.fileName(), DailyStatsStore.fileName());
 
     @TempDir
@@ -195,10 +194,6 @@ class PersistenceRecoveryTest {
         ObjectNode buckets = new DailyStatsStore(restarted, dataDir.toString()).read().orElseThrow();
         assertEquals(bucketsPayload().toString(), buckets.toString(),
                 DailyStatsStore.fileName() + " 的信封容器必须逐字段一致地恢复");
-
-        String deviceId = new IdentityStore(restarted, dataDir.toString()).readDeviceId();
-        assertEquals(IdentityStore.deviceIdForOpenId("openid-a"), deviceId,
-                IdentityStore.fileName() + " 必须一致地恢复");
     }
 
     /**
@@ -285,8 +280,6 @@ class PersistenceRecoveryTest {
         new CommandsStore(objectMapper, dataDir.toString()).write(commandsPayload());
         new DeviceStateStore(objectMapper, dataDir.toString()).write(deviceStatePayload());
         new DailyStatsStore(objectMapper, dataDir.toString()).write(bucketsPayload());
-        new IdentityStore(objectMapper, dataDir.toString())
-                .getOrCreate(IdentityStore.deviceIdForOpenId("openid-a"));
     }
 
     private ObjectNode progressPayload(long ackedTotal) {

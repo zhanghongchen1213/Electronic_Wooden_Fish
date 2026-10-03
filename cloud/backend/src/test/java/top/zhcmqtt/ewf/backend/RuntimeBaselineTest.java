@@ -27,7 +27,6 @@ import org.springframework.context.ConfigurableApplicationContext;
 import org.springframework.core.env.Environment;
 import org.yaml.snakeyaml.Yaml;
 
-import top.zhcmqtt.ewf.backend.common.config.WechatProperties;
 import top.zhcmqtt.ewf.backend.support.TestWorkspace;
 
 /**
@@ -93,27 +92,6 @@ class RuntimeBaselineTest {
         assertEquals("9218", env.getProperty("server.port"), "server.port 应为 9218");
         assertEquals("./data", env.getProperty("app.data-dir"), "app.data-dir 应为 ./data（落点约定，本 Story 不建目录）");
         assertEquals("Asia/Shanghai", env.getProperty("spring.jackson.time-zone"), "Jackson 时区应为 Asia/Shanghai");
-        assertEquals(LOCAL_APP_ID, env.getProperty("wechat.mini.app-id"), "local profile 应取本地 AppID 占位值");
-
-        for (String key : List.of("wechat.mini.app-secret", "jwt.secret",
-                "jwt.access-token-expiration", "jwt.refresh-token-expiration")) {
-            assertNotNull(env.getProperty(key), "缺配置键 " + key + "（本 Story 只校验存在，不实现其语义）");
-        }
-    }
-
-    @Test
-    @DisplayName("wechat.mini.* 必须绑定进 WechatProperties bean，绑定失效不得静默")
-    void wechat配置绑定生效() {
-        WechatProperties production = defaultContext.getBean(WechatProperties.class);
-        assertEquals(PRODUCTION_APP_ID, production.getAppId(),
-                "生产上下文必须把 wechat.mini.app-id 绑进 bean；只断言 Environment 会让绑定失效静默通过");
-        assertEquals("replace-with-ewf-wechat-app-secret", production.getAppSecret(),
-                "wechat.mini.app-secret 必须绑进 bean");
-        assertEquals("https://api.weixin.qq.com/sns/jscode2session", production.getEndpoint(),
-                "application.yml 未配置 endpoint 时必须落到官方默认值");
-
-        WechatProperties local = localContext.getBean(WechatProperties.class);
-        assertEquals(LOCAL_APP_ID, local.getAppId(), "local 上下文必须把 wechat.mini.app-id 绑进 bean");
     }
 
     @Test
@@ -129,7 +107,7 @@ class RuntimeBaselineTest {
     }
 
     @Test
-    @DisplayName("前端环境文件与 backend 配置对齐：API 前缀与 AppID")
+    @DisplayName("前端环境文件与 backend 配置对齐：API 前缀（AppID 对齐随 2026-10-02 去鉴权移除）")
     void 前端环境文件与backend对齐() throws IOException {
         Path repoRoot = TestWorkspace.repoRoot();
         Map<String, String> production = readEnvFile(repoRoot.resolve("cloud/frontend/.env"));
@@ -139,12 +117,6 @@ class RuntimeBaselineTest {
                 "VITE_API_BASE_URL 应以 /api/v1 结尾，实际为 " + production.get("VITE_API_BASE_URL"));
         assertTrue(local.get("VITE_API_BASE_URL").endsWith("/api/v1"),
                 "本地 VITE_API_BASE_URL 应以 /api/v1 结尾，实际为 " + local.get("VITE_API_BASE_URL"));
-
-        assertEquals(PRODUCTION_APP_ID, defaultContext.getEnvironment().getProperty("wechat.mini.app-id"));
-        assertEquals(PRODUCTION_APP_ID, production.get("VITE_WX_APPID"),
-                "application.yml 的 wechat.mini.app-id 应与 cloud/frontend/.env 的 AppID 一致");
-        assertEquals(LOCAL_APP_ID, local.get("VITE_WX_APPID"),
-                "application-local.yml 的 wechat.mini.app-id 应与 cloud/frontend/.env.development 的 AppID 一致");
     }
 
     private static Map<String, Object> readYaml(String relativePath) throws IOException {

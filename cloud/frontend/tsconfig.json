@@ -1,25 +1,24 @@
 {
-  "extends": "@vue/tsconfig/tsconfig.json",
   "compilerOptions": {
+    "target": "ESNext",
+    "module": "ESNext",
     "sourceMap": true,
     "baseUrl": ".",
-    "paths": {
-      "@/*": ["./src/*"]
-    },
     "lib": ["esnext", "dom"],
     "types": ["@dcloudio/types", "vitest/globals"],
     "strict": true,
+    "jsx": "preserve",
+    "esModuleInterop": true,
     "skipLibCheck": true,
     "moduleResolution": "bundler",
-    "verbatimModuleSyntax": false
+    "resolveJsonModule": true,
+    "verbatimModuleSyntax": false,
+    "noEmit": true
   },
   "include": [
-    "src/**/*.ts",
-    "src/**/*.d.ts",
-    "src/**/*.tsx",
-    "src/**/*.vue",
-    "vitest.config.ts",
-    "vite.config.ts",
-    "shims-uni.d.ts"
+    "**/*.ts",
+    "**/*.d.ts",
+    "**/*.tsx",
+    "**/*.vue"
   ]
 }

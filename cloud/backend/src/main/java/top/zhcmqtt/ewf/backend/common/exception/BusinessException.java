@@ -27,22 +27,6 @@ public class BusinessException extends RuntimeException {
     }
 
     /** 未授权：EWF 当前的 401 语义为令牌失效。 */
-    public static BusinessException unauthorized(String message) {
-        return new BusinessException(ErrorCode.TOKEN_EXPIRED, message);
-    }
-
-    public static BusinessException tokenInvalid(String message) {
-        return new BusinessException(ErrorCode.TOKEN_INVALID, message);
-    }
-
-    public static BusinessException tokenMissing(String message) {
-        return new BusinessException(ErrorCode.TOKEN_MISSING, message);
-    }
-
-    public static BusinessException identityMismatch(String message) {
-        return new BusinessException(ErrorCode.IDENTITY_MISMATCH, message);
-    }
-
     public static BusinessException upstreamUnavailable(String message) {
         return new BusinessException(ErrorCode.WECHAT_UPSTREAM, message);
     }

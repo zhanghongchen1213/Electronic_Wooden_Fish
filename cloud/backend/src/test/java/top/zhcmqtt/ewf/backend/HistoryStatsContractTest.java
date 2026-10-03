@@ -38,7 +38,6 @@ import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.node.ObjectNode;
 
-import top.zhcmqtt.ewf.backend.client.WechatMiniClient;
 import top.zhcmqtt.ewf.backend.dto.sync.HistoryStatsResponse;
 import top.zhcmqtt.ewf.backend.dto.sync.StateSnapshotResponse;
 import top.zhcmqtt.ewf.backend.service.CommandsStore;
@@ -56,9 +55,6 @@ import top.zhcmqtt.ewf.backend.service.ProgressStore;
 class HistoryStatsContractTest {
 
     private static final Path DATA_DIR;
-
-    private static final String TEST_SECRET =
-            "0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef";
 
     private static final String STATS_PATH = "/api/v1/sync/stats";
     private static final String REPORT_PATH = "/api/v1/sync/report";
@@ -81,9 +77,6 @@ class HistoryStatsContractTest {
     @DynamicPropertySource
     static void properties(DynamicPropertyRegistry registry) {
         registry.add("app.data-dir", () -> DATA_DIR.toString());
-        registry.add("jwt.secret", () -> TEST_SECRET);
-        registry.add("jwt.access-token-expiration", () -> "7200000");
-        registry.add("jwt.refresh-token-expiration", () -> "2592000000");
     }
 
     @Autowired
@@ -101,24 +94,14 @@ class HistoryStatsContractTest {
     @Autowired
     private HistoryStatsService historyStatsService;
 
-    @MockBean
-    private WechatMiniClient wechatMiniClient;
 
-    private String accessToken;
 
     @BeforeEach
-    void 重置临时数据目录并登录() throws Exception {
+    void 重置临时数据目录() throws Exception {
         for (String file : List.of("identity.json", ProgressStore.fileName(), CommandsStore.fileName(),
                 DeviceStateStore.fileName(), DailyStatsStore.fileName())) {
             Files.deleteIfExists(DATA_DIR.resolve(file));
         }
-        when(wechatMiniClient.exchangeCode("code-stats")).thenReturn("openid-stats");
-
-        JsonNode login = json(mockMvc.perform(post("/api/v1/auth/login/wechat-mini")
-                .contentType(MediaType.APPLICATION_JSON)
-                .content(objectMapper.writeValueAsString(Map.of("code", "code-stats"))))
-                .andExpect(status().isOk()).andReturn());
-        accessToken = login.path("data").path("accessToken").asText();
     }
 
     @AfterAll
@@ -137,12 +120,9 @@ class HistoryStatsContractTest {
     }
 
     @Test
-    @DisplayName("无 JWT → 401；字段闭包恰为裁决 C 七字段")
-    void 鉴权与字段闭包() throws Exception {
-        mockMvc.perform(get(STATS_PATH)).andExpect(status().isUnauthorized());
-
-        JsonNode body = json(mockMvc.perform(get(STATS_PATH)
-                .header("Authorization", "Bearer " + accessToken))
+    @DisplayName("字段闭包恰为裁决 C 七字段")
+    void 字段闭包() throws Exception {
+        JsonNode body = json(mockMvc.perform(get(STATS_PATH))
                 .andExpect(status().isOk()).andReturn());
         assertEquals(0, body.path("code").asInt());
         JsonNode data = body.path("data");
@@ -157,8 +137,7 @@ class HistoryStatsContractTest {
     void 空态待同步与查询只读() throws Exception {
         assertTrue(Files.notExists(DATA_DIR.resolve(DailyStatsStore.fileName())));
 
-        JsonNode empty = json(mockMvc.perform(get(STATS_PATH)
-                .header("Authorization", "Bearer " + accessToken))
+        JsonNode empty = json(mockMvc.perform(get(STATS_PATH))
                 .andExpect(status().isOk()).andReturn()).path("data");
         assertTrue(empty.path("empty").asBoolean());
         assertTrue(Files.notExists(DATA_DIR.resolve(DailyStatsStore.fileName())),
@@ -182,8 +161,7 @@ class HistoryStatsContractTest {
         progress.put("action_id", current.get("action_id").asText());
         progressStore.write(progress);
 
-        JsonNode pending = json(mockMvc.perform(get(STATS_PATH)
-                .header("Authorization", "Bearer " + accessToken))
+        JsonNode pending = json(mockMvc.perform(get(STATS_PATH))
                 .andExpect(status().isOk()).andReturn()).path("data");
         assertTrue(pending.path("pending_sync").asBoolean());
         assertEquals(10, pending.path("today_taps").asInt(), "负例：未确认差不得计入 today_taps");
@@ -199,8 +177,7 @@ class HistoryStatsContractTest {
     @DisplayName("重建 Store（重启近似）后查询稳定")
     void 重启后稳定() throws Exception {
         json(report(8, 0, 1, 1, false, "hs-stable"));
-        JsonNode first = json(mockMvc.perform(get(STATS_PATH)
-                .header("Authorization", "Bearer " + accessToken))
+        JsonNode first = json(mockMvc.perform(get(STATS_PATH))
                 .andExpect(status().isOk()).andReturn()).path("data");
 
         DailyStatsStore rebuiltDaily = new DailyStatsStore(objectMapper, DATA_DIR.toString());
@@ -220,8 +197,7 @@ class HistoryStatsContractTest {
     @DisplayName("负例：统计字段不得进入 snapshot 17 闭包")
     void 快照闭包不含统计字段() throws Exception {
         json(report(3, 0, 1, 1, false, "hs-snap"));
-        JsonNode snap = json(mockMvc.perform(get(SNAPSHOT_PATH)
-                .header("Authorization", "Bearer " + accessToken))
+        JsonNode snap = json(mockMvc.perform(get(SNAPSHOT_PATH))
                 .andExpect(status().isOk()).andReturn()).path("data");
         Set<String> names = fieldNames(snap);
         assertEquals(17, names.size());
@@ -254,7 +230,6 @@ class HistoryStatsContractTest {
         body.put("firmware_version", "1.0.0");
         body.put("action_id", actionId);
         return mockMvc.perform(post(REPORT_PATH)
-                .header("Authorization", "Bearer " + accessToken)
                 .contentType(MediaType.APPLICATION_JSON)
                 .content(objectMapper.writeValueAsString(body)))
                 .andExpect(status().isOk()).andReturn();

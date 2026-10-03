@@ -1,4 +1,5 @@
 # 电子木鱼本地测试环境配置。
+# 2026-10-02 裁决：微信鉴权/JWT 配置已随鉴权移除一并删除。
 spring:
   config:
     activate:
@@ -14,13 +15,3 @@ server:
 
 app:
   data-dir: ./data
-
-jwt:
-  secret: 'replace-with-ewf-local-jwt-secret'
-  access-token-expiration: 7200000
-  refresh-token-expiration: 2592000000
-
-wechat:
-  mini:
-    app-id: 'replace-with-ewf-local-wechat-app-id'
-    app-secret: 'replace-with-ewf-local-wechat-app-secret'

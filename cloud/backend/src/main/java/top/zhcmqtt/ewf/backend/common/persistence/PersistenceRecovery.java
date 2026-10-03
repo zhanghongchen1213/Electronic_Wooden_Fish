@@ -26,7 +26,6 @@ import top.zhcmqtt.ewf.backend.common.persistence.PersistenceRecoveryReport.File
 import top.zhcmqtt.ewf.backend.service.CommandsStore;
 import top.zhcmqtt.ewf.backend.service.DailyStatsStore;
 import top.zhcmqtt.ewf.backend.service.DeviceStateStore;
-import top.zhcmqtt.ewf.backend.service.IdentityStore;
 import top.zhcmqtt.ewf.backend.service.ProgressStore;
 
 /**
@@ -72,13 +71,13 @@ public class PersistenceRecovery implements ApplicationRunner {
     private static final String FALLBACK_MESSAGE = "文件校验失败，请修复后重试";
 
     /**
-     * 契约 §11 的五份文件及其严格读取校验，顺序与契约文件表一致。
+     * 契约 §11 的持久化文件及其严格读取校验（identity.json 随鉴权移除，2026-10-02 裁决），
+     * 顺序与契约文件表一致。
      *
      * <p>校验函数是各 Store 的静态严格读取入口，**不**在本类复制第二份字段白名单。
      */
     private static final List<ContractFile> CONTRACT_FILES = List.of(
             new ContractFile(ProgressStore.fileName(), ProgressStore::strictRead),
-            new ContractFile(IdentityStore.fileName(), IdentityStore::strictRead),
             new ContractFile(CommandsStore.fileName(), CommandsStore::strictRead),
             new ContractFile(DeviceStateStore.fileName(), DeviceStateStore::strictRead),
             new ContractFile(DailyStatsStore.fileName(), DailyStatsStore::strictRead));

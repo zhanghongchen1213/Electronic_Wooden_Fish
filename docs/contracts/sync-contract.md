@@ -69,7 +69,7 @@
 
 | 字段 | 类型 | 单位 | 所有者 | 权威 | 单调性与取值域 | 承载通道 | 出处 |
 | --- | --- | --- | --- | --- | --- | --- | --- |
-| `device_id` | string | 无 | backend | backend | 不透明标识；单身份单设备，不提供绑定、迁移与多设备 | HTTPS 上报、WS 帧、持久化文件 | PRD §7 |
+| `device_id` | string | 无 | backend | backend | 不透明标识；2026-10-02 裁决后为单一固定设备身份（`ewf-solo`），不提供绑定、迁移与多设备 | HTTPS 上报、WS 帧 | PRD §7 |
 | `scripture_version` | string | 无 | canonical | canonical manifest | 必须等于 canonical manifest 的 `scripture_version`；不一致即配置错误并停止推进 | HTTPS 上报、持久化文件 | PRD §7 |
 | `local_total` | integer ≥ 0 | 无 | 设备 | 设备本地事实 | 单调不减；设备重置除外 | HTTPS 上报、WS 帧、持久化文件 | PRD §7 |
 | `acked_total` | integer ≥ 0 | 无 | backend | backend | 单调不减；同值或更低的提交为幂等 no-op | HTTPS 上报、HTTPS 响应、WS 帧、持久化文件 | PRD §7 |
@@ -288,7 +288,6 @@ WebSocket 连接，故契约约束「单一活跃 socket」：新连接建立前
 | 文件 | 承载事实 | `schema_version` | 字段 | 迁移说明 |
 | --- | --- | --- | --- | --- |
 | `progress.json` | 累计高水位、轮次、游标、完成置位与相关动作去重键 | 1 | `local_total`、`acked_total`、`round_id`、`round_cursor`、`round_state`、`pending_completion`、`action_id` | 新增字段时可省略读取并取默认值；删除或改义字段必须递增 `schema_version` 并提供一次性重写 |
-| `identity.json` | 单身份单设备映射 | 1 | `device_id` | 身份不可迁移；重建即重新绑定 |
 | `commands.json` | 命令修订、已应用高水位、待应用命令载荷与设置命令去重键 | 1 | `command_revision`、`applied_revision`、`action_id`、`volume`、`brightness`、`timeout` | 只保留最新修订，旧修订不写回 |
 | `device_state.json` | 设备状态镜像与音频配置版本 | 1 | `battery_percent`、`network_mode`、`audio_config_version`、`firmware_version` | 属非权威镜像，可整体重建 |
 | `daily_stats.json` | 按配置时区归档的日统计（由已确认增量派生的按日桶，不承载统一字段事实） | 1 | 无 | 日界以 backend 配置时区为准，不按设备本地时间切分 |
@@ -305,7 +304,7 @@ WebSocket 连接，故契约约束「单一活跃 socket」：新连接建立前
 
 | 作用域 | 载体 | 承载字段 |
 | --- | --- | --- |
-| backend | `app.data-dir` 下的 §11 文件表 | `device_id`、`local_total`、`acked_total`、`round_id`、`round_cursor`、`round_state`、`pending_completion`、`action_id`、`command_revision`、`applied_revision`、`volume`、`brightness`、`timeout`、`battery_percent`、`network_mode`、`audio_config_version`、`firmware_version` |
+| backend | `app.data-dir` 下的 §11 文件表 | `local_total`、`acked_total`、`round_id`、`round_cursor`、`round_state`、`pending_completion`、`action_id`、`command_revision`、`applied_revision`、`volume`、`brightness`、`timeout`、`battery_percent`、`network_mode`、`audio_config_version`、`firmware_version` |
 | device | Embedded 本地持久化（FR-E-004） | `local_total`、`acked_total`、`round_id`、`scripture_version`、`round_state`、`round_cursor`、`pending_completion`、`action_id`、`applied_revision`、`volume`、`brightness`、`timeout` |
 | frontend | 小程序本地存储 | `snapshot_seq`、`replay_cursor`、`last_applied_seq` |
 | canonical | `docs/contracts/canonical/heart-sutra.manifest.json`（构建期单一落盘来源，AD-4） | `scripture_version` |

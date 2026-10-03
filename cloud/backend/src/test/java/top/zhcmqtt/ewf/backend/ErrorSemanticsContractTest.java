@@ -40,7 +40,6 @@ import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.node.ObjectNode;
 
-import top.zhcmqtt.ewf.backend.client.WechatMiniClient;
 import top.zhcmqtt.ewf.backend.common.exception.ErrorCode;
 import top.zhcmqtt.ewf.backend.common.security.UserContext;
 import top.zhcmqtt.ewf.backend.service.CommandsStore;
@@ -62,9 +61,6 @@ class ErrorSemanticsContractTest {
 
     private static final Path DATA_DIR;
 
-    private static final String TEST_SECRET =
-            "0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef";
-
     private static final Pattern ACTION_KEYWORD = Pattern.compile("重试|重新登录|重建|收敛|修复");
 
     private static final ObjectMapper MAPPER = new ObjectMapper();
@@ -80,9 +76,6 @@ class ErrorSemanticsContractTest {
     @DynamicPropertySource
     static void properties(DynamicPropertyRegistry registry) {
         registry.add("app.data-dir", () -> DATA_DIR.toString());
-        registry.add("jwt.secret", () -> TEST_SECRET);
-        registry.add("jwt.access-token-expiration", () -> "7200000");
-        registry.add("jwt.refresh-token-expiration", () -> "2592000000");
     }
 
     @Autowired
@@ -100,10 +93,7 @@ class ErrorSemanticsContractTest {
     @Autowired
     private CommandsStore commandsStore;
 
-    @MockBean
-    private WechatMiniClient wechatMiniClient;
 
-    private String accessToken;
 
     @BeforeEach
     void reset() throws Exception {
@@ -111,14 +101,6 @@ class ErrorSemanticsContractTest {
                 "device_state.json", "daily_stats.json")) {
             Files.deleteIfExists(DATA_DIR.resolve(file));
         }
-        UserContext.clear();
-        when(wechatMiniClient.exchangeCode("code-a")).thenReturn("openid-a");
-        when(wechatMiniClient.exchangeCode("code-b")).thenReturn("openid-b");
-        JsonNode login = json(mockMvc.perform(post("/api/v1/auth/login/wechat-mini")
-                .contentType(MediaType.APPLICATION_JSON)
-                .content("{\"code\":\"code-a\"}"))
-                .andExpect(status().isOk()).andReturn());
-        accessToken = login.path("data").path("accessToken").asText();
     }
 
     @AfterAll
@@ -152,8 +134,7 @@ class ErrorSemanticsContractTest {
 
         // 20002 via snapshot query without baseline
         seedProgress(50);
-        JsonNode missingBaseline = json(mockMvc.perform(get("/api/v1/sync/snapshot")
-                .header("Authorization", "Bearer " + accessToken))
+        JsonNode missingBaseline = json(mockMvc.perform(get("/api/v1/sync/snapshot"))
                 .andExpect(status().isOk()).andReturn());
         assertAction(missingBaseline, 200, ErrorCode.BASELINE_HIGH_WATER_MISSING, true);
 
@@ -169,7 +150,6 @@ class ErrorSemanticsContractTest {
         ObjectNode badVersion = reportBody(1010, 1000, 1, 2, false, "ver");
         badVersion.put("scripture_version", "HS-0.0.0");
         JsonNode mismatch = json(mockMvc.perform(post("/api/v1/sync/report")
-                .header("Authorization", "Bearer " + accessToken)
                 .contentType(MediaType.APPLICATION_JSON)
                 .content(objectMapper.writeValueAsString(badVersion)))
                 .andExpect(status().isOk()).andReturn());
@@ -184,62 +164,8 @@ class ErrorSemanticsContractTest {
     }
 
     @Test
-    @DisplayName("鉴权/上游/协议/500：码表 HTTP 状态 + 动作关键词 + 非 code=0")
-    void authProtocolServerMatrix() throws Exception {
-        // 40103
-        assertAction(json(mockMvc.perform(get("/api/v1/sync/snapshot"))
-                .andExpect(status().isUnauthorized()).andReturn()),
-                401, ErrorCode.TOKEN_MISSING, false);
-
-        // 40102
-        assertAction(json(mockMvc.perform(get("/api/v1/sync/snapshot")
-                .header("Authorization", "Bearer not-a-jwt"))
-                .andExpect(status().isUnauthorized()).andReturn()),
-                401, ErrorCode.TOKEN_INVALID, false);
-
-        // 40101 — 过期 access
-        String parts = accessToken;
-        String[] segs = parts.split("\\.");
-        assertEquals(3, segs.length);
-        // 用 refresh 当 access → 类型非法更接近 40102；过期用短 secret 签发不方便，
-        // 直接断言已有过期文案出口：篡改 payload 后仍走 tokenInvalid/expired 路径。
-        // 这里用 AuthContract 同形：带过期 token 需 JwtTokenProvider；改用 probe unauthorized 不满足文案，
-        // 故走 refresh 误用为 Bearer。
-        JsonNode login = json(mockMvc.perform(post("/api/v1/auth/login/wechat-mini")
-                .contentType(MediaType.APPLICATION_JSON)
-                .content("{\"code\":\"code-a\"}"))
-                .andExpect(status().isOk()).andReturn());
-        String refresh = login.path("data").path("refreshToken").asText();
-        JsonNode wrongType = json(mockMvc.perform(get("/api/v1/sync/snapshot")
-                .header("Authorization", "Bearer " + refresh))
-                .andExpect(status().isUnauthorized()).andReturn());
-        assertTrue(wrongType.path("code").asInt() == ErrorCode.TOKEN_INVALID
-                        || wrongType.path("code").asInt() == ErrorCode.TOKEN_EXPIRED,
-                "refresh 当 access 应回 40102 或 40101");
-        assertNotEquals(0, wrongType.path("code").asInt());
-        assertTrue(ACTION_KEYWORD.matcher(wrongType.path("message").asText()).find());
-
-        // 40300
-        Files.deleteIfExists(DATA_DIR.resolve("identity.json"));
-        mockMvc.perform(post("/api/v1/auth/login/wechat-mini")
-                .contentType(MediaType.APPLICATION_JSON)
-                .content("{\"code\":\"code-b\"}"))
-                .andExpect(status().isOk());
-        assertAction(json(mockMvc.perform(get("/api/v1/sync/snapshot")
-                .header("Authorization", "Bearer " + accessToken)
-                .param("acked_total", "0")
-                .param("snapshot_seq", "0"))
-                .andExpect(status().isForbidden()).andReturn()),
-                403, ErrorCode.IDENTITY_MISMATCH, false);
-
-        // 重新登录：code-a 身份已不在；为后续用例重建
-        Files.deleteIfExists(DATA_DIR.resolve("identity.json"));
-        JsonNode relogin = json(mockMvc.perform(post("/api/v1/auth/login/wechat-mini")
-                .contentType(MediaType.APPLICATION_JSON)
-                .content("{\"code\":\"code-a\"}"))
-                .andExpect(status().isOk()).andReturn());
-        accessToken = relogin.path("data").path("accessToken").asText();
-
+    @DisplayName("协议/500：码表 HTTP 状态 + 动作关键词 + 非 code=0（鉴权矩阵随 2026-10-02 去鉴权移除）")
+    void protocolServerMatrix() throws Exception {
         // 40000 / 40001
         assertAction(json(mockMvc.perform(post("/__probe/validated")
                 .contentType(MediaType.APPLICATION_JSON)
@@ -273,16 +199,6 @@ class ErrorSemanticsContractTest {
         assertAction(json(mockMvc.perform(get("/__probe/boom"))
                 .andExpect(status().isInternalServerError()).andReturn()),
                 500, ErrorCode.SERVER_ERROR, false);
-
-        // 50200 — 上游占位：微信配置未就绪时登录
-        when(wechatMiniClient.exchangeCode("code-up"))
-                .thenThrow(top.zhcmqtt.ewf.backend.common.exception.BusinessException
-                        .upstreamUnavailable("微信服务暂不可用，请稍后重试"));
-        assertAction(json(mockMvc.perform(post("/api/v1/auth/login/wechat-mini")
-                .contentType(MediaType.APPLICATION_JSON)
-                .content("{\"code\":\"code-up\"}"))
-                .andExpect(status().isBadGateway()).andReturn()),
-                502, ErrorCode.WECHAT_UPSTREAM, false);
     }
 
     private void assertAction(JsonNode body, int httpStatus, int code, boolean expectSnapshot)
@@ -318,7 +234,6 @@ class ErrorSemanticsContractTest {
     private MvcResult report(int local, int acked, int roundId, int cursor, boolean pending, String actionId)
             throws Exception {
         return mockMvc.perform(post("/api/v1/sync/report")
-                .header("Authorization", "Bearer " + accessToken)
                 .contentType(MediaType.APPLICATION_JSON)
                 .content(objectMapper.writeValueAsString(
                         reportBody(local, acked, roundId, cursor, pending, actionId))))
@@ -356,7 +271,6 @@ class ErrorSemanticsContractTest {
             body.put("base_revision", baseRevision);
         }
         return mockMvc.perform(post("/api/v1/sync/command")
-                .header("Authorization", "Bearer " + accessToken)
                 .contentType(MediaType.APPLICATION_JSON)
                 .content(objectMapper.writeValueAsString(body)))
                 .andExpect(status().isOk()).andReturn();

@@ -24,7 +24,6 @@ import top.zhcmqtt.ewf.backend.common.persistence.PersistenceLimits;
 import top.zhcmqtt.ewf.backend.service.CommandsStore;
 import top.zhcmqtt.ewf.backend.service.DailyStatsStore;
 import top.zhcmqtt.ewf.backend.service.DeviceStateStore;
-import top.zhcmqtt.ewf.backend.service.IdentityStore;
 import top.zhcmqtt.ewf.backend.service.ProgressStore;
 import top.zhcmqtt.ewf.backend.support.TestWorkspace;
 
@@ -49,12 +48,12 @@ class PersistenceFileContractTest {
     private static final Map<String, StoreFacade> STORES = storeFacades();
 
     @Test
-    @DisplayName("五个 Store 的文件名与字段集合与契约 §11 逐值一致")
+    @DisplayName("四个 Store 的文件名与字段集合与契约 §11 逐值一致")
     void 文件名与字段集合逐值一致() throws IOException {
         Map<String, JsonNode> contract = contractFiles();
 
         assertEquals(STORES.size(), contract.size(),
-                "本 Story 只建立契约 §11 的五份文件；不得新增第六个后端状态文件");
+                "2026-10-02 去鉴权后契约 §11 为四份文件（identity.json 已移除）；不得新增第五个后端状态文件");
 
         for (Map.Entry<String, JsonNode> entry : contract.entrySet()) {
             StoreFacade facade = STORES.get(entry.getKey());
@@ -69,7 +68,7 @@ class PersistenceFileContractTest {
     }
 
     @Test
-    @DisplayName("五份文件的字段并集等于 backend 作用域的字段集合")
+    @DisplayName("四份文件的字段并集等于 backend 作用域的字段集合")
     void 字段并集等于backend作用域() throws IOException {
         JsonNode scopes = registry().get("persistence_scopes");
         assertNotNull(scopes, "契约注册表缺少 persistence_scopes");
@@ -87,7 +86,7 @@ class PersistenceFileContractTest {
         }
 
         assertEquals(toSet(backend.get("fields")), union,
-                "backend 作用域的承载字段集合必须等于 §11 五份文件字段列的并集");
+                "backend 作用域的承载字段集合必须等于 §11 四份文件字段列的并集");
     }
 
     @Test
@@ -103,7 +102,6 @@ class PersistenceFileContractTest {
     private static Map<String, StoreFacade> storeFacades() {
         Map<String, StoreFacade> stores = new LinkedHashMap<>();
         stores.put(ProgressStore.fileName(), new StoreFacade(ProgressStore.fileName(), ProgressStore.allowedFields()));
-        stores.put(IdentityStore.fileName(), new StoreFacade(IdentityStore.fileName(), IdentityStore.allowedFields()));
         stores.put(CommandsStore.fileName(), new StoreFacade(CommandsStore.fileName(), CommandsStore.allowedFields()));
         stores.put(DeviceStateStore.fileName(),
                 new StoreFacade(DeviceStateStore.fileName(), DeviceStateStore.allowedFields()));

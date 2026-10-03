@@ -7,7 +7,7 @@
 | 路径 | 内容 |
 | --- | --- |
 | `Embedded/` | ESP-IDF 固件（**尚未创建工程**，占位待 E1 起建；结构照搬 legbot `components/{BSP,ui,services}`+`main`） |
-| `cloud/backend/`、`cloud/frontend/` | Spring Boot(JSON 零库) 与 uni-app 小程序（**空占位**） |
+| `cloud/backend/`、`cloud/frontend/` | Spring Boot(JSON 零库) 与 uni-app 小程序（HBuilderX 工程，均已建成） |
 | `docs/` | 设备/后端/契约/交接文档（见 `docs/README.md`） |
 | `docs/embedded/` | 设备侧实现与排障（自 legbot 迁移，见其 README 来源/排除表） |
 | `docs/handoffs/` | 交接文档（当前：UI 设计移交） |
@@ -58,8 +58,8 @@
 - 引脚/板级唯一权威：`docs/hardware/电子木鱼-硬件原理图设计基线.md`、`docs/hardware/电源网络命名规范.md`、`docs/hardware/电子木鱼-硬件网络清单.json` 及对应外围电路文档；跨层边界由 `ARCHITECTURE-SPINE.md` 约束，冲突先在硬件事实源收敛。
 
 ### 3.6 软件层规则（backend / frontend，经验源 miaowu，HEAD b1e0a660）
-- **backend（`cloud/backend`，Spring Boot）**：接口统一 `/api/v1` + `{code,message,data}` 信封（code=0 成功）；错误码 = `{HTTP 状态}{两位序号}`；业务错误回 **HTTP 200 + 业务码**（GlobalExceptionHandler），不破坏 HTTP 语义；微信登录走 `WechatMiniClient` 模式（code2Session 先取 String body 再解析、AppID 三处对齐、session_key 清空与 openId 脱敏、access_token 提前 300s 缓存）；JWT 过滤器分级 + `ThreadLocal finally clear()`；持久化 **JSON 原子文件零库**（AD-16，**禁止引入 SQL/DB**）；单身份单设备（无角色/租户）。
-- **frontend（`cloud/frontend`，uni-app 仅微信小程序）**：单一 `VITE_API_BASE_URL` + 统一 `api/request`（信封+鉴权头，不散落请求）；**401 单飞刷新队列**（并发 401 只刷一次，失败唤醒所有等待防挂起，刷新后重试一次，仍失败 `uni.reLaunch` 登录页且不重复跳）；令牌本地提前过期判断；本地状态只放 Pinia/本地存储，不作权威数据（AD-2）；开发 `urlCheck:false`、生产在微信公众平台配 request 合法域名；分包控 2MB。
+- **backend（`cloud/backend`，Spring Boot）**：接口统一 `/api/v1` + `{code,message,data}` 信封（code=0 成功）；错误码 = `{HTTP 状态}{两位序号}`；业务错误回 **HTTP 200 + 业务码**（GlobalExceptionHandler），不破坏 HTTP 语义；**2026-10-02 裁决：小程序完全自用测试，已彻底移除鉴权**（无微信登录/JWT 过滤器/WechatMiniClient，`application*.yml` 的 jwt/wechat 段已删，契约码表 40101/40102/40103/50200 保留为冻结码表面）；身份为单一固定 `UserContext.SOLO_DEVICE_ID`；持久化 **JSON 原子文件零库**（AD-16，**禁止引入 SQL/DB**），契约 §11 文件表随 identity.json 移除收敛为四份；单设备（无角色/租户）。
+- **frontend（`cloud/frontend`，uni-app 仅微信小程序，HBuilderX 工程）**：单一 `VITE_API_BASE_URL` + 统一 `api/request`（信封，不散落请求）；**2026-10-02 裁决：小程序完全自用测试，已移除全部鉴权行为**（无登录页/令牌/401 单飞，原「401 单飞刷新队列」规则随之作废）；本地状态只放 Pinia/本地存储，不作权威数据（AD-2）；开发 `urlCheck:false`、生产在微信公众平台配 request 合法域名；分包控 2MB。
 - 经验与排除详见 `docs/backend/`、`docs/frontend/` 及其 README。
 
 ### 3.7 最终页面文案与设计产物硬禁令

@@ -49,7 +49,7 @@ import top.zhcmqtt.ewf.backend.service.StateSnapshotService;
  * {@link ProgressSyncService#submitSettings}，控制器不散落。
  *
  * <p><b>身份：</b>单设备内省——{@code device_id} 只取自 {@link UserContext#currentDeviceId()}；
- * 请求体中的身份声明一律不可信。全部路径默认受 {@code JwtAuthenticationFilter} 保护，**不新增白名单**。
+ * 请求体中的身份声明一律不可信。2026-10-02 裁决：完全自用测试，鉴权过滤器已移除，固定单一身份。
  *
  * <p><b>拒绝仍带基准（裁决 C）：</b>业务拒绝走 {@link ApiResponse#error(int, String, Object)}；
  * 成功走 {@link ApiResponse#success(Object)}。
@@ -98,8 +98,7 @@ public class SyncController {
      */
     @GetMapping("/stats")
     public ApiResponse<HistoryStatsResponse> stats() {
-        // 触发 JWT 身份解析；MVP 单设备，统计不按 deviceId 分文件。
-        UserContext.currentDeviceId();
+        // MVP 单设备，统计不按 deviceId 分文件。
         return ApiResponse.success(historyStatsService.query());
     }
 
@@ -123,7 +122,7 @@ public class SyncController {
      * 篇章动作：从头开始 / 退出（裁决 D / Story 5.2）。
      *
      * <p>拒绝走 {@link ApiResponse#error(int, String, Object)} 携带完整 17 字段快照；
-     * 不新增 JWT 白名单。
+     *
      */
     @PostMapping("/round-action")
     public ApiResponse<StateSnapshotResponse> roundAction(@Valid @RequestBody RoundActionRequest request) {
@@ -139,7 +138,7 @@ public class SyncController {
      * 设置命令下发（裁决 A / Story 5.4）。
      *
      * <p>拒绝（含 {@code 20006}）走 {@link ApiResponse#error(int, String, Object)} 携带完整 17 字段快照；
-     * 不新增 JWT 白名单；修订算法在 {@link ProgressSyncService#submitSettings}。
+     * 修订算法在 {@link ProgressSyncService#submitSettings}。
      */
     @PostMapping("/command")
     public ApiResponse<StateSnapshotResponse> command(@Valid @RequestBody SettingsCommandRequest request) {
