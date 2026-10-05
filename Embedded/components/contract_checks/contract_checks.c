@@ -233,6 +233,30 @@ _Static_assert(EWF_UI_MUYU_MODAL_MUTED_HEX == 0xCFC4B0U, "summary/exit muted.");
 _Static_assert(EWF_UI_MUYU_MODAL_TITLE_HEX == 0xFBFAF0U, "title color.");
 /* 禁止第二套顶层 OVERLAY Screen：遮罩挂在 MUYU 页内（见 ui_scr_shell.c）。 */
 
+/* UI 对齐批次（2026-10）：页面背景、字带面板、8 段进度、tap-zone、banner、modal 排版。 */
+_Static_assert(EWF_UI_MUYU_BELT_PANEL_W == 362 && EWF_UI_MUYU_BELT_PANEL_H == 72,
+               "belt panel matches HTML cmp_charcell window geometry.");
+_Static_assert(EWF_UI_MUYU_BELT_PANEL_X == 23 && EWF_UI_MUYU_BELT_PANEL_Y == 99,
+               "belt panel position matches HTML.");
+_Static_assert(EWF_UI_MUYU_SLOT_W == 42 && EWF_UI_MUYU_SLOT_PITCH == 48,
+               "charcell slot geometry matches HTML (42px + 6 gap).");
+_Static_assert(EWF_UI_MUYU_PROGRESS_W == 346 &&
+               EWF_UI_MUYU_PROGRESS_SEGMENTS == 8U,
+               "scripture-progress track width and segment count match HTML.");
+_Static_assert(EWF_UI_MUYU_PROGRESS_SEG_W == 41 && EWF_UI_MUYU_PROGRESS_SEG_RADIUS == 4,
+               "progress segment geometry matches HTML.");
+_Static_assert(EWF_UI_MUYU_TAPZONE_W == 348 && EWF_UI_MUYU_TAPZONE_H == 216,
+               "woodfish tap-zone geometry matches HTML.");
+_Static_assert(EWF_UI_MUYU_WOODFISH_W == 300 && EWF_UI_MUYU_WOODFISH_H == 180,
+               "woodfish anatomy bitmap size matches HTML.");
+_Static_assert(EWF_UI_MUYU_CHARGING_X == 157 && EWF_UI_MUYU_CHARGING_Y == 64,
+               "charging banner position matches HTML state-banner.");
+_Static_assert(EWF_UI_MUYU_PLACEHOLDER_COLOR_HEX == 0xA6A29AU,
+               "belt empty slot color matches HTML #a6a29a.");
+_Static_assert(EWF_UI_MUYU_MODAL_TITLE_Y == 24 && EWF_UI_MUYU_MODAL_SUMMARY_Y == 66 &&
+                   EWF_UI_MUYU_MODAL_BTN_Y == 122,
+               "modal-done inner layout matches HTML.");
+
 /* Story 3.3：经文页 13 槽 append-only 流常量契约。 */
 #include "ui_jingwen_constants.h"
 _Static_assert(EWF_UI_JINGWEN_ROW_SLOTS == 13U, "JINGWEN history row width is 13 slots.");

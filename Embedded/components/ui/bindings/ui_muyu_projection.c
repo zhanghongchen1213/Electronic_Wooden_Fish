@@ -4,6 +4,8 @@
  * @details  所有 lv_* 与 timer 仅在 ui_task 上下文调用。
  *           今日区与 TONGJI 共用 ewf_ui_today_value_format（裁决 G）。
  *           完成遮罩与 gate.completed 对齐（裁决 A）；投影失败只打日志不阻塞落盘。
+ *           UI 对齐批次：字带面板三态、8 段进度、tap-rings 位图切换、
+ *           今日/累计/轮次文案、charging 横幅（门控由 ui_service 注入）。
  * @author   ZHC
  * @date     2026-09-24
  */
@@ -16,6 +18,7 @@
 #include "ui_tongji_stats_policy.h"
 #include "ui.h"
 
+#include <stdio.h>
 #include <string.h>
 
 static bool s_ready;
@@ -26,15 +29,19 @@ static lv_timer_t *s_flash_timer;
 static ui_muyu_woodfish_click_fn s_on_click;
 static ewf_ui_muyu_done_view_t s_prev_done;
 static bool s_done_primed;
+static uint32_t s_prev_segments;
+static bool s_prev_charging;
 
 static void apply_ring_idle(void);
 static void apply_ring_flash(void);
 static void flash_timer_cb(lv_timer_t *timer);
 static void woodfish_clicked_cb(lv_event_t *e);
 static void style_glyph_slot(lv_obj_t *label, bool filled, bool is_current);
+static void apply_progress_segments(uint32_t filled_segments);
 static ewf_ui_tap_rings_gate_t gate_from_snapshot(const watch_state_snapshot_t *snapshot);
 static void restart_flash_timer(void);
 static void apply_done_overlay(const watch_state_snapshot_t *snapshot);
+static void apply_taps_row(const watch_state_snapshot_t *snapshot);
 
 esp_err_t ui_muyu_projection_init(ui_muyu_woodfish_click_fn on_woodfish_click)
 {
@@ -44,6 +51,8 @@ esp_err_t ui_muyu_projection_init(ui_muyu_woodfish_click_fn on_woodfish_click)
     memset(&s_rings, 0, sizeof(s_rings));
     memset(&s_prev_done, 0, sizeof(s_prev_done));
     s_done_primed = false;
+    s_prev_segments = UINT32_MAX;
+    s_prev_charging = false;
     s_flash_timer = NULL;
     s_on_click = on_woodfish_click;
     apply_ring_idle();
@@ -145,62 +154,92 @@ static void style_glyph_slot(lv_obj_t *label, bool filled, bool is_current)
         return;
     }
     if (!filled) {
-        lv_obj_set_style_text_font(label, &ui_font_serif400_26, LV_PART_MAIN | LV_STATE_DEFAULT);
+        lv_obj_set_style_text_font(label, &ui_font_serif500_24, LV_PART_MAIN | LV_STATE_DEFAULT);
         lv_obj_set_style_text_color(label,
                                     lv_color_hex(EWF_UI_MUYU_PLACEHOLDER_COLOR_HEX),
                                     LV_PART_MAIN | LV_STATE_DEFAULT);
         return;
     }
     if (is_current) {
-        lv_obj_set_style_text_font(label, &ui_font_serif700_52, LV_PART_MAIN | LV_STATE_DEFAULT);
+        lv_obj_set_style_text_font(label, &ui_font_serif700_48, LV_PART_MAIN | LV_STATE_DEFAULT);
         lv_obj_set_style_text_color(label,
                                     lv_color_hex(EWF_UI_MUYU_AMBER_400_HEX),
                                     LV_PART_MAIN | LV_STATE_DEFAULT);
         return;
     }
-    lv_obj_set_style_text_font(label, &ui_font_serif500_26, LV_PART_MAIN | LV_STATE_DEFAULT);
+    lv_obj_set_style_text_font(label, &ui_font_serif500_24, LV_PART_MAIN | LV_STATE_DEFAULT);
     lv_obj_set_style_text_color(label,
                                 lv_color_hex(EWF_UI_MUYU_CHAR_COLOR_HEX),
                                 LV_PART_MAIN | LV_STATE_DEFAULT);
 }
 
-static void apply_ring_idle(void)
+static void apply_progress_segments(uint32_t filled_segments)
 {
-    static const uint32_t colors[EWF_UI_MUYU_TAP_RING_COUNT] = {
-        EWF_UI_MUYU_RING_IDLE0_HEX,
-        EWF_UI_MUYU_RING_IDLE1_HEX,
-        EWF_UI_MUYU_RING_IDLE2_HEX,
-    };
-    static const lv_opa_t opas[EWF_UI_MUYU_TAP_RING_COUNT] = {
-        EWF_UI_MUYU_RING_IDLE0_OPA,
-        EWF_UI_MUYU_RING_IDLE1_OPA,
-        EWF_UI_MUYU_RING_IDLE2_OPA,
-    };
-    for (uint32_t i = 0U; i < EWF_UI_MUYU_TAP_RING_COUNT; ++i) {
-        if (ui_muyu_tap_rings[i] == NULL) {
+    if (filled_segments == s_prev_segments) {
+        return;
+    }
+    s_prev_segments = filled_segments;
+    for (uint32_t i = 0U; i < EWF_UI_MUYU_PROGRESS_SEGMENTS; ++i) {
+        if (ui_muyu_progress_segments[i] == NULL) {
             continue;
         }
-        lv_obj_set_style_border_color(ui_muyu_tap_rings[i],
-                                      lv_color_hex(colors[i]),
-                                      LV_PART_MAIN | LV_STATE_DEFAULT);
-        lv_obj_set_style_border_opa(ui_muyu_tap_rings[i],
-                                    opas[i],
-                                    LV_PART_MAIN | LV_STATE_DEFAULT);
+        const uint32_t color = (i < filled_segments) ? EWF_UI_MUYU_AMBER_400_HEX
+                                                     : EWF_UI_MUYU_PROGRESS_TRACK_HEX;
+        lv_obj_set_style_bg_color(ui_muyu_progress_segments[i],
+                                  lv_color_hex(color),
+                                  LV_PART_MAIN | LV_STATE_DEFAULT);
+    }
+}
+
+static void apply_taps_row(const watch_state_snapshot_t *snapshot)
+{
+    const bool trusted = (snapshot != NULL) && snapshot->time_synchronized;
+    const uint32_t today_count = (snapshot != NULL) ? snapshot->tap_today_count : 0U;
+    const uint32_t local_total = (snapshot != NULL) ? snapshot->tap_local_total : 0U;
+    const uint32_t round_id = (snapshot != NULL) ? snapshot->tap_round_id : 0U;
+
+    if (ui_muyu_today_value != NULL) {
+        char value_text[24];
+        ewf_ui_today_value_format(trusted, today_count, value_text, sizeof(value_text));
+        char today_text[40];
+        if (trusted) {
+            (void)snprintf(today_text, sizeof(today_text), "%s 次", value_text);
+            lv_obj_set_style_text_color(ui_muyu_today_value,
+                                        lv_color_hex(EWF_UI_MUYU_CHAR_COLOR_HEX),
+                                        LV_PART_MAIN | LV_STATE_DEFAULT);
+        } else {
+            (void)snprintf(today_text, sizeof(today_text), "%s", value_text);
+            lv_obj_set_style_text_color(ui_muyu_today_value,
+                                        lv_color_hex(EWF_UI_MUYU_UNTRUSTED_HEX),
+                                        LV_PART_MAIN | LV_STATE_DEFAULT);
+        }
+        lv_label_set_text(ui_muyu_today_value, today_text);
+    }
+    if (ui_muyu_total_label != NULL) {
+        char total_num[16];
+        ewf_ui_total_value_format(local_total, total_num, sizeof(total_num));
+        char total_text[40];
+        (void)snprintf(total_text, sizeof(total_text), "累计敲击 %s 次", total_num);
+        lv_label_set_text(ui_muyu_total_label, total_text);
+    }
+    if (ui_muyu_round_index != NULL) {
+        char round_text[32];
+        ewf_ui_round_index_format(round_id, round_text, sizeof(round_text));
+        lv_label_set_text(ui_muyu_round_index, round_text);
+    }
+}
+
+static void apply_ring_idle(void)
+{
+    if (ui_muyu_tap_rings != NULL) {
+        lv_img_set_src(ui_muyu_tap_rings, &ui_img_rings_idle);
     }
 }
 
 static void apply_ring_flash(void)
 {
-    for (uint32_t i = 0U; i < EWF_UI_MUYU_TAP_RING_COUNT; ++i) {
-        if (ui_muyu_tap_rings[i] == NULL) {
-            continue;
-        }
-        lv_obj_set_style_border_color(ui_muyu_tap_rings[i],
-                                      lv_color_hex(EWF_UI_MUYU_AMBER_300_HEX),
-                                      LV_PART_MAIN | LV_STATE_DEFAULT);
-        lv_obj_set_style_border_opa(ui_muyu_tap_rings[i],
-                                    LV_OPA_COVER,
-                                    LV_PART_MAIN | LV_STATE_DEFAULT);
+    if (ui_muyu_tap_rings != NULL) {
+        lv_img_set_src(ui_muyu_tap_rings, &ui_img_rings_flash);
     }
 }
 
@@ -236,7 +275,8 @@ static void restart_flash_timer(void)
 
 void ui_muyu_projection_apply(const watch_state_snapshot_t *snapshot,
                               ewf_ui_tap_origin_t last_tap_origin,
-                              uint32_t now_ms)
+                              uint32_t now_ms,
+                              bool charging)
 {
     if (!s_ready) {
         return;
@@ -260,18 +300,20 @@ void ui_muyu_projection_apply(const watch_state_snapshot_t *snapshot,
         style_glyph_slot(ui_muyu_glyph_slots[i], belt.filled[i], is_current);
     }
 
-    if (ui_muyu_scripture_progress != NULL) {
-        lv_label_set_text(ui_muyu_scripture_progress, belt.progress_text);
+    if (ui_muyu_progress_label != NULL) {
+        lv_label_set_text(ui_muyu_progress_label, belt.progress_text);
     }
-    if (ui_muyu_today_hint != NULL) {
-        char today_text[24];
-        const bool trusted =
-            (snapshot != NULL) ? snapshot->time_synchronized : false;
-        const uint32_t today_count =
-            (snapshot != NULL) ? snapshot->tap_today_count : 0U;
-        ewf_ui_today_value_format(trusted, today_count, today_text, sizeof(today_text));
-        lv_label_set_text(ui_muyu_today_hint, today_text);
+    apply_progress_segments(belt.progress_segments);
+    apply_taps_row(snapshot);
+
+    if (ui_muyu_charging_banner != NULL) {
+        if (charging && !s_prev_charging) {
+            lv_obj_clear_flag(ui_muyu_charging_banner, LV_OBJ_FLAG_HIDDEN);
+        } else if (!charging && s_prev_charging) {
+            lv_obj_add_flag(ui_muyu_charging_banner, LV_OBJ_FLAG_HIDDEN);
+        }
     }
+    s_prev_charging = charging;
 
     apply_done_overlay(snapshot);
 

@@ -78,8 +78,21 @@ static void test_progress_full(void)
     ewf_ui_muyu_belt_view_t view;
     ewf_ui_muyu_belt_project(260U, &view);
     assert(view.progress_percent == 100U);
+    assert(view.progress_segments == 8U);
     assert(strstr(view.progress_text, "260 / 260") != NULL);
-    assert(strstr(view.progress_text, "100%") != NULL);
+    assert(strstr(view.progress_text, "字") != NULL);
+    assert(strstr(view.progress_text, "100.0%") != NULL);
+}
+
+static void test_progress_segments_rounding(void)
+{
+    /* 四舍五入映射：0→0，33(12.7%≈1.0 段)→1，130(50%→4 段)→4，259(≈7.97 段)→8，260→8。 */
+    assert(ewf_ui_muyu_progress_segments(0U) == 0U);
+    assert(ewf_ui_muyu_progress_segments(33U) == 1U);
+    assert(ewf_ui_muyu_progress_segments(130U) == 4U);
+    assert(ewf_ui_muyu_progress_segments(259U) == 8U);
+    assert(ewf_ui_muyu_progress_segments(260U) == 8U);
+    assert(ewf_ui_muyu_progress_segments(999U) == 8U);
 }
 
 static void test_rings_origin_and_coalesce(void)
@@ -131,6 +144,7 @@ int main(void)
     test_belt_full_and_shift();
     test_belt_punctuation_step();
     test_progress_full();
+    test_progress_segments_rounding();
     test_rings_origin_and_coalesce();
     puts("PASS test_ui_muyu_belt_policy");
     return 0;

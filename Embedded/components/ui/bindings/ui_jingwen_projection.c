@@ -46,7 +46,7 @@ static void style_confirmed(lv_obj_t *label)
     if (label == NULL) {
         return;
     }
-    lv_obj_set_style_text_font(label, &ui_font_serif500_26, LV_PART_MAIN | LV_STATE_DEFAULT);
+    lv_obj_set_style_text_font(label, &ui_font_serif500_24, LV_PART_MAIN | LV_STATE_DEFAULT);
     lv_obj_set_style_text_color(label,
                                 lv_color_hex(EWF_UI_JINGWEN_CONFIRMED_COLOR_HEX),
                                 LV_PART_MAIN | LV_STATE_DEFAULT);
@@ -93,7 +93,7 @@ static void ensure_row_labels(uint32_t row_count)
             ESP_LOGW(TAG, "经文行盒创建失败：row=%lu", (unsigned long)row);
             break;
         }
-        lv_obj_set_size(row_box, EWF_UI_JINGWEN_HISTORY_W - 16, EWF_UI_JINGWEN_ROW_HEIGHT);
+        lv_obj_set_size(row_box, EWF_UI_JINGWEN_ROW_W, EWF_UI_JINGWEN_ROW_HEIGHT);
         lv_obj_set_style_bg_opa(row_box, LV_OPA_TRANSP, LV_PART_MAIN | LV_STATE_DEFAULT);
         lv_obj_set_style_border_width(row_box, 0, LV_PART_MAIN | LV_STATE_DEFAULT);
         lv_obj_set_style_pad_all(row_box, 0, LV_PART_MAIN | LV_STATE_DEFAULT);
@@ -204,8 +204,14 @@ void ui_jingwen_projection_apply(const watch_state_snapshot_t *snapshot)
         }
     }
 
-    if (ui_jingwen_scripture_progress != NULL) {
-        lv_label_set_text(ui_jingwen_scripture_progress, view.progress_text);
+    if (ui_jingwen_progress_label != NULL) {
+        lv_label_set_text(ui_jingwen_progress_label, view.progress_text);
+    }
+    if (ui_jingwen_progress_value != NULL) {
+        /* HTML value 条：宽度 = 比例 × track 宽（无圆角、amber.400）。 */
+        const lv_coord_t w = (lv_coord_t)((uint32_t)EWF_UI_JINGWEN_PROGRESS_W *
+                                          view.progress_percent / 100U);
+        lv_obj_set_width(ui_jingwen_progress_value, w);
     }
     if (ui_jingwen_round_index != NULL) {
         lv_label_set_text(ui_jingwen_round_index,

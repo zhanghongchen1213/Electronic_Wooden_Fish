@@ -61,9 +61,6 @@ static void apply_view(const ewf_ui_tongji_stats_view_t *view)
     if (ui_tongji_round_index != NULL) {
         lv_label_set_text(ui_tongji_round_index, view->round_index_text);
     }
-    if (ui_tongji_round_status != NULL) {
-        lv_label_set_text(ui_tongji_round_status, view->round_status_text);
-    }
     if (ui_tongji_progress_arc != NULL) {
         lv_arc_set_value(ui_tongji_progress_arc, (int16_t)view->arc_value);
     }

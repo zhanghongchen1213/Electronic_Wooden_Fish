@@ -27,10 +27,12 @@ esp_err_t ui_muyu_projection_init(ui_muyu_woodfish_click_fn on_woodfish_click);
 
 /**
  * @brief 从 watch_state 快照投影字带/进度，并按游标变化触发三环
+ * @param charging 充电事实门控（PRD「三供电同一路径」，当前无生产者，恒 false）
  */
 void ui_muyu_projection_apply(const watch_state_snapshot_t *snapshot,
                               ewf_ui_tap_origin_t last_tap_origin,
-                              uint32_t now_ms);
+                              uint32_t now_ms,
+                              bool charging);
 
 #ifdef __cplusplus
 }

@@ -31,7 +31,7 @@
               },
               {
                 "strtype": "_style/Text_Font",
-                "strval": "ui_font_serif700_28"
+                "strval": "ui_font_serif600_22"
               }
             ],
             "children": []
@@ -49,7 +49,7 @@
               },
               {
                 "strtype": "_style/Text_Font",
-                "strval": "ui_font_serif700_28"
+                "strval": "ui_font_serif600_22"
               }
             ],
             "children": []

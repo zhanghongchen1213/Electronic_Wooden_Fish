@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""EWF 运行时投影字体覆盖单测（Story 3.1）。"""
+"""EWF 运行时投影字体覆盖单测（Story 3.1 + UI 对齐批次）。"""
 
 from __future__ import annotations
 
@@ -22,44 +22,40 @@ class RuntimeProjectionFontCoverageTest(unittest.TestCase):
     def test_contract_font_codes_cover_shell_titles(self) -> None:
         contract = json.loads(VALIDATOR.CONTRACT_PATH.read_text(encoding="utf-8"))
         entries = {e["selector"]: e for e in contract["runtime_labels"]}
-        self.assertEqual({"serif700_28"}, set(entries["ui_muyu_title"]["font_codes"]))
-        self.assertEqual({"serif700_28"}, set(entries["ui_jingwen_title"]["font_codes"]))
-        self.assertEqual({"ns700_22"}, set(entries["ui_tongji_title"]["font_codes"]))
+        self.assertEqual({"serif600_22"}, set(entries["ui_muyu_title"]["font_codes"]))
+        self.assertEqual({"serif600_22"}, set(entries["ui_jingwen_title"]["font_codes"]))
+        self.assertEqual({"ns600_22"}, set(entries["ui_tongji_title"]["font_codes"]))
         self.assertIn("待同步", entries["statusbar_txt_sync"]["texts"])
         self.assertNotIn("已同步成功", entries["statusbar_txt_sync"]["texts"])
 
     def test_shell_title_glyphs_present(self) -> None:
         serif = VALIDATOR.glyph_codepoints(
-            VALIDATOR.GENERATED_FONT_DIR / "ui_font_serif700_28.c"
+            VALIDATOR.GENERATED_FONT_DIR / "ui_font_serif600_22.c"
         )
         sans = VALIDATOR.glyph_codepoints(
-            VALIDATOR.GENERATED_FONT_DIR / "ui_font_ns700_22.c"
+            VALIDATOR.GENERATED_FONT_DIR / "ui_font_ns600_22.c"
         )
-        self.assertTrue(set("木鱼") <= serif)
-        self.assertTrue(set("经文") <= serif)
-        self.assertTrue(set("统计") <= sans)
+        self.assertTrue(set("心经") <= serif)
+        self.assertTrue(set("统计设置") <= sans)
 
     def test_muyu_belt_font_codes_and_glyphs(self) -> None:
         contract = json.loads(VALIDATOR.CONTRACT_PATH.read_text(encoding="utf-8"))
         entries = {e["selector"]: e for e in contract["runtime_labels"]}
         self.assertEqual(
-            {"serif700_52", "serif500_26", "serif400_26"},
+            {"serif700_48", "serif500_24"},
             set(entries["ui_muyu_glyph_slots"]["font_codes"]),
         )
         self.assertIn("DYNAMIC_SCRIPTURE_BELT", entries["ui_muyu_glyph_slots"]["texts"])
-        glyph52 = VALIDATOR.glyph_codepoints(
-            VALIDATOR.GENERATED_FONT_DIR / "ui_font_serif700_52.c"
+        glyph48 = VALIDATOR.glyph_codepoints(
+            VALIDATOR.GENERATED_FONT_DIR / "ui_font_serif700_48.c"
         )
-        glyph26 = VALIDATOR.glyph_codepoints(
-            VALIDATOR.GENERATED_FONT_DIR / "ui_font_serif500_26.c"
+        glyph24 = VALIDATOR.glyph_codepoints(
+            VALIDATOR.GENERATED_FONT_DIR / "ui_font_serif500_24.c"
         )
-        empty26 = VALIDATOR.glyph_codepoints(
-            VALIDATOR.GENERATED_FONT_DIR / "ui_font_serif400_26.c"
-        )
-        self.assertTrue(set("观自在") <= glyph52)
-        self.assertTrue(set("观自在") <= glyph26)
-        self.assertTrue(set("·") <= empty26)
-        progress = entries["ui_muyu_scripture_progress"]["texts"]
+        self.assertTrue(set("观自在") <= glyph48)
+        self.assertTrue(set("观自在") <= glyph24)
+        self.assertTrue(set("·") <= glyph24)
+        progress = entries["ui_muyu_progress_label"]["texts"]
         self.assertTrue(any("%" in t for t in progress))
 
     def test_projected_fonts_by_label_nonempty(self) -> None:

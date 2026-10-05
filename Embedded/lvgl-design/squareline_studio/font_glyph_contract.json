@@ -8,8 +8,10 @@
       "path": "components/ui/bindings/ui_runtime_binding.c",
       "functions": [
         "sync_text",
-        "signal_text",
-        "patch_statusbar"
+        "patch_statusbar",
+        "patch_signal_icon",
+        "patch_sync_dot",
+        "patch_battery"
       ]
     },
     {
@@ -38,7 +40,9 @@
       "path": "components/ui/bindings/ui_tongji_stats_policy.c",
       "functions": [
         "ewf_ui_today_value_format",
-        "ewf_ui_tongji_stats_project"
+        "ewf_ui_tongji_stats_project",
+        "ewf_ui_total_value_format",
+        "ewf_ui_round_index_format"
       ]
     }
   ],
@@ -46,7 +50,7 @@
     {
       "selector": "ui_muyu_title",
       "font_codes": [
-        "serif700_28"
+        "serif600_22"
       ],
       "texts": [
         "木鱼"
@@ -56,7 +60,7 @@
     {
       "selector": "ui_jingwen_title",
       "font_codes": [
-        "serif700_28"
+        "serif600_22"
       ],
       "texts": [
         "经文"
@@ -66,7 +70,7 @@
     {
       "selector": "ui_tongji_title",
       "font_codes": [
-        "ns700_22"
+        "ns600_22"
       ],
       "texts": [
         "统计"
@@ -76,7 +80,7 @@
     {
       "selector": "ui_shezhi_title",
       "font_codes": [
-        "ns700_22"
+        "ns600_22"
       ],
       "texts": [
         "设置"
@@ -86,7 +90,7 @@
     {
       "selector": "ui_shezhi_brightness_label",
       "font_codes": [
-        "ns700_22"
+        "ns600_20"
       ],
       "texts": [
         "屏幕亮度"
@@ -96,7 +100,7 @@
     {
       "selector": "ui_shezhi_timeout_label",
       "font_codes": [
-        "ns700_22"
+        "ns600_20"
       ],
       "texts": [
         "自动熄屏"
@@ -106,7 +110,7 @@
     {
       "selector": "ui_shezhi_volume_label",
       "font_codes": [
-        "ns700_22"
+        "ns600_20"
       ],
       "texts": [
         "音量"
@@ -116,7 +120,7 @@
     {
       "selector": "ui_shezhi_sync_title",
       "font_codes": [
-        "ns700_22"
+        "ns600_20"
       ],
       "texts": [
         "立即同步"
@@ -164,7 +168,7 @@
     {
       "selector": "ui_shezhi_volume_value",
       "font_codes": [
-        "ns600_16"
+        "ns600_18"
       ],
       "texts": [
         "0",
@@ -176,7 +180,7 @@
     {
       "selector": "ui_shezhi_version_label",
       "font_codes": [
-        "ns700_22"
+        "ns600_20"
       ],
       "texts": [
         "木鱼版本"
@@ -186,7 +190,7 @@
     {
       "selector": "ui_shezhi_device_id_label",
       "font_codes": [
-        "ns700_22"
+        "ns600_20"
       ],
       "texts": [
         "木鱼ID"
@@ -196,7 +200,7 @@
     {
       "selector": "ui_shezhi_identity_values",
       "font_codes": [
-        "ns600_16"
+        "ns600_18"
       ],
       "texts": [
         "-",
@@ -209,7 +213,7 @@
     {
       "selector": "statusbar_txt_sync",
       "font_codes": [
-        "ns600_16"
+        "ns500_12"
       ],
       "texts": [
         "待同步",
@@ -222,9 +226,8 @@
     {
       "selector": "ui_muyu_glyph_slots",
       "font_codes": [
-        "serif700_52",
-        "serif500_26",
-        "serif400_26"
+        "serif700_48",
+        "serif500_24"
       ],
       "texts": [
         "DYNAMIC_SCRIPTURE_BELT"
@@ -233,9 +236,9 @@
       "notes": "7 槽动态 lv_label_set_text；runtime 切换 glyph/char/empty 三档 Serif"
     },
     {
-      "selector": "ui_muyu_scripture_progress",
+      "selector": "ui_muyu_progress_label",
       "font_codes": [
-        "ns600_16"
+        "ns500_12"
       ],
       "texts": [
         "心经进度 0 / 260 · 0%",
@@ -244,9 +247,9 @@
       "source_path": "components/ui/bindings/ui_muyu_belt_policy.c"
     },
     {
-      "selector": "ui_muyu_today_hint",
+      "selector": "ui_muyu_today_value",
       "font_codes": [
-        "ns600_16"
+        "ns500_15"
       ],
       "texts": [
         "待校时",
@@ -260,7 +263,7 @@
     {
       "selector": "ui_muyu_modal_title",
       "font_codes": [
-        "serif700_28"
+        "serif700_24"
       ],
       "texts": [
         "本轮完成"
@@ -270,7 +273,7 @@
     {
       "selector": "ui_muyu_modal_summary",
       "font_codes": [
-        "ns600_16"
+        "ns500_13"
       ],
       "texts": [
         "心经进度 0 / 260 字",
@@ -281,7 +284,7 @@
     {
       "selector": "ui_muyu_modal_btn_restart",
       "font_codes": [
-        "ns700_22"
+        "ns600_14"
       ],
       "texts": [
         "从头开始"
@@ -291,7 +294,7 @@
     {
       "selector": "ui_muyu_modal_btn_exit",
       "font_codes": [
-        "ns700_22"
+        "ns600_14"
       ],
       "texts": [
         "退出"
@@ -302,7 +305,7 @@
       "selector": "ui_jingwen_row_slots",
       "font_codes": [
         "serif700_52",
-        "serif500_26"
+        "serif500_24"
       ],
       "texts": [
         "DYNAMIC_SCRIPTURE_HISTORY"
@@ -311,9 +314,9 @@
       "notes": "经文流行动态 lv_label_set_text；runtime 切换 confirmed/glyph-current 两档 Serif"
     },
     {
-      "selector": "ui_jingwen_scripture_progress",
+      "selector": "ui_jingwen_progress_label",
       "font_codes": [
-        "ns600_16"
+        "ns500_12"
       ],
       "texts": [
         "心经进度 0 / 260 · 0%",
@@ -324,7 +327,7 @@
     {
       "selector": "ui_jingwen_round_index",
       "font_codes": [
-        "ns600_16"
+        "ns500_12"
       ],
       "texts": [
         "第 1 次诵读"
@@ -334,7 +337,7 @@
     {
       "selector": "ui_tongji_title",
       "font_codes": [
-        "ns700_22"
+        "ns600_22"
       ],
       "texts": [
         "统计"
@@ -344,7 +347,7 @@
     {
       "selector": "ui_tongji_today_label",
       "font_codes": [
-        "ns600_16"
+        "ns500_13"
       ],
       "texts": [
         "今日敲击",
@@ -355,7 +358,7 @@
     {
       "selector": "ui_tongji_total_label",
       "font_codes": [
-        "ns600_16"
+        "ns500_13"
       ],
       "texts": [
         "累计敲击",
@@ -366,7 +369,7 @@
     {
       "selector": "ui_tongji_today_value",
       "font_codes": [
-        "ns700_22"
+        "ns700_26"
       ],
       "texts": [
         "待校时",
@@ -379,7 +382,7 @@
     {
       "selector": "ui_tongji_total_value",
       "font_codes": [
-        "ns700_22"
+        "ns700_26"
       ],
       "texts": [
         "0",
@@ -403,7 +406,7 @@
     {
       "selector": "ui_tongji_progress_percent",
       "font_codes": [
-        "ns600_16"
+        "ns500_13"
       ],
       "texts": [
         "已完成 0%",
@@ -415,7 +418,7 @@
     {
       "selector": "ui_tongji_round_label",
       "font_codes": [
-        "ns600_16"
+        "ns500_13"
       ],
       "texts": [
         "本次诵读"
@@ -425,7 +428,7 @@
     {
       "selector": "ui_tongji_round_index",
       "font_codes": [
-        "ns600_16"
+        "ns500_12"
       ],
       "texts": [
         "第 1 次诵读",
@@ -443,6 +446,42 @@
         "已完成"
       ],
       "source_path": "components/ui/bindings/ui_tongji_stats_policy.c"
+    },
+    {
+      "selector": "ui_muyu_total_label",
+      "font_codes": [
+        "ns500_15"
+      ],
+      "texts": [
+        "累计敲击 {total} 次"
+      ]
+    },
+    {
+      "selector": "ui_muyu_round_index",
+      "font_codes": [
+        "ns500_12"
+      ],
+      "texts": [
+        "第 {round} 次诵读"
+      ]
+    },
+    {
+      "selector": "ui_muyu_charging_banner",
+      "font_codes": [
+        "ns500_11"
+      ],
+      "texts": [
+        "充电中 · 暂停敲击"
+      ]
+    },
+    {
+      "selector": "ui_muyu_round_index_jingwen",
+      "font_codes": [
+        "ns500_12"
+      ],
+      "texts": [
+        "第 {round} 次诵读"
+      ]
     }
   ],
   "fonts": {
@@ -456,25 +495,75 @@
       "weight": 700,
       "size": 22
     },
-    "serif700_28": {
+    "ns500_11": {
+      "family": "NotoSansSC",
+      "weight": 500,
+      "size": 11
+    },
+    "ns500_12": {
+      "family": "NotoSansSC",
+      "weight": 500,
+      "size": 12
+    },
+    "ns500_13": {
+      "family": "NotoSansSC",
+      "weight": 500,
+      "size": 13
+    },
+    "ns600_14": {
+      "family": "NotoSansSC",
+      "weight": 600,
+      "size": 14
+    },
+    "ns500_15": {
+      "family": "NotoSansSC",
+      "weight": 500,
+      "size": 15
+    },
+    "ns600_18": {
+      "family": "NotoSansSC",
+      "weight": 600,
+      "size": 18
+    },
+    "ns600_20": {
+      "family": "NotoSansSC",
+      "weight": 600,
+      "size": 20
+    },
+    "ns600_22": {
+      "family": "NotoSansSC",
+      "weight": 600,
+      "size": 22
+    },
+    "ns700_26": {
+      "family": "NotoSansSC",
+      "weight": 700,
+      "size": 26
+    },
+    "serif600_22": {
+      "family": "NotoSerifSC",
+      "weight": 600,
+      "size": 22
+    },
+    "serif700_24": {
       "family": "NotoSerifSC",
       "weight": 700,
-      "size": 28
+      "size": 24
+    },
+    "serif500_24": {
+      "family": "NotoSerifSC",
+      "weight": 500,
+      "size": 24
+    },
+    "serif700_48": {
+      "family": "NotoSerifSC",
+      "weight": 700,
+      "size": 48
     },
     "serif700_52": {
       "family": "NotoSerifSC",
       "weight": 700,
       "size": 52
-    },
-    "serif500_26": {
-      "family": "NotoSerifSC",
-      "weight": 500,
-      "size": 26
-    },
-    "serif400_26": {
-      "family": "NotoSerifSC",
-      "weight": 400,
-      "size": 26
     }
   }
 }

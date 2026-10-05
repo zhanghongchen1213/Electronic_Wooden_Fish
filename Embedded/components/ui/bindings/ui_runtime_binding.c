@@ -31,18 +31,21 @@ static bool s_applied_settings_open;
 /** 是否已完成至少一次设置屏投影。 */
 static bool s_settings_projection_primed;
 
-static const char *signal_text(ewf_ui_signal_state_t st, const char *on_label)
-{
-    switch (st) {
-    case EWF_UI_SIGNAL_CONNECTED:
-        return on_label;
-    case EWF_UI_SIGNAL_NO_SIGNAL:
-        return "--";
-    case EWF_UI_SIGNAL_DISABLED:
-    default:
-        return "-";
-    }
-}
+/* 状态栏状态色（设计对照板锚定：信号 connected=#b8c7a4 / no-signal=#81786a /
+   disabled=#5f564b；电池 #c9a66a、低电 #c77b55；sync 文案 #cfc4b0、电量值 #f5efe2）。
+   sync 圆点四态 HTML 只锚定 ok=#b8c7a4，其余按产品语义映射（契约允许运行时补丁）。 */
+#define EWF_UI_SB_SIGNAL_CONNECTED_HEX 0xB8C7A4U
+#define EWF_UI_SB_SIGNAL_NO_SIGNAL_HEX 0x81786AU
+#define EWF_UI_SB_SIGNAL_DISABLED_HEX 0x5F564BU
+#define EWF_UI_SB_BATTERY_HEX 0xC9A66AU
+#define EWF_UI_SB_BATTERY_LOW_HEX 0xC77B55U
+#define EWF_UI_SB_DOT_OK_HEX 0xB8C7A4U
+#define EWF_UI_SB_DOT_BUSY_HEX 0xD9A441U
+#define EWF_UI_SB_DOT_PENDING_HEX 0x81786AU
+#define EWF_UI_SB_DOT_FAIL_HEX 0xC77B55U
+
+/** 电量图标低电阈值（<30% 切 low 变体与红色）。 */
+#define EWF_UI_SB_BATTERY_LOW_PERCENT 30
 
 static const char *sync_text(ewf_ui_sync_phrase_t phrase)
 {
@@ -59,6 +62,100 @@ static const char *sync_text(ewf_ui_sync_phrase_t phrase)
     }
 }
 
+static uint32_t signal_color(ewf_ui_signal_state_t st)
+{
+    switch (st) {
+    case EWF_UI_SIGNAL_CONNECTED:
+        return EWF_UI_SB_SIGNAL_CONNECTED_HEX;
+    case EWF_UI_SIGNAL_NO_SIGNAL:
+        return EWF_UI_SB_SIGNAL_NO_SIGNAL_HEX;
+    case EWF_UI_SIGNAL_DISABLED:
+    default:
+        return EWF_UI_SB_SIGNAL_DISABLED_HEX;
+    }
+}
+
+static void patch_signal_icon(lv_obj_t *icon,
+                              ewf_ui_signal_state_t st,
+                              const lv_img_dsc_t *connected_src,
+                              const lv_img_dsc_t *off_src,
+                              const lv_img_dsc_t *zero_src)
+{
+    if (icon == NULL) {
+        return;
+    }
+    const lv_img_dsc_t *src = off_src;
+    switch (st) {
+    case EWF_UI_SIGNAL_CONNECTED:
+        src = connected_src;
+        break;
+    case EWF_UI_SIGNAL_NO_SIGNAL:
+        src = zero_src;
+        break;
+    case EWF_UI_SIGNAL_DISABLED:
+    default:
+        src = off_src;
+        break;
+    }
+    lv_img_set_src(icon, src);
+    lv_obj_set_style_img_recolor(icon, lv_color_hex(signal_color(st)),
+                                 LV_PART_MAIN | LV_STATE_DEFAULT);
+}
+
+static void patch_sync_dot(lv_obj_t *dot, ewf_ui_sync_phrase_t phrase)
+{
+    if (dot == NULL) {
+        return;
+    }
+    uint32_t hex = EWF_UI_SB_DOT_PENDING_HEX;
+    switch (phrase) {
+    case EWF_UI_SYNC_PHRASE_OK:
+        hex = EWF_UI_SB_DOT_OK_HEX;
+        break;
+    case EWF_UI_SYNC_PHRASE_BUSY:
+        hex = EWF_UI_SB_DOT_BUSY_HEX;
+        break;
+    case EWF_UI_SYNC_PHRASE_FAIL:
+        hex = EWF_UI_SB_DOT_FAIL_HEX;
+        break;
+    case EWF_UI_SYNC_PHRASE_PENDING:
+    default:
+        hex = EWF_UI_SB_DOT_PENDING_HEX;
+        break;
+    }
+    lv_obj_set_style_bg_color(dot, lv_color_hex(hex), LV_PART_MAIN | LV_STATE_DEFAULT);
+}
+
+static void patch_battery(lv_obj_t *icon, lv_obj_t *txt, int percent)
+{
+    const bool invalid = (percent < 0 || percent > 100);
+    const bool low = (!invalid && percent < EWF_UI_SB_BATTERY_LOW_PERCENT);
+    if (icon != NULL) {
+        const lv_img_dsc_t *src = &ui_img_ic_battery_medium;
+        if (invalid) {
+            src = &ui_img_ic_battery_medium;
+        } else if (low) {
+            src = &ui_img_ic_battery_low;
+        } else if (percent >= 80) {
+            src = &ui_img_ic_battery_full;
+        }
+        lv_img_set_src(icon, src);
+        lv_obj_set_style_img_recolor(icon,
+                                     lv_color_hex(low ? EWF_UI_SB_BATTERY_LOW_HEX
+                                                      : EWF_UI_SB_BATTERY_HEX),
+                                     LV_PART_MAIN | LV_STATE_DEFAULT);
+    }
+    if (txt != NULL) {
+        char buf[8];
+        if (invalid) {
+            lv_label_set_text(txt, "--%");
+        } else {
+            (void)snprintf(buf, sizeof(buf), "%d%%", percent);
+            lv_label_set_text(txt, buf);
+        }
+    }
+}
+
 static void patch_statusbar(lv_obj_t *bar, const ewf_ui_shell_model_t *model)
 {
     if (bar == NULL || model == NULL) {
@@ -68,33 +165,24 @@ static void patch_statusbar(lv_obj_t *bar, const ewf_ui_shell_model_t *model)
     lv_obj_t *icon_wifi = ui_comp_get_child(bar, UI_COMP_STATUSBAR_ICON_WIFI);
     lv_obj_t *icon_ble = ui_comp_get_child(bar, UI_COMP_STATUSBAR_ICON_BLE);
     lv_obj_t *icon_gps = ui_comp_get_child(bar, UI_COMP_STATUSBAR_ICON_GPS);
+    lv_obj_t *dot_sync = ui_comp_get_child(bar, UI_COMP_STATUSBAR_DOT_SYNC);
     lv_obj_t *txt_sync = ui_comp_get_child(bar, UI_COMP_STATUSBAR_TXT_SYNC);
     lv_obj_t *txt_bat = ui_comp_get_child(bar, UI_COMP_STATUSBAR_TXT_BATTERY);
+    lv_obj_t *icon_bat = ui_comp_get_child(bar, UI_COMP_STATUSBAR_ICON_BATTERY);
 
-    if (icon_4g) {
-        lv_label_set_text(icon_4g, signal_text(model->signal_4g, "4G"));
-    }
-    if (icon_wifi) {
-        lv_label_set_text(icon_wifi, signal_text(model->signal_wifi, "Wi"));
-    }
-    if (icon_ble) {
-        lv_label_set_text(icon_ble, signal_text(model->signal_ble, "BT"));
-    }
-    if (icon_gps) {
-        lv_label_set_text(icon_gps, signal_text(model->signal_gps, "GP"));
-    }
+    patch_signal_icon(icon_4g, model->signal_4g,
+                      &ui_img_ic_signal, &ui_img_ic_signal_zero, &ui_img_ic_signal_zero);
+    patch_signal_icon(icon_wifi, model->signal_wifi,
+                      &ui_img_ic_wifi, &ui_img_ic_wifi_off, &ui_img_ic_wifi_off);
+    patch_signal_icon(icon_ble, model->signal_ble,
+                      &ui_img_ic_bluetooth, &ui_img_ic_bluetooth_off, &ui_img_ic_bluetooth_off);
+    patch_signal_icon(icon_gps, model->signal_gps,
+                      &ui_img_ic_navigation, &ui_img_ic_navigation_off, &ui_img_ic_navigation_off);
+    patch_sync_dot(dot_sync, model->sync_phrase);
     if (txt_sync) {
         lv_label_set_text(txt_sync, sync_text(model->sync_phrase));
     }
-    if (txt_bat) {
-        char buf[8];
-        if (model->battery_percent < 0 || model->battery_percent > 100) {
-            lv_label_set_text(txt_bat, "--%");
-        } else {
-            (void)snprintf(buf, sizeof(buf), "%d%%", model->battery_percent);
-            lv_label_set_text(txt_bat, buf);
-        }
-    }
+    patch_battery(icon_bat, txt_bat, model->battery_percent);
 }
 
 esp_err_t ui_runtime_binding_init(void)
@@ -137,6 +225,9 @@ void ui_runtime_binding_build_model(const watch_state_snapshot_t *snapshot,
     out->settings_open = snapshot->nav.settings_open;
     out->screen_state = snapshot->screen_state;
     out->display_on_request = (snapshot->screen_state == WATCH_SCREEN_STATE_ON);
+    if (snapshot->battery_valid) {
+        out->battery_percent = (int)snapshot->battery_percent;
+    }
 }
 
 esp_err_t ui_runtime_binding_apply(const ewf_ui_shell_model_t *model)

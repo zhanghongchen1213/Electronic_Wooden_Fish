@@ -305,7 +305,9 @@ static void project_once(void)
         origin = flash_origin_from_tap_snapshot(&tap_snap);
     }
     const uint32_t now_ms = (uint32_t)(esp_timer_get_time() / 1000LL);
-    ui_muyu_projection_apply(&snapshot, origin, now_ms);
+    /* charging：PRD final「三种供电同一路径」，固件无充电事实生产者；
+       横幅结构已就绪，电源域提供充电事实后在此接线。 */
+    ui_muyu_projection_apply(&snapshot, origin, now_ms, false);
     ui_jingwen_projection_apply(&snapshot);
     ui_tongji_projection_apply(&snapshot);
 

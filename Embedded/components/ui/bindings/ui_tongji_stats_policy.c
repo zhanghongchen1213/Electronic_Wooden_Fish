@@ -54,6 +54,23 @@ void ewf_ui_today_value_format(bool time_synchronized,
     (void)snprintf(out, out_len, "%lu", (unsigned long)today_count);
 }
 
+void ewf_ui_total_value_format(uint32_t local_total, char *out, size_t out_len)
+{
+    format_uint_thousands(local_total, out, out_len);
+}
+
+void ewf_ui_round_index_format(uint32_t round_id, char *out, size_t out_len)
+{
+    if (out == NULL || out_len == 0U) {
+        return;
+    }
+    if (round_id == 0U) {
+        out[0] = '\0';
+        return;
+    }
+    (void)snprintf(out, out_len, "第 %lu 次诵读", (unsigned long)round_id);
+}
+
 void ewf_ui_tongji_stats_project(const ewf_ui_tongji_stats_input_t *in,
                                  ewf_ui_tongji_stats_view_t *out)
 {
@@ -99,10 +116,9 @@ void ewf_ui_tongji_stats_project(const ewf_ui_tongji_stats_input_t *in,
                    (unsigned long)out->progress_percent);
 
     if (in->round_id > 0U) {
-        (void)snprintf(out->round_index_text,
-                       sizeof(out->round_index_text),
-                       "第 %lu 次诵读",
-                       (unsigned long)in->round_id);
+        ewf_ui_round_index_format(in->round_id,
+                                  out->round_index_text,
+                                  sizeof(out->round_index_text));
     }
 
     if (in->pending_completion || in->round_state == 1U ||

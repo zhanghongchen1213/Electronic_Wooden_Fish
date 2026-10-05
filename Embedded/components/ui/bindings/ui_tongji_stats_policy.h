@@ -61,6 +61,16 @@ void ewf_ui_today_value_format(bool time_synchronized,
                                size_t out_len);
 
 /**
+ * @brief 千分位数字串（MUYU 累计行 / TONGJI 累计卡共用）
+ */
+void ewf_ui_total_value_format(uint32_t local_total, char *out, size_t out_len);
+
+/**
+ * @brief 「第 N 次诵读」；round_id==0 输出空串（MUYU/TONGJI round-index 共用）
+ */
+void ewf_ui_round_index_format(uint32_t round_id, char *out, size_t out_len);
+
+/**
  * @brief 由快照字段投影统计页三块文案与环进度
  * @param in 输入；NULL 无操作
  * @param out 输出；NULL 无操作

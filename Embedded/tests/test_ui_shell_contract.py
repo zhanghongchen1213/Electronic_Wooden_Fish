@@ -64,8 +64,11 @@ def test_muyu_shell_has_belt_and_rings():
     text = (GEN / "screens/ui_scr_shell.c").read_text(encoding="utf-8")
     assert "ui_muyu_glyph_slots" in text
     assert "ui_muyu_tap_rings" in text
-    assert "ui_muyu_scripture_progress" in text
+    assert "ui_muyu_progress_label" in text
     assert "心经进度" in text
+    assert "ui_muyu_belt_panel" in text
+    assert "ui_muyu_charging_banner" in text
+    assert "充电中 · 暂停敲击" in (BIND / "ui_muyu_constants.h").read_text(encoding="utf-8")
     assert "ui_muyu_modal_done" in text
     assert "ui_muyu_modal_btn_restart" in text
     assert "ui_muyu_modal_btn_exit" in text
@@ -79,8 +82,12 @@ def test_muyu_shell_has_belt_and_rings():
 
 def test_serif_belt_fonts_present():
     fonts = GEN / "fonts"
-    for name in ("ui_font_serif700_52.c", "ui_font_serif500_26.c", "ui_font_serif400_26.c"):
+    for name in ("ui_font_serif700_52.c", "ui_font_serif500_24.c", "ui_font_serif700_48.c",
+                 "ui_font_serif600_22.c", "ui_font_serif700_24.c"):
         assert (fonts / name).is_file(), name
+    # 退役档不得回流（UI 对齐批次后由 24/48 档替代 26/28）。
+    for name in ("ui_font_serif700_28.c", "ui_font_serif500_26.c", "ui_font_serif400_26.c"):
+        assert not (fonts / name).is_file(), name
 
 def test_jingwen_constants_contract():
     text = (BIND / "ui_jingwen_constants.h").read_text(encoding="utf-8")
@@ -92,7 +99,7 @@ def test_jingwen_constants_contract():
 def test_jingwen_shell_has_history_no_woodfish():
     text = (GEN / "screens/ui_scr_shell.c").read_text(encoding="utf-8")
     assert "ui_jingwen_history" in text
-    assert "ui_jingwen_scripture_progress" in text
+    assert "ui_jingwen_progress_label" in text
     # JINGWEN 页不得挂 woodfish / tap-rings（MUYU 专属符号仍可出现在同文件）。
     jingwen_block = text.split("ui_jingwen_title")[1].split("ui_tongji_title")[0]
     assert "woodfish" not in jingwen_block.lower()

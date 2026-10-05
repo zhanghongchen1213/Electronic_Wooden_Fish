@@ -991,6 +991,7 @@ def run_ui_jingwen_stream_policy_host_test() -> int:
                 str(UI_BIND_DIR / "ui_jingwen_gesture_policy.c"),
                 str(UI_BIND_DIR / "ui_scripture_display_expand.c"),
                 str(UI_BIND_DIR / "ui_muyu_belt_policy.c"),
+                str(UI_BIND_DIR / "ui_tongji_stats_policy.c"),
                 "-o",
                 str(binary),
             ],

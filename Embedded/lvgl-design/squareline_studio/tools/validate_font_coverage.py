@@ -189,7 +189,7 @@ def collect_required_chars() -> dict[str, set[str]]:
                 for ch in decoded:
                     if ord(ch) >= 0x80:
                         # assign to all ns/serif fonts that exist
-                        for code in ("ns600_16", "ns700_22", "serif700_28"):
+                        for code in ("ns600_16", "ns700_22", "serif600_22"):
                             by_font.setdefault(code, set()).add(ch)
 
     return by_font

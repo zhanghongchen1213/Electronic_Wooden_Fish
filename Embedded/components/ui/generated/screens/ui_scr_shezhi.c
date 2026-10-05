@@ -10,6 +10,7 @@ lv_obj_t *ui_shezhi_title = NULL;
 lv_obj_t *ui_shezhi_divider = NULL;
 lv_obj_t *ui_shezhi_viewport = NULL;
 lv_obj_t *ui_shezhi_content = NULL;
+lv_obj_t *ui_shezhi_pull_handle = NULL;
 
 lv_obj_t *ui_shezhi_row_brightness = NULL;
 lv_obj_t *ui_shezhi_brightness_label = NULL;
@@ -52,17 +53,18 @@ static lv_obj_t *make_row(lv_obj_t *parent, lv_coord_t y)
     return row;
 }
 
-static lv_obj_t *make_icon_block(lv_obj_t *parent)
+static lv_obj_t *make_icon_block(lv_obj_t *parent, const lv_img_dsc_t *src,
+                                 uint32_t recolor_hex)
 {
-    /* hardware_pending：lucide SVG 像素级对拍；此处简化色块。 */
-    lv_obj_t *icon = lv_obj_create(parent);
-    lv_obj_clear_flag(icon, LV_OBJ_FLAG_SCROLLABLE);
-    lv_obj_set_size(icon, 30, 30);
+    /* lucide 位图（A8 白模板）+ recolor；几何对齐 HTML row icon。 */
+    lv_obj_t *icon = lv_img_create(parent);
+    lv_img_set_src(icon, src);
     lv_obj_set_pos(icon, 20, 25);
-    lv_obj_set_style_radius(icon, 6, LV_PART_MAIN | LV_STATE_DEFAULT);
-    lv_obj_set_style_bg_color(icon, lv_color_hex(0xE6BD69),
-                              LV_PART_MAIN | LV_STATE_DEFAULT);
-    lv_obj_set_style_border_width(icon, 0, LV_PART_MAIN | LV_STATE_DEFAULT);
+    lv_obj_set_style_img_recolor(icon, lv_color_hex(recolor_hex),
+                                 LV_PART_MAIN | LV_STATE_DEFAULT);
+    lv_obj_set_style_img_recolor_opa(icon, LV_OPA_COVER,
+                                     LV_PART_MAIN | LV_STATE_DEFAULT);
+    lv_obj_clear_flag(icon, LV_OBJ_FLAG_CLICKABLE);
     return icon;
 }
 
@@ -149,8 +151,16 @@ void ui_scr_shezhi_screen_init(void)
                                   LV_PART_MAIN | LV_STATE_DEFAULT);
     lv_obj_set_style_pad_all(ui_shezhi_viewport, 0, LV_PART_MAIN | LV_STATE_DEFAULT);
     lv_obj_set_scroll_dir(ui_shezhi_viewport, LV_DIR_VER);
+    lv_obj_set_scrollbar_mode(ui_shezhi_viewport, LV_SCROLLBAR_MODE_AUTO);
     lv_obj_add_flag(ui_shezhi_viewport, LV_OBJ_FLAG_SCROLLABLE);
     lv_obj_clear_flag(ui_shezhi_viewport, LV_OBJ_FLAG_SCROLL_ELASTIC);
+    /* 滚动条样式（HTML scroll-track/thumb 3px）。 */
+    lv_obj_set_style_width(ui_shezhi_viewport, 3, LV_PART_SCROLLBAR | LV_STATE_DEFAULT);
+    lv_obj_set_style_pad_right(ui_shezhi_viewport, 0, LV_PART_SCROLLBAR | LV_STATE_DEFAULT);
+    lv_obj_set_style_bg_color(ui_shezhi_viewport, lv_color_hex(0x30343B),
+                              LV_PART_SCROLLBAR | LV_STATE_SCROLLED);
+    lv_obj_set_style_bg_color(ui_shezhi_viewport, lv_color_hex(0xA6A29A),
+                              LV_PART_SCROLLBAR | LV_STATE_PRESSED);
 
     ui_shezhi_content = lv_obj_create(ui_shezhi_viewport);
     lv_obj_clear_flag(ui_shezhi_content, LV_OBJ_FLAG_SCROLLABLE);
@@ -164,10 +174,10 @@ void ui_scr_shezhi_screen_init(void)
 
     /* page-1：亮度 / 熄屏 / 音量 / 立即同步（恰好 4 行）。 */
     ui_shezhi_row_brightness = make_row(ui_shezhi_content, 0);
-    (void)make_icon_block(ui_shezhi_row_brightness);
+    (void)make_icon_block(ui_shezhi_row_brightness, &ui_img_ic_sun, 0xE6BD69);
     ui_shezhi_brightness_label = lv_label_create(ui_shezhi_row_brightness);
     lv_label_set_text(ui_shezhi_brightness_label, "屏幕亮度");
-    lv_obj_set_style_text_font(ui_shezhi_brightness_label, &ui_font_ns700_22,
+    lv_obj_set_style_text_font(ui_shezhi_brightness_label, &ui_font_ns600_20,
                                LV_PART_MAIN | LV_STATE_DEFAULT);
     lv_obj_set_style_text_color(ui_shezhi_brightness_label, lv_color_hex(0xFBFAF0),
                                 LV_PART_MAIN | LV_STATE_DEFAULT);
@@ -180,10 +190,10 @@ void ui_scr_shezhi_screen_init(void)
     }
 
     ui_shezhi_row_timeout = make_row(ui_shezhi_content, 88);
-    (void)make_icon_block(ui_shezhi_row_timeout);
+    (void)make_icon_block(ui_shezhi_row_timeout, &ui_img_ic_timer, 0xE6BD69);
     ui_shezhi_timeout_label = lv_label_create(ui_shezhi_row_timeout);
     lv_label_set_text(ui_shezhi_timeout_label, "自动熄屏");
-    lv_obj_set_style_text_font(ui_shezhi_timeout_label, &ui_font_ns700_22,
+    lv_obj_set_style_text_font(ui_shezhi_timeout_label, &ui_font_ns600_20,
                                LV_PART_MAIN | LV_STATE_DEFAULT);
     lv_obj_set_style_text_color(ui_shezhi_timeout_label, lv_color_hex(0xFBFAF0),
                                 LV_PART_MAIN | LV_STATE_DEFAULT);
@@ -196,10 +206,10 @@ void ui_scr_shezhi_screen_init(void)
     }
 
     ui_shezhi_row_volume = make_row(ui_shezhi_content, 176);
-    (void)make_icon_block(ui_shezhi_row_volume);
+    (void)make_icon_block(ui_shezhi_row_volume, &ui_img_ic_volume_2, 0xE6BD69);
     ui_shezhi_volume_label = lv_label_create(ui_shezhi_row_volume);
     lv_label_set_text(ui_shezhi_volume_label, "音量");
-    lv_obj_set_style_text_font(ui_shezhi_volume_label, &ui_font_ns700_22,
+    lv_obj_set_style_text_font(ui_shezhi_volume_label, &ui_font_ns600_20,
                                LV_PART_MAIN | LV_STATE_DEFAULT);
     lv_obj_set_style_text_color(ui_shezhi_volume_label, lv_color_hex(0xFBFAF0),
                                 LV_PART_MAIN | LV_STATE_DEFAULT);
@@ -216,6 +226,11 @@ void ui_scr_shezhi_screen_init(void)
                               LV_PART_INDICATOR | LV_STATE_DEFAULT);
     lv_obj_set_style_bg_color(ui_shezhi_volume_slider, lv_color_hex(0xD9A441),
                               LV_PART_KNOB | LV_STATE_DEFAULT);
+    /* 细轨（HTML 112×6）+ 18×18 knob：主轨上下内缩 6px。 */
+    lv_obj_set_style_pad_top(ui_shezhi_volume_slider, 6,
+                             LV_PART_MAIN | LV_STATE_DEFAULT);
+    lv_obj_set_style_pad_bottom(ui_shezhi_volume_slider, 6,
+                                LV_PART_MAIN | LV_STATE_DEFAULT);
     lv_obj_set_style_pad_all(ui_shezhi_volume_slider, 4,
                              LV_PART_KNOB | LV_STATE_DEFAULT);
     lv_obj_add_event_cb(ui_shezhi_volume_slider, ui_runtime_events_on_generated,
@@ -224,17 +239,17 @@ void ui_scr_shezhi_screen_init(void)
 
     ui_shezhi_volume_value = lv_label_create(ui_shezhi_row_volume);
     lv_label_set_text(ui_shezhi_volume_value, "50");
-    lv_obj_set_style_text_font(ui_shezhi_volume_value, &ui_font_ns600_16,
+    lv_obj_set_style_text_font(ui_shezhi_volume_value, &ui_font_ns600_18,
                                LV_PART_MAIN | LV_STATE_DEFAULT);
     lv_obj_set_style_text_color(ui_shezhi_volume_value, lv_color_hex(0xFBFAF0),
                                 LV_PART_MAIN | LV_STATE_DEFAULT);
     lv_obj_set_pos(ui_shezhi_volume_value, 318, 20);
 
     ui_shezhi_row_sync = make_row(ui_shezhi_content, 264);
-    (void)make_icon_block(ui_shezhi_row_sync);
+    (void)make_icon_block(ui_shezhi_row_sync, &ui_img_ic_refresh_cw, 0xE6BD69);
     ui_shezhi_sync_title = lv_label_create(ui_shezhi_row_sync);
     lv_label_set_text(ui_shezhi_sync_title, "立即同步");
-    lv_obj_set_style_text_font(ui_shezhi_sync_title, &ui_font_ns700_22,
+    lv_obj_set_style_text_font(ui_shezhi_sync_title, &ui_font_ns600_20,
                                LV_PART_MAIN | LV_STATE_DEFAULT);
     lv_obj_set_style_text_color(ui_shezhi_sync_title, lv_color_hex(0xFBFAF0),
                                 LV_PART_MAIN | LV_STATE_DEFAULT);
@@ -266,10 +281,10 @@ void ui_scr_shezhi_screen_init(void)
 
     /* page-2 @ top=344：木鱼版本 / 木鱼ID。 */
     ui_shezhi_row_version = make_row(ui_shezhi_content, 344);
-    (void)make_icon_block(ui_shezhi_row_version);
+    (void)make_icon_block(ui_shezhi_row_version, &ui_img_ic_cpu, 0xA6A29A);
     ui_shezhi_version_label = lv_label_create(ui_shezhi_row_version);
     lv_label_set_text(ui_shezhi_version_label, "木鱼版本");
-    lv_obj_set_style_text_font(ui_shezhi_version_label, &ui_font_ns700_22,
+    lv_obj_set_style_text_font(ui_shezhi_version_label, &ui_font_ns600_20,
                                LV_PART_MAIN | LV_STATE_DEFAULT);
     lv_obj_set_style_text_color(ui_shezhi_version_label, lv_color_hex(0xFBFAF0),
                                 LV_PART_MAIN | LV_STATE_DEFAULT);
@@ -286,10 +301,10 @@ void ui_scr_shezhi_screen_init(void)
                                 LV_PART_MAIN | LV_STATE_DEFAULT);
 
     ui_shezhi_row_device_id = make_row(ui_shezhi_content, 432);
-    (void)make_icon_block(ui_shezhi_row_device_id);
+    (void)make_icon_block(ui_shezhi_row_device_id, &ui_img_ic_cpu, 0xA6A29A);
     ui_shezhi_device_id_label = lv_label_create(ui_shezhi_row_device_id);
     lv_label_set_text(ui_shezhi_device_id_label, "木鱼ID");
-    lv_obj_set_style_text_font(ui_shezhi_device_id_label, &ui_font_ns700_22,
+    lv_obj_set_style_text_font(ui_shezhi_device_id_label, &ui_font_ns600_20,
                                LV_PART_MAIN | LV_STATE_DEFAULT);
     lv_obj_set_style_text_color(ui_shezhi_device_id_label, lv_color_hex(0xFBFAF0),
                                 LV_PART_MAIN | LV_STATE_DEFAULT);
@@ -304,6 +319,17 @@ void ui_scr_shezhi_screen_init(void)
     lv_obj_set_width(ui_shezhi_device_id_value, 120);
     lv_obj_set_style_text_align(ui_shezhi_device_id_value, LV_TEXT_ALIGN_RIGHT,
                                 LV_PART_MAIN | LV_STATE_DEFAULT);
+
+    /* pull-handle：下滑呼出设置的视觉把手（手势链路在 device_nav_service）。 */
+    ui_shezhi_pull_handle = lv_obj_create(ui_scr_shezhi);
+    lv_obj_clear_flag(ui_shezhi_pull_handle, LV_OBJ_FLAG_SCROLLABLE);
+    lv_obj_set_size(ui_shezhi_pull_handle, 48, 5);
+    lv_obj_set_pos(ui_shezhi_pull_handle, 181, 479);
+    lv_obj_set_style_radius(ui_shezhi_pull_handle, 3, LV_PART_MAIN | LV_STATE_DEFAULT);
+    lv_obj_set_style_bg_color(ui_shezhi_pull_handle, lv_color_hex(0xD9A441),
+                              LV_PART_MAIN | LV_STATE_DEFAULT);
+    lv_obj_set_style_border_width(ui_shezhi_pull_handle, 0,
+                                  LV_PART_MAIN | LV_STATE_DEFAULT);
 }
 
 void ui_scr_shezhi_screen_destroy(void)
@@ -316,6 +342,7 @@ void ui_scr_shezhi_screen_destroy(void)
     ui_shezhi_divider = NULL;
     ui_shezhi_viewport = NULL;
     ui_shezhi_content = NULL;
+    ui_shezhi_pull_handle = NULL;
     ui_shezhi_row_brightness = NULL;
     ui_shezhi_brightness_label = NULL;
     ui_shezhi_row_timeout = NULL;

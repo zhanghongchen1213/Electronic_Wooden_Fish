@@ -10,6 +10,7 @@
 
 #include "ui_muyu_belt_policy.h"
 #include "ui_scripture_display_expand.h"
+#include "ui_tongji_stats_policy.h"
 
 #include <stdio.h>
 #include <string.h>
@@ -32,16 +33,10 @@ void ewf_ui_jingwen_stream_project(uint32_t round_cursor,
 
     if (total == 0U) {
         out->progress_percent = ewf_ui_muyu_progress_percent(round_cursor);
-        (void)snprintf(out->progress_text,
-                       sizeof(out->progress_text),
-                       "心经进度 0 / %u · 0%%",
-                       (unsigned)EWF_UI_MUYU_PROGRESS_DENOM);
-        if (tap_round_id > 0U) {
-            (void)snprintf(out->round_index_text,
-                           sizeof(out->round_index_text),
-                           "第 %lu 次诵读",
-                           (unsigned long)tap_round_id);
-        }
+        ewf_ui_muyu_progress_text(round_cursor, out->progress_text,
+                                  sizeof(out->progress_text));
+        ewf_ui_round_index_format(tap_round_id, out->round_index_text,
+                                  sizeof(out->round_index_text));
         return;
     }
 
@@ -69,22 +64,9 @@ void ewf_ui_jingwen_stream_project(uint32_t round_cursor,
     }
 
     out->progress_percent = ewf_ui_muyu_progress_percent(round_cursor);
-    uint32_t shown = round_cursor;
-    if (shown > EWF_UI_MUYU_PROGRESS_DENOM) {
-        shown = EWF_UI_MUYU_PROGRESS_DENOM;
-    }
-    (void)snprintf(out->progress_text,
-                   sizeof(out->progress_text),
-                   "心经进度 %lu / %u · %lu%%",
-                   (unsigned long)shown,
-                   (unsigned)EWF_UI_MUYU_PROGRESS_DENOM,
-                   (unsigned long)out->progress_percent);
-    if (tap_round_id > 0U) {
-        (void)snprintf(out->round_index_text,
-                       sizeof(out->round_index_text),
-                       "第 %lu 次诵读",
-                       (unsigned long)tap_round_id);
-    }
+    ewf_ui_muyu_progress_text(round_cursor, out->progress_text, sizeof(out->progress_text));
+    ewf_ui_round_index_format(tap_round_id, out->round_index_text,
+                              sizeof(out->round_index_text));
 }
 
 bool ewf_ui_jingwen_should_anchor_tail(bool reviewing, bool cursor_grew)

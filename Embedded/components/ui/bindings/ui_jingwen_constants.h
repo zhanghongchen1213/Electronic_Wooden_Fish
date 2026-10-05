@@ -38,14 +38,34 @@
 /** 已确认行正文色（HTML #a6a29a）。 */
 #define EWF_UI_JINGWEN_CONFIRMED_COLOR_HEX 0xA6A29AU
 
-/** scripture-progress 约 top=410。 */
+/** scripture-progress 组：346×58 @ left=32,top=410。 */
+#define EWF_UI_JINGWEN_PROGRESS_X 32
 #define EWF_UI_JINGWEN_PROGRESS_Y 410
+#define EWF_UI_JINGWEN_PROGRESS_W 346
+#define EWF_UI_JINGWEN_PROGRESS_H 58
 
-/** 行高：须容纳流尾 glyph-current（Serif 52/700），正文 26 亦落在此行盒内。 */
-#define EWF_UI_JINGWEN_ROW_HEIGHT 56
+/** 进度 track：346×8 @ (0,4)，无圆角（HTML line 区段与 MUYU 不同）。 */
+#define EWF_UI_JINGWEN_PROGRESS_TRACK_Y 4
+#define EWF_UI_JINGWEN_PROGRESS_TRACK_H 8
+#define EWF_UI_JINGWEN_PROGRESS_TRACK_HEX 0x252525U
 
-/** 槽宽（13 槽塞入 history 内容宽，净空 ≥8）。 */
+/** 进度 label @ (0,20) 346×28 居中。 */
+#define EWF_UI_JINGWEN_PROGRESS_LABEL_Y 20
+#define EWF_UI_JINGWEN_PROGRESS_LABEL_H 28
+
+/** 行高：HTML line 320×32；行距由 flex pad_row=38 控制。 */
+#define EWF_UI_JINGWEN_ROW_HEIGHT 32
+
+/** 行宽与起始内边距（HTML line @ (18,18) 相对 history 面板）。 */
+#define EWF_UI_JINGWEN_ROW_W 320
+#define EWF_UI_JINGWEN_ROW_PAD_X 18
+#define EWF_UI_JINGWEN_ROW_PAD_Y 18
+
+/** 行距（HTML line-1 top=18 → line-2 top=56）。 */
+#define EWF_UI_JINGWEN_ROW_GAP 38
+
+/** 槽宽（13 槽 × 24 = 312，行内左对齐；滚动条侧净空由 track 承担）。 */
 #define EWF_UI_JINGWEN_SLOT_W 24
-#define EWF_UI_JINGWEN_SLOT_GAP 2
+#define EWF_UI_JINGWEN_SLOT_GAP 0
 
 #endif /* EWF_UI_JINGWEN_CONSTANTS_H */

@@ -28,6 +28,37 @@ uint32_t ewf_ui_muyu_progress_percent(uint32_t round_cursor)
     return (cursor * 100U) / EWF_UI_MUYU_PROGRESS_DENOM;
 }
 
+uint32_t ewf_ui_muyu_progress_segments(uint32_t round_cursor)
+{
+    uint32_t cursor = round_cursor;
+    if (cursor >= EWF_UI_MUYU_PROGRESS_DENOM) {
+        return EWF_UI_MUYU_PROGRESS_SEGMENTS;
+    }
+    /* 四舍五入：round(cursor * SEGMENTS / DENOM)。 */
+    return (cursor * EWF_UI_MUYU_PROGRESS_SEGMENTS + EWF_UI_MUYU_PROGRESS_DENOM / 2U) /
+           EWF_UI_MUYU_PROGRESS_DENOM;
+}
+
+void ewf_ui_muyu_progress_text(uint32_t round_cursor, char *out, size_t out_len)
+{
+    if (out == NULL || out_len == 0U) {
+        return;
+    }
+    uint32_t shown = round_cursor;
+    if (shown > EWF_UI_MUYU_PROGRESS_DENOM) {
+        shown = EWF_UI_MUYU_PROGRESS_DENOM;
+    }
+    /* 「心经进度 12 / 260 字 · 4.6%」：一位小数，与设计导出文案一致。 */
+    const uint32_t percent_x10 = (shown * 1000U) / EWF_UI_MUYU_PROGRESS_DENOM;
+    (void)snprintf(out,
+                   out_len,
+                   "心经进度 %lu / %u 字 · %lu.%lu%%",
+                   (unsigned long)shown,
+                   (unsigned)EWF_UI_MUYU_PROGRESS_DENOM,
+                   (unsigned long)(percent_x10 / 10U),
+                   (unsigned long)(percent_x10 % 10U));
+}
+
 void ewf_ui_muyu_belt_project(uint32_t round_cursor, ewf_ui_muyu_belt_view_t *out)
 {
     if (out == NULL) {
@@ -65,14 +96,6 @@ void ewf_ui_muyu_belt_project(uint32_t round_cursor, ewf_ui_muyu_belt_view_t *ou
     }
 
     out->progress_percent = ewf_ui_muyu_progress_percent(round_cursor);
-    uint32_t shown = round_cursor;
-    if (shown > EWF_UI_MUYU_PROGRESS_DENOM) {
-        shown = EWF_UI_MUYU_PROGRESS_DENOM;
-    }
-    (void)snprintf(out->progress_text,
-                   sizeof(out->progress_text),
-                   "心经进度 %lu / %u · %lu%%",
-                   (unsigned long)shown,
-                   (unsigned)EWF_UI_MUYU_PROGRESS_DENOM,
-                   (unsigned long)out->progress_percent);
+    out->progress_segments = ewf_ui_muyu_progress_segments(round_cursor);
+    ewf_ui_muyu_progress_text(round_cursor, out->progress_text, sizeof(out->progress_text));
 }
